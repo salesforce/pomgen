@@ -1,0 +1,9 @@
+maven_artifact(
+    group_id = "com.pomgen.example",
+    artifact_id = "wintervegetables",
+    version = "2.0.0-SNAPSHOT",
+)
+
+maven_artifact_update(
+    version_increment_strategy = "minor",
+)

@@ -1,0 +1,196 @@
+#!/bin/bash
+
+# Copyright (c) 2018, salesforce.com, inc.
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+
+set -e
+
+print_usage() {
+cat << EOF
+
+Usage: maven.sh -a action(s) [-t target -r repository root path]
+
+  - a is required, and specifies which action(s) to run, see below.
+    Make sure you run 'pomgen' before trying other actions.
+    The actions to run may be comma-separated if there is more than one,
+    for example: -a pomgen,install
+
+  - t optionally specifies a bazel target pattern to run the action for.
+    If not specified, defaults to //...
+
+  - r optionally points to the repository root if not running from the root.
+
+
+  Mandatory action:
+    - pomgen: generates pom files for Maven artifacts.  IMPORTANT: this action
+      is required to run at least once before any of the other actions.
+    
+  Additional supported actions (note, you must run pomgen before these will work):
+    - install: installs the main binary artifacts (and poms) into the local
+      Maven repository.
+    - install_all: installs binary, sources, javadoc and pom artifacts into the
+      local Maven repository.
+
+    - deploy_all: deploys binary, sources, javadoc and pom artifacts to Nexus.
+      Uses credentials from ~/.m2/settings.xml's "default" server entry.
+    - deploy_only: re-attempts upload of all artifacts to Nexus.  Assumes
+      "deploy_all" has run once.  This is useful for debugging upload issues.
+      Uses credentials from ~/.m2/settings.xml's "default" server entry.
+
+    - clean: removes generated pom files and Maven build "target" directories 
+      from the src tree.
+
+
+  Supported environment variables:
+    - MVN_ARGS: may be used to pass additional arguments to Maven.
+      For example to point to settings.xml in a non-standard location:
+      export MVN_ARGS="--settings /my/path/to/settings.xml"
+
+    - REPOSITORY_URL: for the 2 deploy actions, the environment variable 
+      REPOSITORY_URL must be set to the jar artifact repository to upload to.
+      For example, when using Nexus:
+          export REPOSITORY_URL=https://nexus.host/nexus/service/local/repositories/"
+      Artifacts will either be uploaded to ${REPOSITORY_URL}/snapshots/content
+      or ${REPOSITORY_URL}/releases/content, based on whether the artifact
+      version ends in -SNAPTSHOT or not.
+
+
+  Examples (run from repository root):
+
+  Generate poms for all example artififacts:
+
+      maven/maven.sh -a pomgen -t example
+
+
+  Install all example artifacts into the local Maven repository:
+  
+      maven/maven.sh -a install -t example
+
+
+  Upload all example, including javadoc and source jars, to Nexus:
+  
+      maven/maven.sh -a deploy_all
+
+
+  More than one action may be specified, for example, to generate poms and
+  then install to the local Maven repository:
+
+      maven/maven.sh -a pomgen,install
+
+EOF
+}
+
+if [ "$#" -eq 0 ]; then
+  print_usage && exit 1
+fi
+
+while getopts "a:t:r" option; do
+  case $option in
+    a ) actions=$OPTARG
+    ;;
+    t ) target=$OPTARG
+    ;;
+    r ) repo_root_path=$OPTARG
+    ;;    
+  esac
+done
+
+if [ -z "$actions" ] ; then
+    echo "ERROR: The action(s) to run must be specified using -a, for example:"
+    echo "       $ maven/maven.sh -a install"
+    echo "       Run maven.sh without arguments for (long) usage information."
+    exit 1
+fi
+
+# convert some simple Bazel target patterns to a path
+if [[ $target == "//..." ]]; then
+    # if filter is "//..." just unset it
+    unset target
+elif [[ $target == //* ]]; then
+    # if it starts with "//", remove first '/'
+    target=${target#*"/"}        
+elif [[ $target != /* ]]; then
+    # target needs to start with a '/'
+    target=/$target
+fi
+if [[ $target == *... ]]; then
+    # if target ends with '...', remove
+    target=${target%"..."}        
+fi
+if [[ $target == */ ]]; then
+    # if target ends with '/', remove
+    target=${target%"/"}        
+fi
+if [[ $target == *:* ]]; then
+    target=${target%:*}
+fi
+if [ -z "$target" ] ; then
+    echo "INFO: No target specified, defaulting to //..."
+    target="/."
+fi
+
+
+if [ -z "$repo_root_path" ] ; then
+    repo_root_path=`pwd`
+    echo "INFO: Defaulting repository root path to current directory: $repo_root_path"
+fi
+
+echo "INFO: Running ${actions} with target: ${target}"
+
+# helper functions
+this_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+source ${this_script_dir}/maven_functions.sh
+
+echo ""
+
+for action in $(echo $actions | tr "," "\n")
+do
+    if ! [[ "$action" =~ ^(clean|pomgen|install|install_all|deploy_all|deploy_only)$ ]]; then
+        echo "ERROR: action [$action] must be one of [clean|install|install_all|deploy|deploy_all|deploy_only]" && exit 1
+    fi
+
+    echo ""
+    echo "Running action [$action]"
+    echo ""
+
+    if [ "$action" == "clean" ]; then
+        _for_each_pom "clean_source_tree" $repo_root_path $target
+
+    elif [ "$action" == "pomgen" ]; then
+        ${this_script_dir}/../pomgen.py\
+               --package $target\
+               --destdir $repo_root_path/bazel-bin\
+               --recursive
+
+    elif [ "$action" == "install" ]; then
+        _for_each_pom "install_main_artifact" $repo_root_path $target
+
+    elif [ "$action" == "install_all" ]; then
+        # no filter below because the javadoc maven plugin looks for dependencies
+        _for_each_pom "install_main_artifact" $repo_root_path
+        _for_each_pom "build_sources_and_javadoc_jars" $repo_root_path $target
+        _for_each_pom "install_sources_and_javadoc_jars" $repo_root_path $target
+
+    elif [ "$action" == "deploy_all" ]; then
+        if [ -z "$REPOSITORY_URL" ]; then
+            echo "ERROR: REPOSITORY_URL must be set"
+            exit 1
+        fi
+
+        # no filter below because the javadoc maven plugin looks for dependencies
+        _for_each_pom "install_main_artifact" $repo_root_path
+        _for_each_pom "build_sources_and_javadoc_jars" $repo_root_path $target
+        _for_each_pom "upload_all_artifacts" $repo_root_path $target
+
+
+    elif [ "$action" == "deploy_only" ]; then
+        if [ -z "$REPOSITORY_URL" ]; then
+            echo "ERROR: REPOSITORY_URL must be set"
+            exit 1
+        fi
+        _for_each_pom "upload_all_artifacts" $repo_root_path $target
+    fi
+    
+done

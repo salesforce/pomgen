@@ -1,0 +1,9 @@
+*.pyc
+
+bazel-bin
+bazel-genfiles
+bazel-out
+bazel-pomgen
+bazel-example
+bazel-testlogs
+
