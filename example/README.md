@@ -34,7 +34,7 @@ The [query_maven_metadata](../query_maven_metadata.py) script provides informati
 From the root of the repository:
 
 ```
-./query_maven_metadata.py --package example/juicer --library_release_plan_tree
+bazel run query -- --package example/juicer --library_release_plan_tree
 ```
 
 The output looks similar to this:
@@ -59,7 +59,7 @@ The output shows:
 From the root of the repository:
 
 ```
-./pomgen.py --package example/juicer --destdir /tmp/pomgen --recursive
+bazel run pomgen -- --package example/juicer --destdir /tmp/pomgen --recursive
 ```
 
 The command above generates 4 poms, one for each Maven Artifact (healthyfoods has 2 Maven Artifacts)
@@ -69,7 +69,8 @@ The command above generates 4 poms, one for each Maven Artifact (healthyfoods ha
 There's also [a script](../update_maven_metadata.py) that can be used to update Maven metadata. For example, from the root of the repository:
 
 ```
-./update_maven_metadata.py --package example/healthyfoods --new_version 5.0.0-SNAPSHOT
+bazel run update -- --package example/healthyfoods --new_version 5.0.0-SNAPSHOT
+
 ```
 
 The command above updates the version of all artifacts under `example/healthyfoods` to 5.0.0-SNAPSHOT.
