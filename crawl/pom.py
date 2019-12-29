@@ -366,7 +366,9 @@ class DynamicPomGen(AbstractPomGen):
             self.dependencies = ()
         else:
             try:
-                dep_labels = bazel.query_java_library_deps_attributes(self.artifact_def.bazel_package)
+                dep_labels = bazel.query_java_library_deps_attributes(
+                    self.workspace.repo_root_path,
+                    self.artifact_def.bazel_package)
                 deps = self.workspace.parse_dep_labels(dep_labels)
                 deps = self.workspace.normalize_deps(self.artifact_def, deps)
                 # keep a reference to all the deps - we need them during pom

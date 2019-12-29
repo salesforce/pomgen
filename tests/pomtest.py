@@ -45,7 +45,7 @@ class PomTest(unittest.TestCase):
 
         org_function = bazel.query_java_library_deps_attributes
         try:
-            bazel.query_java_library_deps_attributes = lambda p: ("@com_google_guava_guava//jar", "@aopalliance_aopalliance//jar", )
+            bazel.query_java_library_deps_attributes = lambda r, p: ("@com_google_guava_guava//jar", "@aopalliance_aopalliance//jar", )
             pomgen.process_dependencies()
             generated_pom = pomgen.gen()
 
@@ -81,7 +81,7 @@ class PomTest(unittest.TestCase):
 
         org_function = bazel.query_java_library_deps_attributes
         try:
-            bazel.query_java_library_deps_attributes = lambda p: 1/0 # fails
+            bazel.query_java_library_deps_attributes = lambda r, p: 1/0 # fails
             pomgen.process_dependencies()
             generated_pom = pomgen.gen()
 
@@ -107,7 +107,7 @@ class PomTest(unittest.TestCase):
 
         org_function = bazel.query_java_library_deps_attributes
         try:
-            bazel.query_java_library_deps_attributes = lambda p: ("@com_google_guava_guava//jar", "@aopalliance_aopalliance//jar", )
+            bazel.query_java_library_deps_attributes = lambda r, p: ("@com_google_guava_guava//jar", "@aopalliance_aopalliance//jar", )
             pomgen.process_dependencies()        
 
             generated_pom = pomgen.gen(pom.PomGenMode.GOLDFILE)
