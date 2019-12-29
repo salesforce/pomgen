@@ -1,5 +1,38 @@
 python_version = 'PY2'
 
+py_binary(
+    name = "pomgen",
+    srcs = glob(["*.py",
+                 "common/*.py",
+                 "config/*.py",
+                 "common/*.py",
+                 "crawl/*.py"]),
+    python_version = python_version,
+)
+
+py_binary(
+    name = "query",
+    main = "query_maven_metadata.py",
+    srcs = glob(["*.py",
+                 "common/*.py",
+                 "config/*.py",
+                 "common/*.py",
+                 "crawl/*.py"]),
+    python_version = python_version,
+)
+
+py_binary(
+    name = "update",
+    main = "update_maven_metadata.py",
+    srcs = glob(["*.py",
+                 "common/*.py",
+                 "config/*.py",
+                 "common/*.py",
+                 "crawl/*.py"]),
+    python_version = python_version,
+)
+
+
 py_test(
     name = "argsupporttest",
     srcs = ["common/argsupport.py",
