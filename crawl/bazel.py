@@ -15,7 +15,7 @@ from common import mdfiles
 from common.os_util import run_cmd
 import os
 
-def query_java_library_deps_attributes(target_pattern):
+def query_java_library_deps_attributes(repository_root_path, target_pattern):
     """
     Returns, as a list of strings, the combined values of the 'deps' and 
     'runtime_deps' attributes on the java_library rule identified by the 
@@ -43,7 +43,7 @@ def query_java_library_deps_attributes(target_pattern):
     dep_attributes = ("deps", "runtime_deps")
     query_parts = ["labels(%s, %s)" % (attr, target_pattern) for attr in dep_attributes]
     query = "bazel query --noimplicit_deps --order_output full '%s'" % " union ".join(query_parts)
-    output = run_cmd(query).splitlines()
+    output = run_cmd(query, cwd=repository_root_path).splitlines()
     deps = _sanitize_deps(output)
     deps = _ensure_unique_deps(deps)
     return reversed(deps)
