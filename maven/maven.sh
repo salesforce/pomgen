@@ -20,7 +20,7 @@ Usage: maven.sh -a action(s) [-t target -r repository root path]
   - t optionally specifies a bazel target pattern to run the action for.
     If not specified, defaults to //...
 
-  - r optionally points to the repository root if not running from the root.
+  - d enables debug logging
 
 
   Mandatory action:
@@ -86,16 +86,22 @@ if [ "$#" -eq 0 ]; then
   print_usage && exit 1
 fi
 
-while getopts "a:t:r" option; do
+debug=false
+
+while getopts "a:t:d" option; do
   case $option in
     a ) actions=$OPTARG
     ;;
     t ) target=$OPTARG
     ;;
-    r ) repo_root_path=$OPTARG
-    ;;    
+    d ) debug=true
+    ;;
   esac
 done
+
+if [ "$debug" = true ]; then
+    echo "DEBUG: Debug logging enabled"
+fi
 
 if [ -z "$actions" ] ; then
     echo "ERROR: The action(s) to run must be specified using -a, for example:"
@@ -131,19 +137,52 @@ if [ -z "$target" ] ; then
     target="/."
 fi
 
-
-if [ -z "$repo_root_path" ] ; then
-    repo_root_path=`pwd`
-    echo "INFO: Defaulting repository root path to current directory: $repo_root_path"
-fi
-
 echo "INFO: Running ${actions} with target: ${target}"
 
-# helper functions
-this_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-source ${this_script_dir}/maven_functions.sh
+if [ "$debug" = true ]; then
+    echo "DEBUG: Running from directory: $(pwd)"
+    echo "DEBUG: Directory content: $(find . )"
+    echo "DEBUG: Environment: $(env)"
+fi
 
-echo ""
+# load helper functions
+helper_functions_file="maven_functions.sh"
+this_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+if [ -f "${this_script_dir}/${helper_functions_file}" ]; then
+    # look relative to this file
+    source "${this_script_dir}/${helper_functions_file}"
+else
+    # to support running through "bazel run", look in a few other places
+    p="external/pomgen/maven/${helper_functions_file}"
+    if [ -f "${p}" ]; then
+        # remote repository
+        source "${p}"
+    else
+        p="maven/${helper_functions_file}"
+        if [ -f "${p}" ]; then
+            # local pomgen repository
+            source "${p}"
+        else
+            echo "ERROR: Unable to locate ${helper_functions_file}" && exit 1
+        fi
+    fi
+fi
+
+# figure out where this script is being run from, accordingly set repo_root_path
+if [ -f "WORKSPACE" ]; then
+    repo_root_path=`pwd`
+else
+    # only necessary when running using "bazel run"
+    if [ -f "$BUILD_WORKING_DIRECTORY/WORKSPACE" ]; then
+        # $BUILD_WORKING_DIRECTORY is set by "bazel run"
+        repo_root_path=$BUILD_WORKING_DIRECTORY
+        cd $repo_root_path
+    else
+        echo "ERROR: please run this script from the monorepo root"
+        exit 1
+    fi
+fi
 
 for action in $(echo $actions | tr "," "\n")
 do
@@ -159,10 +198,14 @@ do
         _for_each_pom "clean_source_tree" $repo_root_path $target
 
     elif [ "$action" == "pomgen" ]; then
-        ${this_script_dir}/../pomgen.py\
-               --package $target\
-               --destdir $repo_root_path/bazel-bin\
-               --recursive
+        extra_args=""
+        if [ "$debug" = true ]; then
+            extra_args="--verbose"
+        fi
+        bazel run @pomgen//:pomgen -- \
+               --package $target \
+               --destdir $repo_root_path/bazel-bin \
+               --recursive $extra_args
 
     elif [ "$action" == "install" ]; then
         _for_each_pom "install_main_artifact" $repo_root_path $target
