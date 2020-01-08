@@ -198,10 +198,14 @@ do
         _for_each_pom "clean_source_tree" $repo_root_path $target
 
     elif [ "$action" == "pomgen" ]; then
+        extra_args=""
+        if [ "$debug" = true ]; then
+            extra_args="--verbose"
+        fi
         bazel run @pomgen//:pomgen -- \
                --package $target \
                --destdir $repo_root_path/bazel-bin \
-               --recursive
+               --recursive $extra_args
 
     elif [ "$action" == "install" ]; then
         _for_each_pom "install_main_artifact" $repo_root_path $target
