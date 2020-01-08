@@ -198,7 +198,7 @@ do
         _for_each_pom "clean_source_tree" $repo_root_path $target
 
     elif [ "$action" == "pomgen" ]; then
-        bazel run :pomgen -- \
+        bazel run @pomgen//:pomgen -- \
                --package $target \
                --destdir $repo_root_path/bazel-bin \
                --recursive
