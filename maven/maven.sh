@@ -153,11 +153,19 @@ if [ -f "${this_script_dir}/${helper_functions_file}" ]; then
     # look relative to this file
     source "${this_script_dir}/${helper_functions_file}"
 else
-    # to support running through "bazel run", look within the runfiles directory
-    if [ -f "maven/${helper_functions_file}" ]; then
-        source "maven/${helper_functions_file}"
+    # to support running through "bazel run", look in a few other places
+    p="external/pomgen/maven/${helper_functions_file}"
+    if [ -f "${p}" ]; then
+        # remote repository
+        source "${p}"
     else
-        echo "ERROR: Unable to locate ${helper_functions_file}" && exit 1
+        p="maven/${helper_functions_file}"
+        if [ -f "${p}" ]; then
+            # local pomgen repository
+            source "${p}"
+        else
+            echo "ERROR: Unable to locate ${helper_functions_file}" && exit 1
+        fi
     fi
 fi
 
