@@ -49,9 +49,9 @@ Usage: maven.sh -a action(s) [-t target -r repository root path]
       export MVN_ARGS="--settings /my/path/to/settings.xml"
 
     - REPOSITORY_URL: for the 2 deploy actions, the environment variable 
-      REPOSITORY_URL must be set to the jar artifact repository to upload to.
+      REPOSITORY_URL must be set to the remote artifact repository to upload to.
       For example, when using Nexus:
-          export REPOSITORY_URL=https://nexus.host/nexus/service/local/repositories/"
+          export REPOSITORY_URL=https://nexus.host/nexus/service/local/repositories"
       Artifacts will either be uploaded to ${REPOSITORY_URL}/snapshots/content
       or ${REPOSITORY_URL}/releases/content, based on whether the artifact
       version ends in -SNAPTSHOT or not.
