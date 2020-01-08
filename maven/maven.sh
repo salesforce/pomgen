@@ -20,7 +20,7 @@ Usage: maven.sh -a action(s) [-t target -r repository root path]
   - t optionally specifies a bazel target pattern to run the action for.
     If not specified, defaults to //...
 
-  - r optionally points to the repository root if not running from the root.
+  - d enables debug logging
 
 
   Mandatory action:
@@ -86,14 +86,22 @@ if [ "$#" -eq 0 ]; then
   print_usage && exit 1
 fi
 
-while getopts "a:t:r" option; do
+debug=false
+
+while getopts "a:t:d" option; do
   case $option in
     a ) actions=$OPTARG
     ;;
     t ) target=$OPTARG
     ;;
+    d ) debug=true
+    ;;
   esac
 done
+
+if [ "$debug" = true ]; then
+    echo "DEBUG: Debug logging enabled"
+fi
 
 if [ -z "$actions" ] ; then
     echo "ERROR: The action(s) to run must be specified using -a, for example:"
@@ -131,6 +139,12 @@ fi
 
 echo "INFO: Running ${actions} with target: ${target}"
 
+if [ "$debug" = true ]; then
+    echo "DEBUG: Running from directory: $(pwd)"
+    echo "DEBUG: Directory content: $(find . )"
+    echo "DEBUG: Environment: $(env)"
+fi
+
 # load helper functions
 helper_functions_file="maven_functions.sh"
 this_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
@@ -143,7 +157,7 @@ else
     if [ -f "maven/${helper_functions_file}" ]; then
         source "maven/${helper_functions_file}"
     else
-        echo "Unable to locate ${helper_functions_file}" && exit 1
+        echo "ERROR: Unable to locate ${helper_functions_file}" && exit 1
     fi
 fi
 
