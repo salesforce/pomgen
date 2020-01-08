@@ -92,8 +92,6 @@ while getopts "a:t:r" option; do
     ;;
     t ) target=$OPTARG
     ;;
-    r ) repo_root_path=$OPTARG
-    ;;    
   esac
 done
 
@@ -131,19 +129,38 @@ if [ -z "$target" ] ; then
     target="/."
 fi
 
-
-if [ -z "$repo_root_path" ] ; then
-    repo_root_path=`pwd`
-    echo "INFO: Defaulting repository root path to current directory: $repo_root_path"
-fi
-
 echo "INFO: Running ${actions} with target: ${target}"
 
-# helper functions
+# load helper functions
+helper_functions_file="maven_functions.sh"
 this_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-source ${this_script_dir}/maven_functions.sh
 
-echo ""
+if [ -f "${this_script_dir}/${helper_functions_file}" ]; then
+    # look relative to this file
+    source "${this_script_dir}/${helper_functions_file}"
+else
+    # to support running through "bazel run", look within the runfiles directory
+    if [ -f "maven/${helper_functions_file}" ]; then
+        source "maven/${helper_functions_file}"
+    else
+        echo "Unable to locate ${helper_functions_file}" && exit 1
+    fi
+fi
+
+# figure out where this script is being run from, accordingly set repo_root_path
+if [ -f "WORKSPACE" ]; then
+    repo_root_path=`pwd`
+else
+    # only necessary when running using "bazel run"
+    if [ -f "$BUILD_WORKING_DIRECTORY/WORKSPACE" ]; then
+        # $BUILD_WORKING_DIRECTORY is set by "bazel run"
+        repo_root_path=$BUILD_WORKING_DIRECTORY
+        cd $repo_root_path
+    else
+        echo "ERROR: please run this script from the monorepo root"
+        exit 1
+    fi
+fi
 
 for action in $(echo $actions | tr "," "\n")
 do
@@ -159,9 +176,9 @@ do
         _for_each_pom "clean_source_tree" $repo_root_path $target
 
     elif [ "$action" == "pomgen" ]; then
-        ${this_script_dir}/../pomgen.py\
-               --package $target\
-               --destdir $repo_root_path/bazel-bin\
+        bazel run :pomgen -- \
+               --package $target \
+               --destdir $repo_root_path/bazel-bin \
                --recursive
 
     elif [ "$action" == "install" ]; then
