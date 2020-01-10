@@ -13,7 +13,7 @@ The libraries in this example are, and reference each other in this order:
 
 ### Before running pomgen
 
-Make sure you can successfully build the example code using Bazel.  This has been tested with Bazel 1.0.
+Make sure you have installed the required [external dependencies](../README.md#external-dependencies).
 
 From the root of the repository:
 
@@ -21,7 +21,7 @@ From the root of the repository:
 bazel build //...
 ```
 
-pomgen requires [Python 2.7](https://github.com/salesforce/pomgen/issues/1). Make sure the pomgen tests pass.  From the root of the repository:
+Make sure the pomgen tests pass.  From the root of the repository:
 
 ```
 bazel test //...
@@ -34,7 +34,7 @@ The [query_maven_metadata](../query_maven_metadata.py) script provides informati
 From the root of the repository:
 
 ```
-bazel run query -- --package example/juicer --library_release_plan_tree
+bazel run @pomgen//:query -- --package example/juicer --library_release_plan_tree
 ```
 
 The output looks similar to this:
@@ -59,7 +59,7 @@ The output shows:
 From the root of the repository:
 
 ```
-bazel run pomgen -- --package example/juicer --destdir /tmp/pomgen --recursive
+bazel run @pomgen//:pomgen -- --package example/juicer --destdir /tmp/pomgen --recursive
 ```
 
 The command above generates 4 poms, one for each Maven Artifact (healthyfoods has 2 Maven Artifacts)
@@ -69,7 +69,7 @@ The command above generates 4 poms, one for each Maven Artifact (healthyfoods ha
 There's also [a script](../update_maven_metadata.py) that can be used to update Maven metadata. For example, from the root of the repository:
 
 ```
-bazel run update -- --package example/healthyfoods --new_version 5.0.0-SNAPSHOT
+bazel run @pomgen//:update -- --package example/healthyfoods --new_version 5.0.0-SNAPSHOT
 
 ```
 
@@ -77,9 +77,7 @@ The command above updates the version of all artifacts under `example/healthyfoo
 
 ## Processing generated pom.xml files
 
-pomgen generates pom.xml files, based on whether a library needs to be released or not. The final step is to run the Maven command line for each generated pom, and to do something with it. There is a [wrapper script](../maven/maven.sh) that does this. This script requires:
-- The Maven executable `mvn` to be in your $PATH
-- The xmllint command line utility
+pomgen generates pom.xml files, based on whether a library needs to be released or not. The final step is to run the Maven command line for each generated pom, and to do something with it. There is a [wrapper script](../maven/maven.sh) that does this. Before running, make sure you have the required [external dependencies](../maven/README.md#external-dependencies).
 
 ### Installing Maven Artifacts into the local Maven Repository
 
@@ -88,15 +86,15 @@ This is useful for running Maven builds locally that consume Bazel produced Arti
 From the root of the repository:
 
 ```
-./maven/maven.sh -a pomgen,install -t example
+bazel run @pomgen//maven -- -a pomgen,install -t example
 ```
 
 The command above will first call pomgen to generate poms and then invoke Maven to install the Artifacts (poms and jars) into the local Maven Repository.
 
-Note that maven.sh wrapper scripts is driven by the presence of pom.xml files. It is possible that pom.xml files are left around from previous invocations, running `clean` removes these poms and some other artifacts that are created as a side effects of running Maven.
+The maven.sh wrapper scripts is driven by the presence of pom.xml files. It is possible that pom.xml files are left around from previous invocations, running `clean` removes these poms and some other artifacts that are created as a side effects of running Maven.
 
 ```
-./maven/maven.sh -a clean -t example
+bazel run @pomgen//maven -- -a clean
 ```
 
 
@@ -105,7 +103,7 @@ Note that maven.sh wrapper scripts is driven by the presence of pom.xml files. I
 Use the `deploy` action instead of the `install` action:
 
 ```
-./maven/maven.sh -a pomgen,deploy -t example
+bazel run @pomgen//maven -- -a pomgen,deploy -t example
 ```
 
 Running deploy requires the environment variable `REPOSITORY_URL` to be set. REPOSITORY_URL has only been tested with Nexus endpoints. The format is
