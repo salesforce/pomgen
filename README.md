@@ -23,7 +23,28 @@ pomgen can track whether the content of a Bazel Package has changed since it was
 
 Please see the [pomgen example](example/README.md) to see how pomgen works.
 
-## Notes
+## External Dependencies
 
 - [Python 2.7](https://github.com/salesforce/pomgen/issues/1) is required and must be in your PATH
 - You need to install [lxml](https://lxml.de): pip install --user lxml
+- Everything has been testing with Bazel 1.0.  Other Bazel versions may work.
+
+## Running pomgen in your own repository
+
+Reference this repository in your `WORKSPACE` file using Bazel's `git_repository` rule:
+
+```
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+
+git_repository(
+    name = "pomgen",
+    remote = "https://github.com/salesforce/pomgen.git",
+    commit = "<git-commit-sha>"
+)
+```
+
+You can then run Bazel commands [as documented](example/README.md), for example:
+
+```
+bazel run @pomgen//maven -- -a pomgen,install
+```
