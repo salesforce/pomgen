@@ -48,3 +48,44 @@ You can then run Bazel commands [as documented](example/README.md), for example:
 ```
 bazel run @pomgen//maven -- -a pomgen,install
 ```
+
+## Configuration
+
+Some pomgen behavior is driven by an optional configuration file `.pomgenrc`. pomgen looks for this file at the root of the repository it is running in.
+
+The file format is:
+
+```
+[general]
+# Path to the pom template, used when generating pom.xml files for jar artifacts
+# Default value: config/pom_template.xml
+pom_template_path=
+
+# Path to the file that lists external dependencies
+# Default value: WORKSPACE
+external_dependencies_path=
+
+[crawler]
+# A list of path prefixes that are not crawled by pomgen.  Any dependency
+# that starts with one of the strings returned by this method is skipped 
+# and not processed (and not included in the generated pom.xml).
+# These dependencies are similar to Maven's "provided" scope: if they are
+# needed at runtime, it is expected that the final runtime assembly
+# contains them.
+# Default value: ""
+# Example value: projects/protos/,
+excluded_dependency_paths=
+
+[artifact]
+# Paths not considered when determining whether an artifact has changed
+# Default value: src/test,
+excluded_relative_paths=
+
+# File names not considered when determining whether an artifact has changed
+# Default value: .gitignore,
+excluded_filenames=
+
+# Ignored file extensions when determining whether an artifact has changed
+# Default value: .md,
+excluded_extensions=
+```
