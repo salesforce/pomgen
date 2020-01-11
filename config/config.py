@@ -8,8 +8,10 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 Responsible for loading a config file of the following format:
 
 [general]
-pom_template_path=tools/pomgen_cfg/pom.template
-external_dependencies_path=external_deps.bzl
+# Path to the pom template, used when generating pom.xml files for jar artifacts
+pom_template_path=
+# Path to the file that lists external dependencies
+external_dependencies_path=
 
 [crawler]
 # A list of path prefixes that are not crawled by pomgen.  Any dependency
