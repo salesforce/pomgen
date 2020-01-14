@@ -27,6 +27,7 @@ filegroup(
                  "config/*.py",
                  "common/*.py",
                  "crawl/*.py"]),
+    visibility = ["//misc:__subpackages__",],
 )
 
 
