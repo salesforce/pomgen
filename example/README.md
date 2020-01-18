@@ -2,7 +2,7 @@
 
 ## Looking around
 
-This example has 3 libraries. A library is a collection of one or more Bazel Packages that produce Maven Artifacts. A library is defined by the presence of a [LIBRARY.root](healthyfoods/MVN-INF/LIBRARY.root) marker file.
+This example has 3 libraries. A library is a collection of one or more Bazel Packages that produce Maven Artifacts. A library is defined by the presence of a [LIBRARY.root](healthyfoods/MVN-INF/LIBRARY.root) marker file. In the Maven World, a Library would be a Maven project with one or more modules.
 
 A Bazel Package that produces a Maven Artifact must have a [BUILD.pom](healthyfoods/fruit-api/MVN-INF/BUILD.pom) file that defines Maven specific metadata.
 
@@ -115,3 +115,37 @@ https://hostname/nexus/service/local/repositories
 The maven script appends `$repository/content` to the value of REPOSITORY_URL.
 
 `$repository` will be replaced with `snapshots` if the version of the artifact being processed ends with -SNAPSHOT, otherwise `$repository` is replaced with `releases`.
+
+## Advanced use-cases
+
+### Templates for pom-only artifacts
+
+pomgen supports custom pom templates for the purpose of generating pom-only artifacts (`<packaging>pom</packaging>`). This is typically needed when migrating a Maven project to Bazel that has a parent pom, meant to be inherited from: the parent pom still needs to be generated because existing Maven projects may depend on it. 
+
+See this [example pom template](healthyfoods/parentpom/MVN-INF/pom.template) - note that the corresponding [BUILD.pom](healthyfoods/parentpom/MVN-INF/BUILD.pom) file must specify that the `pom_generation_mode` is `template`. The pom file is generated in the same way as described above, when pomgen runs for the library:
+
+```
+bazel run @pomgen//:pomgen -- --package example/healthyfoods --destdir /tmp/pomgen
+```
+
+#### Template Features
+
+##### Referencing values from the BUILD.pom file
+
+artifact_id, group_id and version from the BUILD.pom file can be referenced in the pom template using the syntax 
+
+```
+#{group_id}
+#{articat_id}
+#{version}
+```
+
+See the [example pom template](healthyfoods/parentpom/MVN-INF/pom.template).
+
+##### Referencing versions
+
+The version of known artifacts, both external (maven_jar) and internal (BUILD.pom) can be referenced in the pom template using the following syntax:
+```
+#{group_id:artifact_id:version}
+```
+See the [example pom template](healthyfoods/parentpom/MVN-INF/pom.template).
