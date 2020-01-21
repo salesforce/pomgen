@@ -292,6 +292,12 @@ class DependencyTest(unittest.TestCase):
         self.assertTrue(dep2 in s)
         self.assertTrue(dep3 in s)
 
+    def test_equals_ignores_version(self):
+        dep1 = dependency.new_dep_from_maven_art_str("com.google.guava:guava:20.0", "name")
+        dep2 = dependency.new_dep_from_maven_art_str("com.google.guava:guava:100", "name")
+
+        self.assertEqual(dep1, dep2)
+
     def test_copy(self):
         import copy
         dep = dependency.ThirdPartyDependency("name", "group", "artifact", "version", "classifier", "scope") 
