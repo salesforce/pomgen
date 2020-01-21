@@ -54,6 +54,10 @@ def _parse_arguments(args):
                         required=False,
                         help="Prints release information about the artifacts in the monorepo - output is json")
 
+    # this is experimental and not generalized yet
+    parser.add_argument("--filter", type=str, required=False,
+        help="Generic query filter, currently only supported for artifact queries")
+
     return parser.parse_args(args)
 
 def _target_for_monorepo_dep(repo_root, dep):
@@ -101,6 +105,12 @@ if __name__ == "__main__":
         maven_artifacts = [buildpom.parse_maven_artifact_def(repo_root, p) for p in packages]
         all_artifacts = []
         for maven_artifact in maven_artifacts:
+            if args.filter is not None:
+                attr_filter_name, attr_filter_value = args.filter.split("=")
+                if hasattr(maven_artifact, attr_filter_name):
+                    value = getattr(maven_artifact, attr_filter_name)
+                    if attr_filter_value != value:
+                        continue
             attrs = OrderedDict()
             attrs["artifact_id"] = maven_artifact.artifact_id
             attrs["group_id"] = maven_artifact.group_id

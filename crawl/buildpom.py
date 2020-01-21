@@ -34,8 +34,8 @@ class MavenArtifactDef(object):
 
 
     pom_generation_mode: the pom generation strategy, supported modes are:
-        - dynamic: the pom is generted from scratch
-        - template: the pom is generated based on a template file
+        - dynamic: the pom is generted from scratch, using a base template
+        - template: the pom is generated based on a custom template file
         
         The default value is "dynamic".
 
