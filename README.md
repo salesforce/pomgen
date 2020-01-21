@@ -61,8 +61,9 @@ The file format is:
 # Default value: config/pom_template.xml
 pom_template_path=
 
-# Path to the file that lists external dependencies
+# Path to the file that lists external dependencies - multiple files are supported, comma-separated
 # Default value: WORKSPACE
+# Example value: path/to/file1,path/to/file2
 external_dependencies_path=
 
 [crawler]
@@ -89,3 +90,5 @@ excluded_filenames=
 # Default value: .md,
 excluded_extensions=
 ```
+
+Running pomgen with `--verbose` causes the current config to be echoed.

@@ -10,7 +10,8 @@ Responsible for loading a config file of the following format:
 [general]
 # Path to the pom template, used when generating pom.xml files for jar artifacts
 pom_template_path=
-# Path to the file that lists external dependencies
+# Path to the file(s) that lists external dependencies - multiple files are 
+# supported, comma-separated.
 external_dependencies_path=
 
 [crawler]
@@ -66,12 +67,12 @@ def load(repo_root, verbose=False):
         with open(cfg_path, 'r') as f:
             parser.readfp(f)
 
-    pom_template_p = gen("pom_template_path", "config/pom_template.xml")
-    external_deps_p=gen("external_dependencies_path", "WORKSPACE")
+    pom_template_p = gen("pom_template_path", ["config/pom_template.xml"])
+    external_deps_p=gen("external_dependencies_path", ["WORKSPACE"])
 
     cfg = Config(
-        pom_template_path_and_content=_read_file(repo_root, pom_template_p),
-        external_deps_path_and_content=_read_file(repo_root, external_deps_p),
+        pom_template_path_and_content=_read_files(repo_root, pom_template_p)[0],
+        external_deps_path_and_content=_read_files(repo_root, external_deps_p),
         excluded_dependency_paths=crawl("excluded_dependency_paths", ()),
         excluded_src_relpaths=artifact("excluded_relative_paths", ("src/test",)),
         excluded_src_file_names=artifact("excluded_filenames", (".gitignore",)),
@@ -93,7 +94,7 @@ def _get_value_with_default(parser, section, option, dflt):
 class Config:
     def __init__(self, 
                  pom_template_path_and_content=("",""),
-                 external_deps_path_and_content=("",""),
+                 external_deps_path_and_content=[],
                  excluded_dependency_paths=(),
                  excluded_src_relpaths=(),
                  excluded_src_file_names=(),
@@ -116,7 +117,11 @@ class Config:
 
     @property
     def external_dependencies(self):
-        return self.external_deps_path_and_content[1]
+        # we'll just append the content of each file here
+        all_content = ""
+        for path,content in self.external_deps_path_and_content:
+            all_content += content + "\n"
+        return all_content
 
     @property
     def all_src_exclusions(self):
@@ -140,7 +145,7 @@ excluded_relative_paths=%s
 excluded_filenames=%s
 excluded_extensions=%s
 """ % (self.pom_template_path_and_content[0],
-       self.external_deps_path_and_content[0],
+       ",".join([t[0] for t in self.external_deps_path_and_content]),
        self.excluded_dependency_paths,
        self.excluded_src_relpaths,
        self.excluded_src_file_names,
@@ -157,12 +162,16 @@ def _to_tuple(thing):
         return tuple(filtered_tokens)
     raise Exception("Cannot convert to tuple")
 
-def _read_file(repo_root, path):
+def _read_files(repo_root, paths):
     """
-    Returns a tuple of (<path>, <file content>).
+    Returns a list of tuples: (<path>, <file content>).
     """
-    with open(os.path.join(repo_root, path), "r") as f:
-        return (path, f.read().strip())
+    paths = _to_tuple(paths)
+    path_and_content = []
+    for path in paths:
+        with open(os.path.join(repo_root, path), "r") as f:
+            path_and_content.append((path, f.read().strip()))
+    return path_and_content
 
 def _add_pathsep(paths):
     return tuple([p if p.endswith(os.sep) else p+os.sep for p in paths])

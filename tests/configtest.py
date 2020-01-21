@@ -6,9 +6,69 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 """
 
 from config import config
+import os
+import tempfile
 import unittest
 
 class ConfigTest(unittest.TestCase):
+
+    def test_pom_template(self):
+        repo_root = tempfile.mkdtemp("root")
+        pom_template_path = self._write_file(repo_root, "pom_template", "pom")
+        self._write_pomgenrc(repo_root, pom_template_path, ext_deps_path="")
+
+        cfg = config.load(repo_root)
+
+        self.assertEqual("pom", cfg.pom_template)
+
+    def test_external_dependencies__single_file(self):
+        repo_root = tempfile.mkdtemp("root")
+        pom_template_path = self._write_file(repo_root, "pom_template", "foo")
+        ext_deps_path = self._write_file(repo_root, "ext_deps", "abc")
+        self._write_pomgenrc(repo_root, pom_template_path, ext_deps_path)
+
+        cfg = config.load(repo_root)
+
+        self.assertEqual("abc\n", cfg.external_dependencies)
+
+    def test_external_dependencies__multiple_files(self):
+        repo_root = tempfile.mkdtemp("root")
+        pom_template_path = self._write_file(repo_root, "pom_template", "foo")
+        ext_deps_p1 = self._write_file(repo_root, "ext_deps1", "abc")
+        ext_deps_p2 = self._write_file(repo_root, "ext_deps2", "def")
+        ext_deps_p3 = self._write_file(repo_root, "ext_deps3", "ghi")
+        self._write_pomgenrc(repo_root, pom_template_path, 
+                             "%s,%s,%s"%(ext_deps_p1, ext_deps_p2, ext_deps_p3))
+
+        cfg = config.load(repo_root)
+
+        self.assertEqual("abc\ndef\nghi\n", cfg.external_dependencies)
+
+    def test_str(self):
+        repo_root = tempfile.mkdtemp("root")
+        pom_template_path = self._write_file(repo_root, "pom_template", "foo")
+        ext_deps_p1 = self._write_file(repo_root, "ext_deps1", "abc")
+        ext_deps_p2 = self._write_file(repo_root, "ext_deps2", "def")
+        self._write_pomgenrc(repo_root, pom_template_path, "%s,%s" %
+                             (ext_deps_p1, ext_deps_p2))
+
+        cfg = config.load(repo_root)
+
+        self.assertIn("pom_template_path=%s" % pom_template_path, str(cfg))
+        self.assertIn("external_dependencies_path=%s,%s" % 
+                      (ext_deps_p1, ext_deps_p2), str(cfg))
+
+    def _write_pomgenrc(self, repo_root, pom_template_path, ext_deps_path):
+        self._write_file(repo_root, ".pomgenrc", """[general]
+external_dependencies_path=%s
+pom_template_path=%s
+""" % (ext_deps_path, pom_template_path))
+
+    def _write_file(self, repo_root, relative_path, content):
+        path = os.path.join(repo_root, relative_path)
+        with open(path, "w") as f:
+            f.write(content)
+        return path
 
     def test_pathsep__excluded_dependency_paths(self):
         cfg = config.Config(excluded_dependency_paths="abc")
