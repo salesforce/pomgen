@@ -1,8 +1,8 @@
 python_version = 'PY2'
 
 py_binary(
-    name = "alldeps",
-    srcs = ["//:pomgen_files", "all_third_party_deps_pom.py"],
-    main = "all_third_party_deps_pom.py",
+    name = "extdeps",
+    srcs = ["//:pomgen_files", "extdeps_pomgen.py"],
+    main = "extdeps_pomgen.py",
     python_version = python_version,
 )
