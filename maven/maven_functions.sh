@@ -90,10 +90,8 @@ _for_each_pom() {
                 # image for it
 
                 # first, look for the jar matching the package name under
-                # bazel-genfiles, because that's where our springboot rule
-                # puts the jars it produces
+                # bazel-bin
                 jar_artifact_path="$build_dir_package_path/${package_name}.jar"
-                jar_artifact_path=$(echo "${jar_artifact_path}" | sed 's+bazel-bin/+bazel-genfiles/+g')
                 if [ ! -f "${jar_artifact_path}" ]; then
                     # second, we also support jars produced by Bazel's
                     # java_binary rule, so look whether that one
