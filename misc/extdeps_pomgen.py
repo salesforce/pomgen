@@ -29,9 +29,16 @@ IGNORED_DEPENDENCY_PREFIXES = ("@bazel_tools",
 def _parse_arguments(args):
     parser = argparse.ArgumentParser(description="Third Party Pom Generator. This script generates a single pom file to stdout, containing 3rdparty dependencies. Dependencies are de-duped and sorted alphabetically by their group and artifact ids. If given no input, this script processes all declared 3rd party dependencies.")
     parser.add_argument("--repo_root", type=str, required=False,
-        help="the root of the repository")
+        help="optional - the root of the repository")
     parser.add_argument("--stdin", required=False, action='store_true',
-        help="reads dependencies from stdin - this is useful to chain bazel query command(s), as input to this script. In this mode, this script will look for dependencies of the form \"@<name>//jar\", one on each line. Some special dependencies (for example @remote), are ignored.")
+        help="optional - reads dependencies from stdin - this is useful to chain bazel query command(s), as input to this script. In this mode, this script will look for dependencies of the form \"@<name>//jar\", one on each line. Some special dependencies (for example @remote), are ignored.")
+    parser.add_argument("--group_id", type=str, required=False,
+        help="optional - the groupId to use in the generated pom")
+    parser.add_argument("--artifact_id", type=str, required=False,
+        help="optional - the artifactId to use in the generated pom")
+    parser.add_argument("--version", type=str, required=False,
+        help="optional - the version to use in the generated pom")
+
     return parser.parse_args(args)
 
 class ThirdPartyDepsPomGen(pom.DynamicPomGen):
@@ -56,10 +63,14 @@ if __name__ == "__main__":
                                     cfg.external_dependencies, 
                                     cfg.excluded_dependency_paths,
                                     cfg.all_src_exclusions)
+
+    group_id = "all_ext_deps_group" if args.group_id is None else args.group_id
+    artifact_id = "all_ext_deps_art" if args.artifact_id is None else args.artifact_id
+    version = "0.0.1-SNAPSHOT" if args.version is None else args.version
     
-    artifact_def = buildpom.MavenArtifactDef(group_id="all_ext_deps_group",
-                                             artifact_id="all_ext_deps_art",
-                                             version="0.0.1-SNAPSHOT")
+    artifact_def = buildpom.MavenArtifactDef(group_id=group_id,
+                                             artifact_id=artifact_id,
+                                             version=version)
 
     if args.stdin:
         dep_labels = []
