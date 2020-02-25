@@ -1,4 +1,4 @@
-python_version = 'PY2'
+python_version = 'PY3'
 
 py_binary(
     name = "pomgen",

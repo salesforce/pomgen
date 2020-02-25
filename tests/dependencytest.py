@@ -8,6 +8,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 from crawl import buildpom
 from crawl import dependency
 import unittest
+import sys
 
 class DependencyTest(unittest.TestCase):
     
@@ -87,7 +88,10 @@ class DependencyTest(unittest.TestCase):
         artifact = "group"
         with self.assertRaises(Exception) as ctx:
             dependency.new_dep_from_maven_art_str(artifact, "bazel-name")
-        self.assertIn("need more than 1 value", str(ctx.exception))
+        if sys.version_info[0] < 3:
+            self.assertIn("need more than 1 value to unpack", str(ctx.exception))
+        else:
+            self.assertIn("(expected 5, got 1)", str(ctx.exception))
 
     def test_external_dependency__unsupported_version_syntax(self):
         """
