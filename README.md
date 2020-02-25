@@ -25,7 +25,7 @@ Please see the [pomgen example](example/README.md) to see how pomgen works.
 
 ## External Dependencies
 
-- [Python 2.7](https://github.com/salesforce/pomgen/issues/1) is required and must be in your PATH
+- Python 3 is required and must be in your PATH
 - You need to install [lxml](https://lxml.de): pip install --user lxml
 - Everything has been testing with Bazel 1.0.  Other Bazel versions may work.
 

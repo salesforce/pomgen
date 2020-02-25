@@ -34,8 +34,12 @@ excluded_filenames=.gitignore,
 excluded_extensions=.md,
 """
 
-import ConfigParser
-import exclusions
+try:
+    import ConfigParser as configparser
+except ImportError:
+    import configparser
+
+from . import exclusions
 import os
 from common import logger
 
@@ -48,7 +52,7 @@ def load(repo_root, verbose=False):
 
     Returns a Config instance.
     """
-    parser = ConfigParser.RawConfigParser()
+    parser = configparser.RawConfigParser()
 
     def gen(option, dflt):
         """Read from [general] section """
@@ -86,9 +90,9 @@ def load(repo_root, verbose=False):
 def _get_value_with_default(parser, section, option, dflt):
     try:
         return parser.get(section, option)
-    except ConfigParser.NoOptionError:
+    except configparser.NoOptionError:
         return dflt
-    except ConfigParser.NoSectionError:
+    except configparser.NoSectionError:
         return dflt
 
 class Config:
