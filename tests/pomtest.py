@@ -5,6 +5,7 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
+from common import pomgenmode
 from config import exclusions
 from crawl import bazel
 from crawl import buildpom
@@ -204,7 +205,7 @@ class PomTest(unittest.TestCase):
         artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.2.3")
         srpc_artifact_def = buildpom.maven_artifact("com.grail.srpc",
                                                     "srpc-api", "5.6.7")
-        srpc_artifact_def = buildpom._augment_art_def_values(srpc_artifact_def, None, "pack1", None, None)
+        srpc_artifact_def = buildpom._augment_art_def_values(srpc_artifact_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
         pomgen = pom.TemplatePomGen(ws, artifact_def, template_content = """
             this artifact version #{version}
             logback #{ch.qos.logback:logback-classic:version}

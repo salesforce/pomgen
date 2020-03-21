@@ -62,7 +62,7 @@ From the root of the repository:
 bazel run @pomgen//:pomgen -- --package example/juicer --destdir /tmp/pomgen --recursive
 ```
 
-The command above generates 4 poms, one for each Maven Artifact (healthyfoods has 2 Maven Artifacts)
+The command above generates 5 poms, one for each Maven Artifact (healthyfoods has 3 Maven Artifacts)
 
 ### Updating Maven Metadata
 
