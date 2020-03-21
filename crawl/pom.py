@@ -7,6 +7,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 This module contains pom.xml generation logic.
 """
 
+from common import pomgenmode
 from common import mdfiles
 import copy
 from crawl import bazel
@@ -34,9 +35,9 @@ class PomGenMode:
 
 def get_pom_generator(workspace, pom_template, maven_artifact_def):
     mode = maven_artifact_def.pom_generation_mode
-    if mode == "dynamic":
+    if mode is pomgenmode.DYNAMIC:
         return DynamicPomGen(workspace, maven_artifact_def, pom_template)
-    elif mode == "template":
+    elif mode is pomgenmode.TEMPLATE:
         content, _ = mdfiles.read_file(workspace.repo_root_path,
                                        maven_artifact_def.bazel_package,
                                        maven_artifact_def.pom_template_file)

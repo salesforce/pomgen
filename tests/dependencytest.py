@@ -5,6 +5,7 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
+from common import pomgenmode
 from crawl import buildpom
 from crawl import dependency
 import unittest
@@ -115,7 +116,7 @@ class DependencyTest(unittest.TestCase):
         version = "1.1.0"
         package = "pack1"
         art_def = buildpom.maven_artifact(group_id, artifact_id, version)
-        art_def = buildpom._augment_art_def_values(art_def, None, package, None, None)
+        art_def = buildpom._augment_art_def_values(art_def, None, package, None, None, pomgenmode.DYNAMIC)
 
         dep = dependency.new_dep_from_maven_artifact_def(art_def)
 
@@ -131,7 +132,7 @@ class DependencyTest(unittest.TestCase):
         version = "1.1.0"
         package = "pack1"
         art_def = buildpom.maven_artifact(group_id, artifact_id, version)
-        art_def = buildpom._augment_art_def_values(art_def, None, package, None, None)
+        art_def = buildpom._augment_art_def_values(art_def, None, package, None, None, pomgenmode.DYNAMIC)
 
         dep = dependency.new_dep_from_maven_artifact_def(art_def)
 
@@ -201,10 +202,10 @@ class DependencyTest(unittest.TestCase):
         dep1 = dependency.new_dep_from_maven_art_str("com.google.guava:guava:20.0", "name")
         dep2 = dependency.new_dep_from_maven_art_str("com.google.guava:zoouava:20.0", "name")
         art_def = buildpom.maven_artifact("com.zoogle.guava", "art1", "1.0")
-        art_def = buildpom._augment_art_def_values(art_def, None, "pack1", None, None)
+        art_def = buildpom._augment_art_def_values(art_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
         dep3 = dependency.new_dep_from_maven_artifact_def(art_def)
         art_def = buildpom.maven_artifact("com.google.guava", "art1", "1.0")
-        art_def = buildpom._augment_art_def_values(art_def, None, "pack1", None, None)
+        art_def = buildpom._augment_art_def_values(art_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
         dep4 = dependency.new_dep_from_maven_artifact_def(art_def)
         
         l = [dep3, dep2, dep1, dep4]

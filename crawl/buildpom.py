@@ -11,6 +11,7 @@ This module is responsible for parsing BUILD.pom and BUILD.pom.released files.
 from collections import namedtuple
 from common import code
 from common import mdfiles
+from common import pomgenmode
 from common import version
 import os
 import re
@@ -33,11 +34,8 @@ class MavenArtifactDef(object):
     version: the maven artifact version of the bazel package.
 
 
-    pom_generation_mode: the pom generation strategy, supported modes are:
-        - dynamic: the pom is generted from scratch, using a base template
-        - template: the pom is generated based on a custom template file
-        
-        The default value is "dynamic".
+    pom_generation_mode: the pom generation strategy, the type is
+        common.pomgenmode.PomGenMode
 
 
     pom_template_file: if the pom_generation_mode is "template" (see above),
@@ -211,18 +209,15 @@ class MavenArtifactDef(object):
 # only used internally for parsing
 ReleasedMavenArtifactDef = namedtuple("ReleasedMavenArtifactDef", "version artifact_hash")
 
-def maven_artifact(group_id,
-                   artifact_id,
-                   version,
+def maven_artifact(group_id=None,
+                   artifact_id=None,
+                   version=None,
                    pom_generation_mode=None,
                    pom_template_file=None,
                    include_deps=True,
                    deps=[]):
     """
-    This function is only intended to be called from BUILD.pom files.
-    
-    This method declaration enforces which MavenArtifactDef attribute is
-    required, and which one is optional.
+    This function is only intended to be called from BUILD.pom files.    
     """
     return MavenArtifactDef(group_id,
                             artifact_id,
@@ -251,6 +246,7 @@ def parse_maven_artifact_def(root_path, package):
     maven_artifact_func = code.get_function_block(content, "maven_artifact")
     try:
         art_def = eval(maven_artifact_func)
+        pom_generation_mode = pomgenmode.from_string(art_def.pom_generation_mode)
     except:
         print("[ERROR] Cannot parse [%s]: %s" % (path, sys.exc_info()))
         raise
@@ -262,7 +258,8 @@ def parse_maven_artifact_def(root_path, package):
 
     return _augment_art_def_values(art_def, rel_art_def, package,
                                    released_pom_content,
-                                   version_increment_strategy)
+                                   version_increment_strategy,
+                                   pom_generation_mode)
 
 def _read_released_pom(root_path, package):
     content, _ = mdfiles.read_file(root_path, package, mdfiles.POM_XML_RELEASED_FILE_NAME)
@@ -285,7 +282,8 @@ def _parse_released_maven_artifact_def(root_path, package):
         raise
 
 def _augment_art_def_values(user_art_def, user_rel_art_def, bazel_package,
-                            released_pom_content, version_increment_strategy):
+                            released_pom_content, version_increment_strategy,
+                            pom_generation_mode):
     """
     Defaults values that have not been provided in the BUILD.pom file.
 
@@ -301,12 +299,15 @@ def _augment_art_def_values(user_art_def, user_rel_art_def, bazel_package,
 
         version_increment_strategy: the artifacts version increment strategy,
             as specified in the BUILD.pom file
+
+        pom_generation_mode: the strongly typed pom_generation_mode 
+            (common.pomgenmode.PomGenMode)
     """
     return MavenArtifactDef(
         user_art_def.group_id,
         user_art_def.artifact_id,
         user_art_def.version,
-        "dynamic" if user_art_def.pom_generation_mode is None else user_art_def.pom_generation_mode,
+        pom_generation_mode,
         user_art_def.pom_template_file,
         user_art_def.deps,
         True if user_art_def.include_deps is None else user_art_def.include_deps,
