@@ -166,7 +166,7 @@ class Crawler:
         for pomgen in self.pomgens:
             art_def = pomgen.artifact_def
             if not art_def.requires_release and art_def.released_pom_content is not None:
-                current_pom = pomparser.pretty_print(pomgen.gen(pom.PomGenMode.GOLDFILE))
+                current_pom = pomparser.pretty_print(pomgen.gen(pom.PomContentType.GOLDFILE))
                 previous_pom = pomparser.pretty_print(art_def.released_pom_content)
                 pom_changed = current_pom != previous_pom
                 if pom_changed:

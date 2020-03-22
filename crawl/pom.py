@@ -16,15 +16,17 @@ from crawl import workspace
 import os
 import re
 
-class PomGenMode:
+class PomContentType:
     """
-    Available pom generation modes:
+    Available pom content types:
       
-      RELEASE - this is the default - it generates a valid pom.xml based on 
-                BUILD file or pom.template content.
-      GOLDFILE - generates a pom meant for comparing against another
-                 previously generated pom (the "goldfile" pom). This mode
-                 differs from the default RELEASE mode in the following ways:
+      RELEASE - this is the default, standard pom.xml, based on  BUILD file or 
+          pom.template content.
+
+      GOLDFILE - this pom content is meant for comparing against another
+                 previously generated pom (the "goldfile" pom). This content
+                 type differs from the default RELEASE type in the following 
+                 ways:
                    - dependencies are explictly ordered (default is BUILD order)
                    - versions of monorepo-based dependencies are removed
     """
@@ -104,30 +106,30 @@ class AbstractPomGen(object):
         """
         pass
 
-    def gen(self, genmode=PomGenMode.RELEASE):
+    def gen(self, pomcontenttype=PomContentType.RELEASE):
         """
         Returns the generated pom.xml as a string.  This method may be called
         multiple times, and must therefore be idempotent.
         """
         raise Exception("must be implemented by subclass")
 
-    def _artifact_def_version(self, genmode):
+    def _artifact_def_version(self, pomcontenttype):
         """
         Returns the associated artifact's version, based on the specified 
-        PomGenMode.
+        PomContentType.
 
         This is a utility method for subclasses.
         """
-        return PomGenMode.MASKED_VERSION if genmode is PomGenMode.GOLDFILE else self.artifact_def.version
+        return PomContentType.MASKED_VERSION if pomcontenttype is PomContentType.GOLDFILE else self.artifact_def.version
 
-    def _dep_version(self, genmode, dep):
+    def _dep_version(self, pomcontenttype, dep):
         """
         Returns the given dependency's version, based on the specified
-        PomGenMode.
+        PomContentType.
 
         This is a utility method for subclasses.
         """
-        return PomGenMode.MASKED_VERSION if genmode is PomGenMode.GOLDFILE and dep.bazel_package is not None else dep.version
+        return PomContentType.MASKED_VERSION if pomcontenttype is PomContentType.GOLDFILE and dep.bazel_package is not None else dep.version
 
     def _xml(self, content, element, indent, value=None, close_element=False):
         """
@@ -143,7 +145,7 @@ class AbstractPomGen(object):
         else:
             return "%s%s<%s>%s</%s>%s" % (content, ' '*indent, element, value, element, os.linesep), indent
 
-    def _gen_dependency_element(self, genmode, dep, content, indent, close_element):
+    def _gen_dependency_element(self, pomcontenttype, dep, content, indent, close_element):
         """
         Generates a pomx.xml <dependency> element.
 
@@ -155,7 +157,7 @@ class AbstractPomGen(object):
         content, indent = self._xml(content, "dependency", indent)
         content, indent = self._xml(content, "groupId", indent, dep.group_id)
         content, indent = self._xml(content, "artifactId", indent, dep.artifact_id)
-        content, indent = self._xml(content, "version", indent, self._dep_version(genmode, dep))
+        content, indent = self._xml(content, "version", indent, self._dep_version(pomcontenttype, dep))
         if dep.classifier is not None:
             content, indent = self._xml(content, "classifier", indent, dep.classifier)
         if dep.scope is not None:
@@ -201,10 +203,10 @@ class TemplatePomGen(AbstractPomGen):
         self.crawled_bazel_packages = crawled_bazel_packages
         self.crawled_external_dependencies = crawled_external_dependencies
 
-    def gen(self, genmode=PomGenMode.RELEASE):
+    def gen(self, pomcontenttype=PomContentType.RELEASE):
         pom_content, parsed_dependencies = self._process_pom_template_content(self.template_content)
 
-        properties = self._get_properties(genmode, parsed_dependencies)
+        properties = self._get_properties(pomcontenttype, parsed_dependencies)
 
         for k in TemplatePomGen.INITAL_PROPERTY_SUBSTITUTIONS:
             if k in properties:
@@ -241,12 +243,12 @@ class TemplatePomGen(AbstractPomGen):
             pom_template_content = pom_template_content[:start_section_index] + pom_template_content[end_section_index + len(TemplatePomGen.DEPS_CONFIG_SECTION_END)+1:]
             return (pom_template_content, parsed_dependencies)
 
-    def _get_properties(self, genmode, pom_template_parsed_deps):
-        properties = self._get_version_properties(genmode)
-        properties.update(self._get_crawled_dependencies_properties(genmode, pom_template_parsed_deps))            
+    def _get_properties(self, pomcontenttype, pom_template_parsed_deps):
+        properties = self._get_version_properties(pomcontenttype)
+        properties.update(self._get_crawled_dependencies_properties(pomcontenttype, pom_template_parsed_deps))            
         return properties
 
-    def _get_version_properties(self, genmode):
+    def _get_version_properties(self, pomcontenttype):
         # the version of all dependencies can be referenced in a pom template
         # using the syntax: #{<groupId>:<artifactId>:[<classifier>:]version}.
         #
@@ -266,7 +268,7 @@ class TemplatePomGen(AbstractPomGen):
             if key in properties:
                 msg = "Found multiple artifacts with the same groupId:artifactId: \"%s\". This means that there are either multiple BUILD.pom files defining the same artifact, or that a BUILD.pom defined artifact has the same groupId and artifactId as a referenced Nexus jar" % dep.maven_coordinates_name
                 raise Exception(msg)
-            properties[key] = self._dep_version(genmode, dep)
+            properties[key] = self._dep_version(pomcontenttype, dep)
             if dep.bazel_label_name is not None:
                 key = "%s.version" % dep.bazel_label_name
                 assert key not in properties
@@ -275,11 +277,11 @@ class TemplatePomGen(AbstractPomGen):
         # the maven coordinates of this artifact can be referenced directly:
         properties["artifact_id"] = self.artifact_def.artifact_id
         properties["group_id"] = self.artifact_def.group_id
-        properties["version"] = self._artifact_def_version(genmode)
+        properties["version"] = self._artifact_def_version(pomcontenttype)
 
         return properties
 
-    def _get_crawled_dependencies_properties(self, genmode, pom_template_parsed_deps):
+    def _get_crawled_dependencies_properties(self, pomcontenttype, pom_template_parsed_deps):
         # this is somewhat lame: an educated guess on where the properties
         # being build here will be referenced (within 
         # project/depedencyManagement/dependencies)
@@ -289,12 +291,12 @@ class TemplatePomGen(AbstractPomGen):
 
         content = self._build_deps_property_content(self.crawled_bazel_packages,
                                                     pom_template_parsed_deps, 
-                                                    genmode, indent)
+                                                    pomcontenttype, indent)
         properties[TemplatePomGen.BAZEL_PGK_DEPS_PROP_NAME] = content
 
         content = self._build_deps_property_content(self.crawled_external_dependencies,
                                                     pom_template_parsed_deps, 
-                                                    genmode, indent)
+                                                    pomcontenttype, indent)
         properties[TemplatePomGen.EXT_DEPS_PROP_NAME] = content
 
         pom_template_only_deps = pom_template_parsed_deps.get_parsed_deps_set_missing_from(self.crawled_bazel_packages, self.crawled_external_dependencies)
@@ -317,7 +319,7 @@ class TemplatePomGen(AbstractPomGen):
         return content
 
     def _build_deps_property_content(self, deps, pom_template_parsed_deps, 
-                                     genmode, indent):
+                                     pomcontenttype, indent):
 
         content = ""
         deps = _sort(deps)
@@ -325,7 +327,7 @@ class TemplatePomGen(AbstractPomGen):
             dep = self._copy_attributes_from_parsed_dep(dep, pom_template_parsed_deps)
             pom_template_exclusions = pom_template_parsed_deps.get_parsed_exclusions_for(dep)
             dep_has_exclusions = len(pom_template_exclusions) > 0
-            content, indent = self._gen_dependency_element(genmode, dep, content, indent, close_element=not dep_has_exclusions)
+            content, indent = self._gen_dependency_element(pomcontenttype, dep, content, indent, close_element=not dep_has_exclusions)
             if dep_has_exclusions:
                 exclusions = list(pom_template_exclusions)
                 exclusions.sort()
@@ -380,27 +382,27 @@ class DynamicPomGen(AbstractPomGen):
 
         return self.dependencies
 
-    def gen(self, genmode=PomGenMode.RELEASE):
+    def gen(self, pomcontenttype=PomContentType.RELEASE):
         content = self.pom_template.replace("${group_id}", self.artifact_def.group_id)
         content = content.replace("${artifact_id}", self.artifact_def.artifact_id)
-        version = self._artifact_def_version(genmode)
+        version = self._artifact_def_version(pomcontenttype)
         content = content.replace("${version}", version)
-        content = content.replace("${dependencies}", self._gen_dependencies(genmode))
+        content = content.replace("${dependencies}", self._gen_dependencies(pomcontenttype))
         return content
 
-    def _gen_dependencies(self, genmode):
+    def _gen_dependencies(self, pomcontenttype):
         if len(self.dependencies) == 0:
             return ""
 
         deps = self.dependencies
-        if genmode == PomGenMode.GOLDFILE:
+        if pomcontenttype == PomContentType.GOLDFILE:
             deps = self.dependencies[:]
             deps.sort()
 
         content = ""
         content, indent = self._xml(content, "dependencies", indent=_INDENT)
         for dep in deps:
-            content, indent = self._gen_dependency_element(genmode, dep, content, indent, close_element=False)
+            content, indent = self._gen_dependency_element(pomcontenttype, dep, content, indent, close_element=False)
             if dep.bazel_package is None:
                 # for 3rd party deps that do not live in the monorepo, add
                 # exclusions to mimic how dependencies are handled in BUILD
