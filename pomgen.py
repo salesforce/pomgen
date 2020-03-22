@@ -78,7 +78,7 @@ if __name__ == "__main__":
             if not os.path.exists(pom_dest_dir):
                 os.makedirs(pom_dest_dir)
 
-            genmode = pom.PomGenMode.GOLDFILE if args.pom_goldfile else pom.PomGenMode.RELEASE
+            genmode = pom.PomContentType.GOLDFILE if args.pom_goldfile else pom.PomContentType.RELEASE
             pom_content = pomgen.gen(genmode)
 
             # the goldfile pom is actually a pomgen metadata file, so we 

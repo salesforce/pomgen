@@ -111,7 +111,7 @@ class PomTest(unittest.TestCase):
             bazel.query_java_library_deps_attributes = lambda r, p: ("@com_google_guava_guava//jar", "@aopalliance_aopalliance//jar", )
             pomgen.process_dependencies()        
 
-            generated_pom = pomgen.gen(pom.PomGenMode.GOLDFILE)
+            generated_pom = pomgen.gen(pom.PomContentType.GOLDFILE)
 
             self.assertIn("""<groupId>g1</groupId>
     <artifactId>a2</artifactId>
@@ -212,7 +212,7 @@ class PomTest(unittest.TestCase):
             srpc #{com.grail.srpc:srpc-api:version}""")
         pomgen.register_dependencies(set([dependency.MonorepoDependency(srpc_artifact_def)]), set())
 
-        generated_pom = pomgen.gen(genmode=pom.PomGenMode.GOLDFILE)
+        generated_pom = pomgen.gen(pomcontenttype=pom.PomContentType.GOLDFILE)
 
         self.assertIn("this artifact version ***", generated_pom)
         self.assertIn("logback 1.4.4", generated_pom)
