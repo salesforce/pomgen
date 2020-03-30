@@ -16,6 +16,7 @@ from crawl import workspace
 import os
 import re
 
+
 class PomContentType:
     """
     Available pom content types:
@@ -35,40 +36,70 @@ class PomContentType:
 
     MASKED_VERSION = "***"
 
-def get_pom_generator(workspace, pom_template, maven_artifact_def):
-    mode = maven_artifact_def.pom_generation_mode
+
+def get_pom_generator(workspace, pom_template, artifact_def, dependency):
+    """
+    Returns a concrete implementation of AbstractPomGen.
+
+    Arguments:
+        workspace: the crawl.workspace.Workspace singleton
+        pom_template: the template to use for generating dynamic (jar) pom.xmls
+        artifact_def: the crawl.buildpom.MavenArtifactDef instance for access 
+            to the parsed MVN-INF/* metadata files
+        dependency: the dependency pointing to this artifact_def
+    """
+    assert artifact_def is not None
+    assert dependency is not None
+
+    mode = artifact_def.pom_generation_mode
     if mode is pomgenmode.DYNAMIC:
-        return DynamicPomGen(workspace, maven_artifact_def, pom_template)
+        return DynamicPomGen(workspace, artifact_def, dependency, pom_template)
     elif mode is pomgenmode.TEMPLATE:
         content, _ = mdfiles.read_file(workspace.repo_root_path,
-                                       maven_artifact_def.bazel_package,
-                                       maven_artifact_def.pom_template_file)
-        return TemplatePomGen(workspace, maven_artifact_def, content)
+                                       artifact_def.bazel_package,
+                                       artifact_def.pom_template_file)
+        return TemplatePomGen(workspace, artifact_def, dependency, content)
+    elif mode is pomgenmode.SKIP:
+        return NoopPomGen(workspace, artifact_def, dependency)
     else:
-        raise Exception("Unknown pom_generation_mode [%s] for %s" % (mode, maven_artifact_def))
+        raise Exception("Bug: unknown pom_generation_mode [%s] for %s" % (mode, artifact_def.bazel_package))
+
 
 class AbstractPomGen(object):
-    def __init__(self, workspace, artifact_def):
-        self.artifact_def = artifact_def
-        self.workspace = workspace
+
+    def __init__(self, workspace, artifact_def, dependency):
+        self._artifact_def = artifact_def
+        self._dependency = dependency
+        self._workspace = workspace
+
+    @property
+    def artifact_def(self):
+        return self._artifact_def
 
     @property
     def bazel_package(self):
-        return self.artifact_def.bazel_package
+        return self._artifact_def.bazel_package
+
+    @property 
+    def dependency(self):
+        return self._dependency
 
     def process_dependencies(self):
         """
-        Discovers the dependencies of this artifact (bazel package).
+        Discovers the dependencies of this artifact (bazel target).
 
-        This method *must* be called before generating a pom.
+        This method *must* be called before requesting this instance to generate
+        a pom.
 
-        This method returns a tuple of 2 lists of Dependency instances: (l1, l2)
+        This method returns a tuple of 3 (!) lists of Dependency instances: 
+            (l1, l2, l3)
             l1: all source dependencies (== references to other bazel packages)
             l2: all external dependencies (maven jars)
+            l3: l1 and l2 together, in "discovery order"
         """
         all_deps = ()
-        if self.artifact_def.deps is not None:
-            all_deps = self.workspace.parse_dep_labels(self.artifact_def.deps)
+        if self._artifact_def.deps is not None:
+            all_deps = self._workspace.parse_dep_labels(self._artifact_def.deps)
         all_deps += self._load_additional_dependencies_hook()
 
         source_dependencies = []
@@ -79,30 +110,39 @@ class AbstractPomGen(object):
             else:
                 source_dependencies.append(dep)
         
-        return (source_dependencies, ext_dependencies)
+        return (tuple(source_dependencies), 
+                tuple(ext_dependencies), 
+                tuple(all_deps))
 
-    def _load_additional_dependencies_hook(self):
+    def register_dependencies(self, dependencies):
         """
-        Returns a list of dependency instances referenced by the current 
-        package.
+        Sets the dependencies to use for pom generation.
 
-        Only meant to be overridden by subclasses.
-        """
-        return ()
+        This method is called after bazel packages have been processes, with
+        the final list of dependencies to include in the final pom file.
 
-    def register_dependencies(self, crawled_bazel_packages, 
-                              crawled_external_dependencies):
-        """
-        This method is called after all bazel packages have been crawled and
-        processed, with the following sets of Dependency instances.
-
-            - crawled_bazel_packages: 
-                  a set of all crawled bazel packages
-            - crawled_external_dependencies: 
-                  a set of all crawled (discovered) external dependencies
+        This method *must* be called before requesting this instance to generate
+        a pom.
 
         Subclasses that care about this must implement this method and
-        do something with the argument passed into this method.
+        do something with the arguments passed into this method.
+        """
+        pass
+
+    def register_dependencies_globally(self, 
+                                       crawled_bazel_packages, 
+                                       crawled_external_dependencies):
+        """
+        This method is called after all bazel packages have been crawled and
+        processed, with the following sets of Dependency instances:
+
+            - crawled_bazel_packages: 
+                  the set of ALL crawled bazel packages
+            - crawled_external_dependencies: 
+                  the set of ALL crawled (discovered) external dependencies
+
+        Subclasses that care about this must implement this method and
+        do something with the arguments passed into this method.
         """
         pass
 
@@ -113,6 +153,15 @@ class AbstractPomGen(object):
         """
         raise Exception("must be implemented by subclass")
 
+    def _load_additional_dependencies_hook(self):
+        """
+        Returns a list of dependency instances referenced by the current 
+        package.
+
+        Only meant to be overridden by subclasses.
+        """
+        return ()
+
     def _artifact_def_version(self, pomcontenttype):
         """
         Returns the associated artifact's version, based on the specified 
@@ -120,14 +169,14 @@ class AbstractPomGen(object):
 
         This is a utility method for subclasses.
         """
-        return PomContentType.MASKED_VERSION if pomcontenttype is PomContentType.GOLDFILE else self.artifact_def.version
+        return PomContentType.MASKED_VERSION if pomcontenttype is PomContentType.GOLDFILE else self._artifact_def.version
 
     def _dep_version(self, pomcontenttype, dep):
         """
         Returns the given dependency's version, based on the specified
         PomContentType.
 
-        This is a utility method for subclasses.
+        This method is only intended to be called by subclasses.
         """
         return PomContentType.MASKED_VERSION if pomcontenttype is PomContentType.GOLDFILE and dep.bazel_package is not None else dep.version
 
@@ -176,6 +225,20 @@ class AbstractPomGen(object):
         content, indent = self._xml(content, "exclusions", indent, close_element=True)
         return content, indent
 
+
+class NoopPomGen(AbstractPomGen):
+    """
+    A placeholder pom generator that doesn't generator anything, but still
+    follows references.
+    """
+    def __init__(self, workspace, artifact_def, dependency):
+        super(NoopPomGen, self).__init__(workspace, artifact_def, dependency)
+
+    def _load_additional_dependencies_hook(self):
+        return _query_dependencies(self._workspace, self._artifact_def, 
+                                   self._dependency)
+
+
 class TemplatePomGen(AbstractPomGen):
 
     BAZEL_PGK_DEPS_PROP_NAME = "pomgen.crawled_bazel_packages"
@@ -193,13 +256,15 @@ class TemplatePomGen(AbstractPomGen):
     """
     Generates a pom.xml based on a template file.
     """
-    def __init__(self, workspace, artifact_def, template_content):
-        super(TemplatePomGen, self).__init__(workspace, artifact_def)
+    def __init__(self, workspace, artifact_def, dependency, template_content):
+        super(TemplatePomGen, self).__init__(workspace, artifact_def, dependency)
         self.template_content = template_content
         self.crawled_bazel_packages = set()
         self.crawled_external_dependencies = set()
 
-    def register_dependencies(self, crawled_bazel_packages, crawled_external_dependencies):
+    def register_dependencies_globally(self, 
+                                       crawled_bazel_packages, 
+                                       crawled_external_dependencies):
         self.crawled_bazel_packages = crawled_bazel_packages
         self.crawled_external_dependencies = crawled_external_dependencies
 
@@ -218,7 +283,7 @@ class TemplatePomGen(AbstractPomGen):
 
         bad_refs = [match.group(1) for match in re.finditer(r"""\#\{(.*?)\}""", pom_content) if len(match.groups()) == 1]
         if len(bad_refs) > 0:
-            raise Exception("pom template for [%s] has unresolvable references: %s" % (self.artifact_def, bad_refs))
+            raise Exception("pom template for [%s] has unresolvable references: %s" % (self._artifact_def, bad_refs))
         return pom_content
 
     def _process_pom_template_content(self, pom_template_content):
@@ -261,7 +326,7 @@ class TemplatePomGen(AbstractPomGen):
 
         properties = {}
 
-        all_deps = list(self.workspace.name_to_external_dependencies.values())+\
+        all_deps = list(self._workspace.name_to_external_dependencies.values())+\
             list(self.crawled_bazel_packages)
         for dep in all_deps:
             key = "%s:version" % dep.maven_coordinates_name
@@ -275,8 +340,8 @@ class TemplatePomGen(AbstractPomGen):
                 properties[key] = dep.version
 
         # the maven coordinates of this artifact can be referenced directly:
-        properties["artifact_id"] = self.artifact_def.artifact_id
-        properties["group_id"] = self.artifact_def.group_id
+        properties["artifact_id"] = self._artifact_def.artifact_id
+        properties["group_id"] = self._artifact_def.group_id
         properties["version"] = self._artifact_def_version(pomcontenttype)
 
         return properties
@@ -352,51 +417,50 @@ class TemplatePomGen(AbstractPomGen):
                     dep.classifier = parsed_dep.classifier
         return dep
 
+
 class DynamicPomGen(AbstractPomGen):
-    """    
+    """
     A non-generic, non-reusable, specialized pom.xml generator, targeted 
     for the "monorepo pom generation" use-case.
 
-    Generates a pom.xm file from scratch.
+    Generates a pom.xm file based on the specified singleton (shared) template.
+
+    This generator assumes that the following placesholders exist in the
+    specified template:
+
+       ${artifact_id}
+       ${group_id}
+       ${version}
+       ${dependencies}
+
     """
-    def __init__(self, workspace, artifact_def, pom_template):
-        super(DynamicPomGen, self).__init__(workspace, artifact_def)
+    def __init__(self, workspace, artifact_def, dependency, pom_template):
+        super(DynamicPomGen, self).__init__(workspace, artifact_def, dependency)
         self.pom_template = pom_template
-        self.dependencies = None
+        self.dependencies = ()
 
-    def _load_additional_dependencies_hook(self):
-        if not self.artifact_def.include_deps:
-            self.dependencies = ()
-        else:
-            try:
-                dep_labels = bazel.query_java_library_deps_attributes(
-                    self.workspace.repo_root_path,
-                    self.artifact_def.bazel_package)
-                deps = self.workspace.parse_dep_labels(dep_labels)
-                deps = self.workspace.normalize_deps(self.artifact_def, deps)
-                # keep a reference to all the deps - we need them during pom
-                # generation
-                self.dependencies = deps
-            except Exception as e:
-                raise Exception("Error while processing dependencies: %s %s caused by %s" % (e.message, self.artifact_def, repr(e)))
-
-        return self.dependencies
+    def register_dependencies(self, dependencies):
+        self.dependencies = dependencies
 
     def gen(self, pomcontenttype=PomContentType.RELEASE):
-        content = self.pom_template.replace("${group_id}", self.artifact_def.group_id)
-        content = content.replace("${artifact_id}", self.artifact_def.artifact_id)
+        content = self.pom_template.replace("${group_id}", self._artifact_def.group_id)
+        content = content.replace("${artifact_id}", self._artifact_def.artifact_id)
         version = self._artifact_def_version(pomcontenttype)
         content = content.replace("${version}", version)
         content = content.replace("${dependencies}", self._gen_dependencies(pomcontenttype))
         return content
 
+    def _load_additional_dependencies_hook(self):
+        return _query_dependencies(self._workspace, self._artifact_def,
+                                   self._dependency)
+        
     def _gen_dependencies(self, pomcontenttype):
         if len(self.dependencies) == 0:
             return ""
 
         deps = self.dependencies
         if pomcontenttype == PomContentType.GOLDFILE:
-            deps = self.dependencies[:]
+            deps = list(deps)
             deps.sort()
 
         content = ""
@@ -430,7 +494,9 @@ class DynamicPomGen(AbstractPomGen):
 
         return ()
 
+
 _INDENT = pomparser.INDENT
+
 
 def _sort(s):
     """
@@ -440,3 +506,30 @@ def _sort(s):
     l = list(s)
     l.sort()
     return l
+
+
+# this method delegates to bazel query to get the value of a bazel target's 
+# "deps" and "runtime_deps" attributes. it really doesn't below in this module,
+# because it has nothing to do with generating a pom.xml file.
+# it could move into common.pomgenmode or live closer to the crawler
+def _query_dependencies(workspace, artifact_def, dependency):
+    if not artifact_def.include_deps:
+        return ()
+    else:
+        try:
+            label = _build_bazel_label(artifact_def.bazel_package,
+                                       dependency.bazel_target)
+            dep_labels = bazel.query_java_library_deps_attributes(
+                workspace.repo_root_path, label)
+            deps = workspace.parse_dep_labels(dep_labels)
+            return workspace.normalize_deps(artifact_def, deps)
+        except Exception as e:
+            msg = e.message if hasattr(e, "message") else type(e)
+            raise Exception("Error while processing dependencies: %s %s caused by %s" % (msg, artifact_def, repr(e)))
+
+
+def _build_bazel_label(package, target):
+    assert package is not None, "package should not be None"
+    assert target is not None, "target should not be None"
+    assert len(target) > 0, "target should not be an empty string for package [%s]" % package
+    return "%s:%s" % (package, target)

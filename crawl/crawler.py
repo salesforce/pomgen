@@ -18,17 +18,26 @@ from crawl.releasereason import ReleaseReason
 import difflib
 import os
 
+
 class Node:
     """
     A single node in the DAG, based on references in BUILD files.
-    Each Bazel package with a BUILD.pom file gets its own Node instance.
+    Each Bazel target gets its own Node instance. Typically, there is one 
+    target per bazel package.
     """
 
-    def __init__(self, artifact_def, parent):
+    def __init__(self, parent, artifact_def, dependency):
         assert artifact_def is not None, "artifact_def cannot be None"
-        self.artifact_def = artifact_def # parsed metadata (BUILD.pom etc) files
-        self.parent = parent             # the parent Node, None if no parent
-        self.children = []               # all direct child nodes
+        assert dependency is not None, "dependency cannot be None"
+
+        # the parent Node, None if no parent
+        self.parent = parent
+        # parsed metadata (BUILD.pom etc) files
+        self.artifact_def = artifact_def
+        # the dependency pointing to this target
+        self.dependency = dependency
+        # all direct child nodes
+        self.children = []               
 
     def pretty_print(self):
         self._pretty_print(self, 0)
@@ -37,6 +46,7 @@ class Node:
         print("%s%s:%s" % (' '*indent, node.artifact_def.group_id, node.artifact_def.artifact_id))
         for child in node.children:
             self._pretty_print(child, indent+2)
+
 
 class CrawlerResult:
     """
@@ -55,16 +65,19 @@ class CrawlerResult:
         # set of Dependency instances, for all crawled bazel packages
         self.crawled_bazel_packages = crawled_bazel_packages
 
+
 class Crawler:
+
     def __init__(self, workspace, pom_template):
         self.workspace = workspace
         self.pom_template = pom_template
         self.package_to_artifact = {} # bazel package -> artifact def instance
         self.library_to_artifact = defaultdict(list) # library root path -> list of its artifact def instances
         self.library_to_nodes = defaultdict(list) # library root path -> list of its DAG Node instances
-        self.package_to_childnodes = defaultdict(list) # bazel package -> list of DAG child Node instances
+        self.target_to_node = {} # bazel target -> Node for that target
+        self.target_to_dependencies = {} # bazel_target -> target's deps
 
-        self.pomgens = [] # pomgen instances for all packages
+        self.pomgens = [] # all pomgen instances
         self.leafnodes = [] # all leafnodes discovered while crawling
 
         self.crawled_external_dependencies = set() # all external dependencies discovered while crawling around
@@ -92,9 +105,9 @@ class Crawler:
         """
 
 
-        # first we build the initial DAG, by starting a one or more packages
+        # first we build the initial DAG, by starting with one or more packages
         # and traversing references expressed in BUILD files, specifically
-        # deps and runtime deps of the single java_library target.
+        # deps and runtime deps of single java_library target.
         # there must be only one java_library target defined in each processed
         # bazel package/BUILD file
         nodes = self._crawl_packages(packages, follow_monorepo_references)
@@ -115,11 +128,32 @@ class Crawler:
                 missing_packages = self._get_unprocessed_packages()
 
 
+
+        # Crawling is complete at this point, now process the nodes
+
+        
+        # for bazel targets that do not generate a pom 
+        # (pom_generation_mode=skip), we still need to handle dependencies;
+        # this is the "import bundle" use case.
+        # push the dependencies up to the closest parent node that does
+        # generate a pom
+        self._push_transitives_to_parent()
+
+
         # augment pom generators with deps discovered while crawling
-        crawled_bazel_packages = set([dependency.new_dep_from_maven_artifact_def(a) for a in list(self.package_to_artifact.values())])
+        # there are 2 types of dep registrations: 
+        #   -> local, only the deps actually belonging to each pomgen instance
+        #   -> global, ie all deps discovered, set on each pomgen instance
+        crawled_bazel_packages = set([dependency.new_dep_from_maven_artifact_def(a, bazel_target=None) for a in list(self.package_to_artifact.values())])
         for p in self.pomgens:
-            p.register_dependencies(crawled_bazel_packages, 
-                                    self.crawled_external_dependencies)
+            # 1) local
+            target_key = self._get_target_key(p.bazel_package, p.dependency)
+            dependencies = self.target_to_dependencies[target_key]
+            p.register_dependencies(dependencies)
+
+            # 2) global
+            p.register_dependencies_globally(
+                crawled_bazel_packages, self.crawled_external_dependencies)
 
 
         # for each artifact, if its pom changed since the last release
@@ -135,10 +169,14 @@ class Crawler:
 
         # only pomgen instances for artifacts that need to be released are
         # included in the result
-        pomgens = [p for p in self.pomgens if p.artifact_def.requires_release]
+        result_pomgens = []
+        for p in self.pomgens:
+            if (p.artifact_def.pom_generation_mode.produces_artifact and 
+                p.artifact_def.requires_release):
+                result_pomgens.append(p)
 
 
-        return CrawlerResult(pomgens, nodes, crawled_bazel_packages)
+        return CrawlerResult(result_pomgens, nodes, crawled_bazel_packages)
 
     def _get_unprocessed_packages(self):
         """
@@ -163,6 +201,7 @@ class Crawler:
         whether its current pom is different than the previously released pom.
         If the pom has changed, mark the artifact def as needing to be released.
         """
+
         for pomgen in self.pomgens:
             art_def = pomgen.artifact_def
             if not art_def.requires_release and art_def.released_pom_content is not None:
@@ -178,6 +217,56 @@ class Crawler:
                     diff = difflib.unified_diff(previous_pom.splitlines(True),
                                                 current_pom.splitlines(True))
                     logger.raw(''.join(diff))
+
+    def _push_transitives_to_parent(self):
+        """
+        For special pom generation modes that do not actually produce
+        maven artifacts (pom_generation_mode="skip"):
+        Given artifacts A->B->C->D, if B and C have "skip" generation mode,
+        their deps need to be pushed up to A, so that they are included in
+        A's pom.xml. So the final poms generated will be: A->D
+        """
+        for node in self.leafnodes:
+            processed_nodes = set() # Node instances that were already handled
+            collected_dep_lists = [] # list of list of deps
+            self._push_transitives_and_walk(node, collected_dep_lists, 
+                                            processed_nodes)
+
+    def _push_transitives_and_walk(self, node, collected_dep_lists, 
+                                   processed_nodes):
+        package = node.artifact_def.bazel_package
+        target_key = self._get_target_key(package, node.dependency)
+        deps = self.target_to_dependencies[target_key]
+        if node.artifact_def.pom_generation_mode.produces_artifact:
+            if len(collected_dep_lists) > 0:
+                deps = self.target_to_dependencies[target_key]
+                collected_dep_lists.append(deps)
+                deps = self._process_collected_dep_lists(collected_dep_lists)
+                self.target_to_dependencies[target_key] = deps
+                collected_dep_lists = []
+        else:
+            if node not in processed_nodes:
+                processed_nodes.add(node)
+                collected_dep_lists.append(deps)
+        if node.parent is not None:
+            self._push_transitives_and_walk(node.parent, collected_dep_lists,
+                                            processed_nodes)
+
+    def _process_collected_dep_lists(self, collected_dep_lists):
+        deps = reversed(collected_dep_lists)
+        deps = self._flatten_and_dedupe(deps)
+        deps = [d for d in deps if d.references_artifact]
+        return deps
+
+    def _flatten_and_dedupe(self, list_of_lists):
+        flattened = []
+        processed = set()
+        for li in list_of_lists:
+            for item in li:
+                if not item in processed:
+                    flattened.append(item)
+                    processed.add(item)
+        return flattened
 
     def _calculate_artifact_release_flag(self, force_release):
         """
@@ -245,49 +334,77 @@ class Crawler:
         follow_monorepo_references: 
             If False, this method doesn't follow monorepo references.
         """
-        return [self._crawl(p, None, follow_monorepo_references) for p in packages]
+        nodes = []
+        for package in packages:
+            n = self._crawl(package, dep=None, parent_node=None, 
+                            follow_monorepo_references=follow_monorepo_references)
+            nodes.append(n)
+        return nodes
     
-    def _crawl(self, package, parent_node, follow_monorepo_references):
+    def _crawl(self, package, dep, parent_node, follow_monorepo_references):
         """
         For the specified package, crawl monorepo dependencies, unless
         follow_monorepo_references is False.
 
+        The dependency instance is the dependency pointing at this package.
+
         Returns a Node instance for the crawled package.
         """
-        
-        if package in self.package_to_childnodes:
-            # if we have already processed this package, we can re-use the
+        target_key = self._get_target_key(package, dep)
+        if target_key in self.target_to_node:
+            # if we have already processed this target, we can re-use the
             # children we discovered previously
             # for example: A -> B -> C is how we found B, and now we got here
             # through another path: A -> Z -> B -> C
             # the parent is different, but the children have to be the same
-            node = Node(self.package_to_artifact[package], parent_node)
-            node.children = self.package_to_childnodes[package]
+            cached_node = self.target_to_node[target_key]
+            node = Node(parent_node, cached_node.artifact_def, 
+                        cached_node.dependency)
+            node.children = cached_node.children
             self.library_to_nodes[node.artifact_def.library_path].append(node)
-            self._store_leafnode(node)
+            self._store_if_leafnode(node)
             return node
         else:
-            logger.info("Processing %s" % package)
+            logger.info("Processing [%s]" % target_key)
             artifact_def = self.workspace.parse_maven_artifact_def(package)
-            node = Node(artifact_def, parent_node)
             self.package_to_artifact[package] = artifact_def
             self.library_to_artifact[artifact_def.library_path].append(artifact_def)
-            pomgen = pom.get_pom_generator(self.workspace, self.pom_template, artifact_def)
+            pomgen = self._get_pom_generator(artifact_def, dep)
             self.pomgens.append(pomgen)
-            source_deps, ext_deps = pomgen.process_dependencies()
+            source_deps, ext_deps, all_deps = pomgen.process_dependencies()
+            self.target_to_dependencies[target_key] = all_deps
             self.crawled_external_dependencies.update(ext_deps)
-            child_packages = [dep.bazel_package for dep in source_deps]
+            node = Node(parent_node, artifact_def, pomgen.dependency)
             if follow_monorepo_references:
-                for child_package in child_packages:
-                    child_node = self._crawl(child_package, node,
+                # crawl monorepo dependencies
+                for source_dep in source_deps:
+                    child_node = self._crawl(source_dep.bazel_package,
+                                             source_dep, node, 
                                              follow_monorepo_references)
                     node.children.append(child_node)
-            self.package_to_childnodes[package] = node.children
+            self.target_to_node[target_key] = node
             self.library_to_nodes[node.artifact_def.library_path].append(node)
-            self._store_leafnode(node)
+            self._store_if_leafnode(node)
             return node
 
-    def _store_leafnode(self, node):
+    def _get_pom_generator(self, artifact_def, dep):
+        if dep is None:
+            # make a real dependency instance here so we can pass it along
+            # into the pom generator
+            dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        return pom.get_pom_generator(self.workspace, 
+                                     self.pom_template, artifact_def,
+                                     dep)
+
+    def _get_target_key(self, package, dep):
+        if dep is None:
+            target = os.path.basename(package)
+        else:
+            target = dep.bazel_target
+        assert target is not None
+        return "%s:%s" % (package, target)
+
+    def _store_if_leafnode(self, node):
         if len(node.children) == 0:
             self.leafnodes.append(node)
 
@@ -305,4 +422,3 @@ class Crawler:
         if requires_release:
             return (True, ReleaseReason.POM)
         return (False, None)
-

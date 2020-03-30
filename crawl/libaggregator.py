@@ -7,6 +7,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 
 from crawl.releasereason import ReleaseReason
 
+
 def get_libraries_to_release(artifact_nodes):
     """
     Takes an artifact DAG and turns it into a library DAG.
@@ -20,6 +21,7 @@ def get_libraries_to_release(artifact_nodes):
             library_nodes.append(n)
 
     return library_nodes
+
 
 class LibraryNode:
 
@@ -64,10 +66,16 @@ class LibraryNode:
         all_release_reasons.add(self.release_reason)
         indicator = self._get_rel_indicator(self.release_reason)
         output_lines.append("%s%s %s %s" % (' '*indent, self.library_path,
-                                            indicator, self.version))
+                                            indicator, 
+                                            self._get_pretty_print_version()))
         for child in self.children:
             child._pretty_print(indent+2, output_lines,
                                 all_release_reasons)
+
+    def _get_pretty_print_version(self):
+        # version can be none for libraries that have non artifact producing
+        # package
+        return "" if self.version is None else self.version
 
     def _get_rel_indicator(self, release_reason):
         if release_reason is None:
@@ -97,15 +105,21 @@ def _walk(artifact_node, library_path_to_library_node):
         library_node.release_reason = _get_lib_release_reason(library_node.release_reason, artifact_def.release_reason)
     else:
         version = artifact_def.version if artifact_def.requires_release else artifact_def.released_version
+        if version is None:
+            # make sure that version is None for the expected reason:
+            assert not artifact_def.pom_generation_mode.produces_artifact
         library_node = LibraryNode(library_path, artifact_def.requires_release,
                                    artifact_def.release_reason, version,
                                    artifact_def.version_increment_strategy)
         library_path_to_library_node[library_path] = library_node
         
     for artifact_child_node in artifact_node.children:
+        # traverse the artifact children - they may or may not belong to the
+        # same library
         library_child_node = _walk(artifact_child_node,library_path_to_library_node)
         library_node.add_child(library_child_node)
     return library_node
+
 
 def _get_lib_release_reason(current_release_reason, proposed_release_reason):
     """

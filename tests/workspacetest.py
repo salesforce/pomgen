@@ -6,32 +6,51 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 """
 
 from common.os_util import run_cmd
+from common import pomgenmode
 from config import exclusions
 from crawl import git
+from crawl import buildpom
+from crawl import dependency
 from crawl import workspace
-from crawl.buildpom import MavenArtifactDef
-from crawl.dependency import MonorepoDependency
-from crawl.dependency import ThirdPartyDependency
 import os
 import tempfile
 import unittest
 
 class WorkspaceTest(unittest.TestCase):
 
-    def test_normalize_deps(self):
-        ws = workspace.Workspace("some/path", "", [], exclusions.src_exclusions())
-        artifact_def1 = MavenArtifactDef("g1", "a1", "1", bazel_package="a/b/c")
-        artifact_def2 = MavenArtifactDef("g2", "a2", "1", bazel_package="a/b/c")
-        artifact_def3 = MavenArtifactDef("g1", "a1", "1", bazel_package="d/e/f")
-        dep1 = MonorepoDependency(artifact_def1)
-        dep2 = MonorepoDependency(artifact_def2)
-        dep3 = MonorepoDependency(artifact_def3)
-        dep4 = ThirdPartyDependency("name", "g101", "a101", "1")
+    def test_normalize_deps__default_removes_refs_to_same_package(self):
+        ws = workspace.Workspace("so/path", "", [], exclusions.src_exclusions())
+        package = "a/b/c"
+        art1 = buildpom.MavenArtifactDef("g1", "a1", "1", bazel_package=package,
+                                         pom_generation_mode=pomgenmode.DYNAMIC)
+        dep1 = dependency.MonorepoDependency(art1, bazel_target=None)
+        art2 = buildpom.MavenArtifactDef("g2", "a2", "1", bazel_package=package)
+        dep2 = dependency.MonorepoDependency(art2, bazel_target=None)
+        art3 = buildpom.MavenArtifactDef("g1", "a1", "1", bazel_package="d/e/f")
+        dep3 = dependency.MonorepoDependency(art3, bazel_target=None)
+        dep4 = dependency.ThirdPartyDependency("name", "g101", "a101", "1")
 
         # the result of this method is based on bazel_package comparison
-        deps = ws.normalize_deps(artifact_def1, [dep1, dep2, dep3, dep4])
+        deps = ws.normalize_deps(art1, [dep1, dep2, dep3, dep4])
 
         self.assertEqual([dep3, dep4], deps)
+
+    def test_normalize_deps__skip_pomgen_mode_allows_refs_to_same_package(self):
+        ws = workspace.Workspace("so/path", "", [], exclusions.src_exclusions())
+        package = "a/b/c"
+        art1 = buildpom.MavenArtifactDef("g1", "a1", "1", bazel_package=package,
+                                         pom_generation_mode=pomgenmode.SKIP)
+        dep1 = dependency.MonorepoDependency(art1, bazel_target=None)
+        art2 = buildpom.MavenArtifactDef("g2", "a2", "1", bazel_package=package)
+        dep2 = dependency.MonorepoDependency(art2, bazel_target=None)
+        art3 = buildpom.MavenArtifactDef("g1", "a1", "1", bazel_package="d/e/f")
+        dep3 = dependency.MonorepoDependency(art3, bazel_target=None)
+        dep4 = dependency.ThirdPartyDependency("name", "g101", "a101", "1")
+
+        # the result of this method is based on bazel_package comparison
+        deps = ws.normalize_deps(art1, [dep1, dep2, dep3, dep4])
+
+        self.assertEqual([dep1, dep2, dep3, dep4], deps)
 
     def test_parse_ext_dep(self):
         """
@@ -174,6 +193,30 @@ class WorkspaceTest(unittest.TestCase):
         self.assertEqual(artifact_version, deps[0].version)
         self.assertFalse(deps[0].external)
         self.assertEqual(package_name, deps[0].bazel_package)
+
+    def test_parse_src_dep_with_target(self):
+        """
+        Verifies that a source dependency label is correctly parsed into a 
+        Dependency instance, when the source dependency includes a target
+        """
+        artifact_version = "1.2.3"
+        package_name = "package1"
+        group_id = "group1"
+        artifact_id = "art1"
+        repo_root = tempfile.mkdtemp("monorepo")
+        self._touch_file_at_path(repo_root, "", "MVN-INF", "LIBRARY.root")
+        self._write_build_pom(repo_root, package_name, artifact_id, group_id, artifact_version)
+        ws = workspace.Workspace(repo_root, "", [], exclusions.src_exclusions())
+
+        deps = ws.parse_dep_labels(["//%s:my_cool_target" % package_name])
+
+        self.assertEqual(1, len(deps))
+        self.assertEqual(group_id, deps[0].group_id)
+        self.assertEqual(artifact_id, deps[0].artifact_id)
+        self.assertEqual(artifact_version, deps[0].version)
+        self.assertFalse(deps[0].external)
+        self.assertEqual(package_name, deps[0].bazel_package)
+        self.assertEqual("my_cool_target", deps[0].bazel_target)
 
     def test_src_dep_without_build_pom(self):
         """

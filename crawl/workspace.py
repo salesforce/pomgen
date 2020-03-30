@@ -73,7 +73,7 @@ class Workspace:
     def normalize_deps(self, artifact_def, deps):
         """
         Normalizes the specified deps, in the context of the specified 
-        artifact_def. 
+        owning artifact_def.
 
         This method performs the following steps:
 
@@ -88,10 +88,23 @@ class Workspace:
         for dep in deps:
             if dep.bazel_package is not None and dep.bazel_package == artifact_def.bazel_package:
                 # this dep has the same bazel_package as the artifact 
-                # referencing the dep, skip it
-                continue
+                # referencing the dep, skip it, unless this bazel package
+                # actually does not produce artifacts
+                if artifact_def.pom_generation_mode.produces_artifact:
+                    continue
             updated_deps.append(dep)
         return updated_deps
+
+    def filter_artifact_producing_packages(self, packages):
+        """
+        Given a list of packages, returns those that are actually producing
+        a Maven artifact. 
+
+        This is based on the pom_generation_mode specified in the BUILD.pom 
+        file.
+        """
+        art_defs = [self.parse_maven_artifact_def(p) for p in packages]
+        return [art_def.bazel_package for art_def in art_defs if art_def.pom_generation_mode.produces_artifact]
 
     def _parse_dep_label(self, dep_label):
         if dep_label.startswith("@"):
@@ -103,16 +116,21 @@ class Workspace:
                 return self._name_to_ext_deps[ext_dep_name]
         elif dep_label.startswith("//"):
             # monorepo src ref:
-            src_path = dep_label[2:]
-            src_path = src_path[0:src_path.index(':')] if ':' in src_path else src_path
+            package_path = dep_label[2:] # remove leading "//"
+            target_name = None
+            i = package_path.rfind(":")
+            if i != -1:
+                target_name = package_path[i+1:]
+                package_path = package_path[:i]
+
             for excluded_dependency_path in self.excluded_dependency_paths:
-                if src_path.startswith(excluded_dependency_path):
+                if package_path.startswith(excluded_dependency_path):
                     return None
-            maven_artifact_def = self.parse_maven_artifact_def(src_path)
+            maven_artifact_def = self.parse_maven_artifact_def(package_path)
             if maven_artifact_def is None:
-                raise Exception("no BUILD.pom file in package [%s]" % src_path)
+                raise Exception("no BUILD.pom file in package [%s]" % package_path)
             else:
-                return dependency.new_dep_from_maven_artifact_def(maven_artifact_def)
+                return dependency.new_dep_from_maven_artifact_def(maven_artifact_def, target_name)
         else:
             raise Exception("bad label [%s]" % dep_label)
 

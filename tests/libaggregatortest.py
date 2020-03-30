@@ -6,6 +6,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 """
 
 from crawl.buildpom import MavenArtifactDef
+from crawl import dependency
 from crawl.crawler import Node
 from crawl.releasereason import ReleaseReason
 import crawl.libaggregator
@@ -126,7 +127,8 @@ class LibAggregatorTest(unittest.TestCase):
                                         library_path=library_path,
                                         requires_release=requires_release)
         artifact_def.release_reason = release_reason
-        return Node(artifact_def, parent=None)
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        return Node(parent=None, artifact_def=artifact_def, dependency=dep)
 
 if __name__ == '__main__':
     unittest.main()

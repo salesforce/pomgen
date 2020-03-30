@@ -1,0 +1,3 @@
+maven_artifact(
+    pom_generation_mode = "skip",
+)

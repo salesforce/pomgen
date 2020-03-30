@@ -1,9 +1,9 @@
 java_library(
     name = "juicer",
     srcs = glob(["src/main/java/**/*.java"]),
-    deps = ["//example/healthyfoods/fruit-api", 
-            "//example/healthyfoods/vegetable-api",
-            "//example/wintervegetables",
+    deps = ["//examples/hello-world/healthyfoods/fruit-api", 
+            "//examples/hello-world/healthyfoods/vegetable-api",
+            "//examples/hello-world/wintervegetables",
             "@com_google_guava_guava//jar"]
 )
 
