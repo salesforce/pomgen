@@ -77,9 +77,9 @@ if __name__ == "__main__":
     args = _parse_arguments(sys.argv[1:])
     repo_root = common.get_repo_root(args.repo_root)
     cfg = config.load(repo_root)
-    workspace = workspace.Workspace(repo_root, cfg.external_dependencies, 
-                                    cfg.excluded_dependency_paths, 
-                                    cfg.all_src_exclusions)
+    ws = workspace.Workspace(repo_root, cfg.external_dependencies, 
+                             cfg.excluded_dependency_paths, 
+                             cfg.all_src_exclusions)
 
     determine_packages_to_process = (args.list_libraries or 
                                      args.list_artifacts or
@@ -89,6 +89,7 @@ if __name__ == "__main__":
 
     if determine_packages_to_process:
         packages = argsupport.get_all_packages(repo_root, args.package)
+        packages = ws.filter_artifact_producing_packages(packages)
         if len(packages) == 0:
             raise Exception("Did not find any BUILD.pom packages at [%s]" % args.package)
 
@@ -120,7 +121,7 @@ if __name__ == "__main__":
         print(_to_json(all_artifacts))
 
     if args.list_all_external_dependencies:
-        external_dependencies = list(workspace.name_to_external_dependencies.values())
+        external_dependencies = list(ws.name_to_external_dependencies.values())
         external_dependencies.sort()
         all_ext_deps = []
         for external_dependency in external_dependencies:
@@ -138,7 +139,7 @@ if __name__ == "__main__":
                                    args.artifact_release_plan)
 
     if crawl_artifact_dependencies:
-        crawler = crawler.Crawler(workspace, cfg.pom_template)
+        crawler = crawler.Crawler(ws, cfg.pom_template)
         artifact_result = crawler.crawl(packages)
         library_nodes = libaggregator.get_libraries_to_release(artifact_result.nodes)
 

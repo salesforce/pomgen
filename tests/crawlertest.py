@@ -50,7 +50,8 @@ class CrawlerTest(unittest.TestCase):
         self._add_libraries(self.repo_root_path)
         self._setup_repo(self.repo_root_path)
         self._write_all_build_pom_released(self.repo_root_path)
-        ws = workspace.Workspace(self.repo_root_path, "", [], exclusions.src_exclusions())
+        ws = workspace.Workspace(self.repo_root_path, "", 
+                                 [], exclusions.src_exclusions())
         self.crawler = crawler.Crawler(ws, pom_template="")
 
     def test_setup(self):
@@ -159,12 +160,33 @@ class CrawlerTest(unittest.TestCase):
         All 3 libraries have changed, but explicitly disable crawling.
         """
         self._update_files(self.repo_root_path, ["libs/a/a1", "libs/b/a1", "libs/c/a1"])
-        self._commit(self.repo_root_path) 
+        self._commit(self.repo_root_path)
 
         result = self.crawler.crawl(["libs/a/a1"], follow_monorepo_references=False)
 
         self.assertEqual(set(["libs/a/a1"]),
                           set([p.artifact_def.bazel_package for p in result.pomgens]))
+
+    def test_register_dependencies(self):
+        """
+        Verifies that register_dependencies is called by the crawler.
+        """
+        self._update_files(self.repo_root_path, ["libs/a/a1",])
+        self._commit(self.repo_root_path)
+
+        registered_deps = []
+        import crawl.pom as pom
+        org_method = pom.TemplatePomGen.register_dependencies
+        try:
+            def f(s, deps):
+                registered_deps.append(list(deps))
+            pom.TemplatePomGen.register_dependencies = f
+
+            result = self.crawler.crawl(["libs/a/a1"],)
+
+            self.assertTrue(len(registered_deps) > 0)
+        finally:
+            pom.TemplatePomGen.register_dependencies = org_method            
 
     def test_version_references_in_pom_template(self):
         """

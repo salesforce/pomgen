@@ -51,7 +51,7 @@ def query_java_library_deps_attributes(repository_root_path, target_pattern):
 def query_all_artifact_packages(repository_root_path, target_pattern):
     """
     Returns all packages in the specified target pattern, as a list of strings,
-    that are "maven artifact producing" packages.
+    that are "maven aware" packages.
     """
     path = os.path.join(repository_root_path, target_pattern_to_path(target_pattern))
 

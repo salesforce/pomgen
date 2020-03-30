@@ -42,12 +42,15 @@ class PomTest(unittest.TestCase):
     artifact = "com.google.guava:guava:20.0",
   )""", [], exclusions.src_exclusions())
         artifact_def = buildpom.maven_artifact("g1", "a2", "1.2.3")
-        pomgen = pom.DynamicPomGen(ws, artifact_def, TEST_POM_TEMPLATE)
+        artifact_def = buildpom._augment_art_def_values(artifact_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        pomgen = pom.DynamicPomGen(ws, artifact_def, dep, TEST_POM_TEMPLATE)
 
         org_function = bazel.query_java_library_deps_attributes
         try:
             bazel.query_java_library_deps_attributes = lambda r, p: ("@com_google_guava_guava//jar", "@aopalliance_aopalliance//jar", )
-            pomgen.process_dependencies()
+            _, _, deps = pomgen.process_dependencies()
+            pomgen.register_dependencies(deps)
             generated_pom = pomgen.gen()
 
             self.assertIn("""<groupId>g1</groupId>
@@ -78,7 +81,8 @@ class PomTest(unittest.TestCase):
         ws = workspace.Workspace("some/path", "", [], exclusions.src_exclusions())
         artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3",
                                                  include_deps=False)
-        pomgen = pom.DynamicPomGen(ws, artifact_def, "")
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        pomgen = pom.DynamicPomGen(ws, artifact_def, dep, "")
 
         org_function = bazel.query_java_library_deps_attributes
         try:
@@ -104,12 +108,16 @@ class PomTest(unittest.TestCase):
     artifact = "com.google.guava:guava:20.0",
   )""", [], exclusions.src_exclusions())
         artifact_def = buildpom.maven_artifact("g1", "a2", "1.2.3")
-        pomgen = pom.DynamicPomGen(ws, artifact_def, TEST_POM_TEMPLATE)
+        artifact_def = buildpom._augment_art_def_values(artifact_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+
+        pomgen = pom.DynamicPomGen(ws, artifact_def, dep, TEST_POM_TEMPLATE)
 
         org_function = bazel.query_java_library_deps_attributes
         try:
             bazel.query_java_library_deps_attributes = lambda r, p: ("@com_google_guava_guava//jar", "@aopalliance_aopalliance//jar", )
-            pomgen.process_dependencies()        
+            _, _, deps = pomgen.process_dependencies()
+            pomgen.register_dependencies(deps)
 
             generated_pom = pomgen.gen(pom.PomContentType.GOLDFILE)
 
@@ -144,7 +152,8 @@ class PomTest(unittest.TestCase):
                 artifact = "ch.qos.logback:logback-classic:1.4.4",
             )""", [], exclusions.src_exclusions())
         artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.2.3")
-        pomgen = pom.TemplatePomGen(ws, artifact_def, template_content = """
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        pomgen = pom.TemplatePomGen(ws, artifact_def, dep,template_content = """
             logback_old_syntax #{ch_qos_logback_logback_classic.version}
             logback_new_syntax #{ch.qos.logback:logback-classic:version}
             monorepo artifact version #{version}""")
@@ -160,12 +169,13 @@ class PomTest(unittest.TestCase):
         Verifies references to monorepo versions in a pom template.
         """
         ws = workspace.Workspace("some/path", "", [], exclusions.src_exclusions())
-        artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.2.3")
-        srpc_artifact_def = buildpom.maven_artifact("com.grail.srpc",
-                                                    "srpc-api", "5.6.7")
-        pomgen = pom.TemplatePomGen(ws, artifact_def, template_content = """
+        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
+        srpc_artifact_def = buildpom.MavenArtifactDef("com.grail.srpc",
+                                                      "srpc-api", "5.6.7")
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        pomgen = pom.TemplatePomGen(ws, artifact_def, dep,template_content = """
             srpc #{com.grail.srpc:srpc-api:version}""")
-        pomgen.register_dependencies(set([dependency.MonorepoDependency(srpc_artifact_def)]), set())
+        pomgen.register_dependencies_globally(set([dependency.MonorepoDependency(srpc_artifact_def, bazel_target=None)]), set())
 
         generated_pom = pomgen.gen()
         
@@ -182,10 +192,11 @@ class PomTest(unittest.TestCase):
                 artifact = "g:a:20",
             )""", [], exclusions.src_exclusions())
         artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.2.3")
-        d = dependency.MonorepoDependency(buildpom.maven_artifact("g","a","1"))
-        pomgen = pom.TemplatePomGen(ws, artifact_def, template_content = """
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        pomgen = pom.TemplatePomGen(ws, artifact_def, dep,template_content = """
             srpc #{g:a:version}""")
-        pomgen.register_dependencies(set([d]), set())
+        d = dependency.MonorepoDependency(buildpom.maven_artifact("g","a","1"), bazel_target=None)
+        pomgen.register_dependencies_globally(set([d]), set())
 
         with self.assertRaises(Exception) as ctx:
             pomgen.gen()
@@ -206,11 +217,12 @@ class PomTest(unittest.TestCase):
         srpc_artifact_def = buildpom.maven_artifact("com.grail.srpc",
                                                     "srpc-api", "5.6.7")
         srpc_artifact_def = buildpom._augment_art_def_values(srpc_artifact_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
-        pomgen = pom.TemplatePomGen(ws, artifact_def, template_content = """
+        dep = dependency.new_dep_from_maven_artifact_def(srpc_artifact_def)
+        pomgen = pom.TemplatePomGen(ws, artifact_def, dep,template_content = """
             this artifact version #{version}
             logback #{ch.qos.logback:logback-classic:version}
             srpc #{com.grail.srpc:srpc-api:version}""")
-        pomgen.register_dependencies(set([dependency.MonorepoDependency(srpc_artifact_def)]), set())
+        pomgen.register_dependencies_globally(set([dependency.MonorepoDependency(srpc_artifact_def, bazel_target=None)]), set())
 
         generated_pom = pomgen.gen(pomcontenttype=pom.PomContentType.GOLDFILE)
 
@@ -244,7 +256,8 @@ __pomgen.end_dependency_customization__
 """
         ws = workspace.Workspace("some/path", "", [], exclusions.src_exclusions())
         artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.2.3")
-        pomgen = pom.TemplatePomGen(ws, artifact_def, pom_template)
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        pomgen = pom.TemplatePomGen(ws, artifact_def, dep, pom_template)
 
         generated_pom = pomgen.gen()
 
@@ -299,7 +312,8 @@ __pomgen.end_dependency_customization__
 """
         ws = workspace.Workspace("some/path", "", [], exclusions.src_exclusions())
         artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.2.3")
-        pomgen = pom.TemplatePomGen(ws, artifact_def, pom_template)
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        pomgen = pom.TemplatePomGen(ws, artifact_def, dep, pom_template)
 
         generated_pom = pomgen.gen()
 
@@ -335,9 +349,10 @@ __pomgen.end_dependency_customization__
 """
         ws = workspace.Workspace("some/path", "", [], exclusions.src_exclusions())
         artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.2.3")
-        pomgen = pom.TemplatePomGen(ws, artifact_def, pom_template)
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        pomgen = pom.TemplatePomGen(ws, artifact_def, dep, pom_template)
         crawled_package = dependency.ThirdPartyDependency("name", "c.s.sconems", "abstractions", "0.0.1")
-        pomgen.register_dependencies(set([crawled_package]), set())
+        pomgen.register_dependencies_globally(set([crawled_package]), set())
 
         generated_pom = pomgen.gen()
 
@@ -373,9 +388,10 @@ __pomgen.end_dependency_customization__
 """
         ws = workspace.Workspace("some/path", "", [], exclusions.src_exclusions())
         artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.2.3")
-        pomgen = pom.TemplatePomGen(ws, artifact_def, pom_template)
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        pomgen = pom.TemplatePomGen(ws, artifact_def, dep, pom_template)
         crawled_dep = dependency.ThirdPartyDependency("name", "cg", "ca", "0.0.1")
-        pomgen.register_dependencies(set(), set([crawled_dep]))
+        pomgen.register_dependencies_globally(set(), set([crawled_dep]))
 
         generated_pom = pomgen.gen()
 
@@ -440,9 +456,10 @@ __pomgen.end_dependency_customization__
 """
         ws = workspace.Workspace("some/path", "", [], exclusions.src_exclusions())
         artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.2.3")
-        pomgen = pom.TemplatePomGen(ws, artifact_def, pom_template)
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        pomgen = pom.TemplatePomGen(ws, artifact_def, dep, pom_template)
         crawled_dep = dependency.ThirdPartyDependency("name", "cg", "ca", "0.0.1")
-        pomgen.register_dependencies(set(), set([crawled_dep]))
+        pomgen.register_dependencies_globally(set(), set([crawled_dep]))
 
         generated_pom = pomgen.gen()
 
@@ -489,9 +506,10 @@ __pomgen.end_dependency_customization__
 """
         ws = workspace.Workspace("some/path", "", [], exclusions.src_exclusions())
         artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.2.3")
-        pomgen = pom.TemplatePomGen(ws, artifact_def, pom_template)
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        pomgen = pom.TemplatePomGen(ws, artifact_def, dep, pom_template)
         crawled_dep = dependency.ThirdPartyDependency("name", "cg", "ca", "0.0.1")
-        pomgen.register_dependencies(set(), set([crawled_dep]))
+        pomgen.register_dependencies_globally(set(), set([crawled_dep]))
 
         generated_pom = pomgen.gen()
 
@@ -505,7 +523,8 @@ __pomgen.end_dependency_customization__
         ws = workspace.Workspace("some/path", "", [], exclusions.src_exclusions())
         artifact_def = buildpom.maven_artifact("groupId", "artifactId",
                                                "1.2.3")
-        pomgen = pom.TemplatePomGen(ws, artifact_def, template_content = """
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        pomgen = pom.TemplatePomGen(ws, artifact_def, dep,template_content = """
             my pom template with a bad ref #{bad1} and also #{bad2}""")
 
         with self.assertRaises(Exception) as ctx:

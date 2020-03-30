@@ -1,3 +1,10 @@
+"""
+Copyright (c) 2018, salesforce.com, inc.
+All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause
+For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+"""
+
 python_version = 'PY3'
 
 py_binary(
@@ -30,6 +37,8 @@ filegroup(
     visibility = ["//misc:__subpackages__",],
 )
 
+
+# small tests
 
 py_test(
     name = "argsupporttest",
@@ -75,17 +84,6 @@ py_test(
 )
 
 py_test(
-    name = "configtest",
-    srcs = ["common/logger.py",
-            "config/config.py",
-            "config/exclusions.py",
-            "tests/configtest.py"],
-    imports = ["."],
-    size = "small",
-    python_version = python_version,
-)
-
-py_test(
     name = "buildpomtest",
     srcs = ["common/code.py",
             "common/mdfiles.py",
@@ -114,25 +112,19 @@ py_test(
 )
 
 py_test(
-    name = "crawlertest",
-    srcs = ["common/code.py",
-            "common/logger.py",
-            "common/mdfiles.py",
-            "common/pomgenmode.py",
-            "common/os_util.py",
-            "common/version.py",
+    name = "configtest",
+    srcs = ["common/logger.py",
+            "config/config.py",
             "config/exclusions.py",
-            "crawl/artifactprocessor.py",
-            "crawl/bazel.py",
-            "crawl/buildpom.py",
-            "crawl/crawler.py",
-            "crawl/dependency.py",
-            "crawl/git.py",
-            "crawl/pom.py",
-            "crawl/pomparser.py",
-            "crawl/releasereason.py",
-            "crawl/workspace.py",
-            "tests/crawlertest.py"],
+            "tests/configtest.py"],
+    imports = ["."],
+    size = "small",
+    python_version = python_version,
+)
+
+py_test(
+    name = "crawlertest",
+    srcs = [":pomgen_files", "tests/crawlertest.py"],
     imports = ["."],
     size = "small",
     python_version = python_version,
@@ -187,9 +179,16 @@ py_test(
 )
 
 py_test(
+    name = "pomgentest",
+    srcs = [":pomgen_files", "tests/pomgentest.py"],
+    imports = ["."],
+    size = "small",
+    python_version = python_version,
+)
+
+py_test(
     name = "pomtest",
-    srcs = [
-            "common/code.py",
+    srcs = ["common/code.py",
             "common/logger.py",
             "common/mdfiles.py",
             "common/os_util.py",

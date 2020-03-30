@@ -23,16 +23,15 @@ class PomGenMode:
     The pom generation mode, as specified by the `pom_generation_mode` attribute
     of the `maven_artifact` rule.
     """
-    def __init__(self, name, requires_mvn_art_update_rule):
+    def __init__(self, name, produces_artifact):
         """
         name:
           The name of this pom_generation_mode
-        requires_mvn_art_update_rule:
-          Whether the BUILD.pom file for this mode requires the
-          `maven_artifact_update` rule to be specified.
+        produces_artifact:
+          Whether this pomgen mode produces a maven artifact
         """
         self.name = name
-        self.requires_maven_artifact_update_rule = requires_mvn_art_update_rule
+        self.produces_artifact = produces_artifact
 
     def __str__(self):
         return "PomGenMode: %s" % self.name
@@ -41,10 +40,14 @@ class PomGenMode:
 
 
 # dynamic: the pom is generated from scratch, using a common base template
-DYNAMIC = PomGenMode("dynamic", requires_mvn_art_update_rule=True)
+DYNAMIC = PomGenMode("dynamic", produces_artifact=True)
 
 # template: the pom is generated based on a custom template file
-TEMPLATE = PomGenMode("template", requires_mvn_art_update_rule=True)
+TEMPLATE = PomGenMode("template", produces_artifact=True)
+
+# skip: this bazel package is skipped over at pom generation time
+SKIP = PomGenMode("skip", produces_artifact=False)
+
 
 DEFAULT = DYNAMIC
-ALL_MODES = (DYNAMIC, TEMPLATE,)
+ALL_MODES = (DYNAMIC, TEMPLATE, SKIP,)

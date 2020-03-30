@@ -6,6 +6,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 """
 
 from crawl.buildpom import MavenArtifactDef
+from crawl import dependency
 from crawl.crawler import Node
 from crawl.releasereason import ReleaseReason
 import crawl.libaggregator
@@ -46,6 +47,32 @@ class LibAggregatorTest(unittest.TestCase):
         self.assertEqual(lib_nodes[0].library_path, "mylib")
         self.assertFalse(lib_nodes[0].requires_release)
         self.assertIsNone(lib_nodes[0].release_reason)
+
+    def test_pretty_print__single_lib__requires_release(self):
+        a1 = self._create_library_artifact_node("g1", "a1", "1.0.0", "mylib",
+                                                requires_release=True,
+                                                release_reason=ReleaseReason.FIRST)
+
+        lib_nodes = crawl.libaggregator.get_libraries_to_release([a1,])
+        pretty_output = lib_nodes[0].pretty_print()
+
+        self.assertIn("mylib ++ 1.0.0", pretty_output)
+        self.assertIn("++ artifact has never been released", pretty_output)
+
+    def test_pretty_print__single_lib__does_not_require_release(self):
+        """
+        Make sure the pretty message honors requires_release, instead of
+        just checking wether release_reason is None or not.
+        """
+        a1 = self._create_library_artifact_node("g1", "a1", "1.0.0", "mylib",
+                                                requires_release=False,
+                                                release_reason=ReleaseReason.FIRST)
+
+        lib_nodes = crawl.libaggregator.get_libraries_to_release([a1,])
+        pretty_output = lib_nodes[0].pretty_print()
+
+        self.assertIn("mylib - 1.0.0", pretty_output)
+        self.assertIn("- no changes to release", pretty_output)
 
     def test_two_libraries(self):
         """
@@ -126,7 +153,8 @@ class LibAggregatorTest(unittest.TestCase):
                                         library_path=library_path,
                                         requires_release=requires_release)
         artifact_def.release_reason = release_reason
-        return Node(artifact_def, parent=None)
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        return Node(parent=None, artifact_def=artifact_def, dependency=dep)
 
 if __name__ == '__main__':
     unittest.main()
