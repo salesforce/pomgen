@@ -1,0 +1,9 @@
+maven_artifact(
+    group_id = "com.pomgen.example.skip-art-gen",
+    artifact_id = "lib2",
+    version = "1.0.0-SNAPSHOT",
+)
+
+maven_artifact_update(
+    version_increment_strategy = "minor",
+)

@@ -7,9 +7,10 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 
 from common import logger
 from functools import total_ordering
+import os
 
 @total_ordering
-class Dependency(object):
+class AbstractDependency(object):
     """
 
     Required/always set:
@@ -24,6 +25,10 @@ class Dependency(object):
               (which could be a previously uploaded monorepo artifact)
               False -> this is a monorepo source dependency
 
+    references_artifact: True -> this dependency references another maven
+                         artifact
+                         False -> this is a "traversal only" dependency
+
 
     Optional/may be None:
 
@@ -33,6 +38,10 @@ class Dependency(object):
     
     bazel_package: The bazel package this dependency lives in, None for 
         artifacts that are not built out of the monorepo (for example Guava).
+
+    bazel_target: If bazel_packge is not None, the specific target for this
+        dependency.
+
     """
     def __init__(self, group_id, artifact_id, classifier=None, scope=None):
         self.group_id = group_id
@@ -60,11 +69,23 @@ class Dependency(object):
         return None
 
     @property
+    def version(self):
+        raise Exception("must be implemented in subclass")
+
+    @property
     def external(self):
         raise Exception("must be implemented in subclass")
 
     @property
     def bazel_package(self):
+        raise Exception("must be implemented in subclass")
+
+    @property
+    def bazel_target(self):
+        raise Exception("must be implemented in subclass")
+
+    @property
+    def references_artifact(self):
         raise Exception("must be implemented in subclass")
 
     def __hash__(self):
@@ -107,11 +128,13 @@ class Dependency(object):
     def __repr__(self):
         return self.__str__()
 
-class ThirdPartyDependency(Dependency):
-    def __init__(self, bazel_label, group_id, artifact_id, version, classifier=None, scope=None):
+
+class ThirdPartyDependency(AbstractDependency):
+
+    def __init__(self, bazel_label_name, group_id, artifact_id, version, classifier=None, scope=None):
         super(ThirdPartyDependency, self).__init__(group_id, artifact_id, classifier, scope)
-        self.version = version
-        self.bazel_label = bazel_label
+        self._version = version
+        self._bazel_label_name = bazel_label_name
 
     @property
     def external(self):
@@ -122,19 +145,34 @@ class ThirdPartyDependency(Dependency):
         return None
 
     @property
-    def bazel_label_name(self):
-        return self.bazel_label
+    def bazel_target(self):
+        return None
 
-class MonorepoDependency(Dependency):
-    def __init__(self, artifact_def):
+    @property
+    def references_artifact(self):
+        return True
+
+    @property
+    def version(self):
+        return self._version
+
+    @property
+    def bazel_label_name(self):
+        return self._bazel_label_name
+
+class MonorepoDependency(AbstractDependency):
+
+    def __init__(self, artifact_def, bazel_target):
         super(MonorepoDependency, self).__init__(artifact_def.group_id,
                                                  artifact_def.artifact_id)
-        self.artifact_def = artifact_def
+        self._artifact_def = artifact_def
+        self._bazel_target = MonorepoDependency._init_target(
+            artifact_def.bazel_package, bazel_target)
 
     @property
     def version(self):
         use_released = self._use_previously_released_artifact()
-        return self.artifact_def.released_version if use_released else self.artifact_def.version
+        return self._artifact_def.released_version if use_released else self._artifact_def.version
 
     @property
     def external(self):
@@ -142,14 +180,31 @@ class MonorepoDependency(Dependency):
 
     @property
     def bazel_package(self):
-        return self.artifact_def.bazel_package
+        return self._artifact_def.bazel_package
+
+    @property
+    def bazel_target(self):
+        return self._bazel_target
+
+    @property
+    def references_artifact(self):
+        return self._artifact_def.pom_generation_mode.produces_artifact
+
+    @classmethod
+    def _init_target(clazz, bazel_package, bazel_target):
+        if bazel_target is not None:
+            return bazel_target
+        if bazel_package is not None:
+            return os.path.basename(bazel_package)
+        return None
 
     def _use_previously_released_artifact(self):
-        if self.artifact_def.requires_release is not None:
+        if self._artifact_def.requires_release is not None:
             # better to be explicit here: requires_release has been set
-            if self.artifact_def.requires_release == False:
+            if self._artifact_def.requires_release == False:
                 return True
         return False
+
 
 def new_dep_from_maven_art_str(maven_artifact_str, name):
     num_coordinates = maven_artifact_str.count(':') + 1
@@ -175,5 +230,7 @@ def new_dep_from_maven_art_str(maven_artifact_str, name):
 
     return ThirdPartyDependency(name, group_id, artifact_id, version, classifier)
 
-def new_dep_from_maven_artifact_def(artifact_def):
-    return MonorepoDependency(artifact_def)
+def new_dep_from_maven_artifact_def(artifact_def, bazel_target=None):
+    if bazel_target is not None:
+        assert len(bazel_target) > 0, "bazel target must not be empty for artifact def %s" % artifact_def.bazel_package
+    return MonorepoDependency(artifact_def, bazel_target)

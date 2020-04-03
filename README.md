@@ -8,8 +8,8 @@ The set of scripts in this repository provides a solution for:
 
 ## Setup
 
- - For each Maven Artifact producing Bazel Package, a [BUILD.pom](example/healthyfoods/fruit-api/MVN-INF/BUILD.pom) file defines Maven specific metadata
- - A special [marker file](example/healthyfoods/MVN-INF/LIBRARY.root) groups one or more Maven Artifacts into a Library
+ - For each Maven Artifact producing Bazel Package, a [BUILD.pom](examples/hello-world/healthyfoods/fruit-api/MVN-INF/BUILD.pom) file defines Maven specific metadata
+ - A special [marker file](examples/hello-world/healthyfoods/MVN-INF/LIBRARY.root) groups one or more Maven Artifacts into a Library
 
 ## Bazel Package References
 
@@ -21,7 +21,7 @@ pomgen can track whether the content of a Bazel Package has changed since it was
 
 ## Example
 
-Please see the [pomgen example](example/README.md) to see how pomgen works.
+Please see the [hello-world example](examples/hello-world/README.md) to see how pomgen works.
 
 ## External Dependencies
 
@@ -43,7 +43,7 @@ git_repository(
 )
 ```
 
-You can then run Bazel commands [as documented](example/README.md), for example:
+You can then run pomgen commands [as documented](examples/hello-world/README.md#before-running-pomgen), for example:
 
 ```
 bazel run @pomgen//maven -- -a pomgen,install

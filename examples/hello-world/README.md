@@ -1,4 +1,4 @@
-# pomgen Example
+# Hello World for pomgen 
 
 ## Looking around
 
@@ -29,22 +29,20 @@ bazel test //...
 
 ### pomgen query
 
-The [query_maven_metadata](../query_maven_metadata.py) script provides information about Libraries and Maven Artifacts in the repository.  It also shows information on whether a Library needs to be released or not.
+The [query_maven_metadata](../../query_maven_metadata.py) script provides information about Libraries and Maven Artifacts in the repository.  It also shows information on whether a Library needs to be released or not.
 
 From the root of the repository:
 
 ```
-bazel run @pomgen//:query -- --package example/juicer --library_release_plan_tree
+bazel run @pomgen//:query -- --package examples/hello-world/juicer --library_release_plan_tree
 ```
 
 The output looks similar to this:
 ```
-example/juicer ++ 3.0.0-SNAPSHOT
-  example/wintervegetables ++ 2.0.0-SNAPSHOT
-    example/healthyfoods ++ 1.0.0-SNAPSHOT
-  example/healthyfoods ++ 1.0.0-SNAPSHOT
-
-++ artifact has never been released
+examples/hello-world/juicer ++ 3.0.0-SNAPSHOT
+  examples/hello-world/healthyfoods ++ 1.0.0-SNAPSHOT
+  examples/hello-world/wintervegetables ++ 2.0.0-SNAPSHOT
+    examples/hello-world/healthyfoods ++ 1.0.0-SNAPSHOT
 ```
 
 The output shows:
@@ -59,17 +57,17 @@ The output shows:
 From the root of the repository:
 
 ```
-bazel run @pomgen//:pomgen -- --package example/juicer --destdir /tmp/pomgen --recursive
+bazel run @pomgen//:pomgen -- --package examples/hello-world/juicer --destdir /tmp/pomgen --recursive
 ```
 
 The command above generates 5 poms, one for each Maven Artifact (healthyfoods has 3 Maven Artifacts)
 
 ### Updating Maven Metadata
 
-There's also [a script](../update_maven_metadata.py) that can be used to update Maven metadata. For example, from the root of the repository:
+There's also [a script](../../update_maven_metadata.py) that can be used to update Maven metadata. For example, from the root of the repository:
 
 ```
-bazel run @pomgen//:update -- --package example/healthyfoods --new_version 5.0.0-SNAPSHOT
+bazel run @pomgen//:update -- --package examples/hello-world/healthyfoods --new_version 5.0.0-SNAPSHOT
 
 ```
 
@@ -77,7 +75,7 @@ The command above updates the version of all artifacts under `example/healthyfoo
 
 ## Processing generated pom.xml files
 
-pomgen generates pom.xml files, based on whether a library needs to be released or not. The final step is to run the Maven command line for each generated pom, and to do something with it. There is a [wrapper script](../maven/maven.sh) that does this. Before running, make sure you have the required [external dependencies](../maven/README.md#external-dependencies).
+pomgen generates pom.xml files, based on whether a library needs to be released or not. The final step is to run the Maven command line for each generated pom, and to do something with it. There is a [wrapper script](../../maven/maven.sh) that does this. Before running, make sure you have the required [external dependencies](../../maven/README.md#external-dependencies).
 
 ### Installing Maven Artifacts into the local Maven Repository
 
@@ -86,7 +84,7 @@ This is useful for running Maven builds locally that consume Bazel produced Arti
 From the root of the repository:
 
 ```
-bazel run @pomgen//maven -- -a pomgen,install -t example
+bazel run @pomgen//maven -- -a pomgen,install -t examples/hello-world
 ```
 
 The command above will first call pomgen to generate poms and then invoke Maven to install the Artifacts (poms and jars) into the local Maven Repository.
@@ -103,7 +101,7 @@ bazel run @pomgen//maven -- -a clean
 Use the `deploy` action instead of the `install` action:
 
 ```
-bazel run @pomgen//maven -- -a pomgen,deploy -t example
+bazel run @pomgen//maven -- -a pomgen,deploy -t examples/hello-world
 ```
 
 Running deploy requires the environment variable `REPOSITORY_URL` to be set. REPOSITORY_URL has only been tested with Nexus endpoints. The format is
@@ -125,7 +123,7 @@ pomgen supports custom pom templates for the purpose of generating pom-only arti
 See this [example pom template](healthyfoods/parentpom/MVN-INF/pom.template) - note that the corresponding [BUILD.pom](healthyfoods/parentpom/MVN-INF/BUILD.pom) file must specify that the `pom_generation_mode` is `template`. The pom file is generated in the same way as described above, when pomgen runs for the library:
 
 ```
-bazel run @pomgen//:pomgen -- --package example/healthyfoods --destdir /tmp/pomgen
+bazel run @pomgen//:pomgen -- --package examples/hello-world/healthyfoods --destdir /tmp/pomgen
 ```
 
 #### Template Features

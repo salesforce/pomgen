@@ -71,6 +71,15 @@ class DependencyTest(unittest.TestCase):
         self.assertEqual("group:art", dep.maven_coordinates_name)
         self.assertEqual("bazel-name", dep.bazel_label_name)
 
+    def test_external_dependency__references_artifact(self):
+        """
+        Ensures the Dependency instance for an external dependency has expected
+        names.
+        """
+        artifact = "group:art:ver"
+        dep = dependency.new_dep_from_maven_art_str(artifact, "bazel-name")
+        self.assertTrue(dep.references_artifact)
+
     def test_external_dependency__with_classifier(self):
         """
         Ensures the Dependency instance for an external dependency has expected
@@ -118,7 +127,7 @@ class DependencyTest(unittest.TestCase):
         art_def = buildpom.maven_artifact(group_id, artifact_id, version)
         art_def = buildpom._augment_art_def_values(art_def, None, package, None, None, pomgenmode.DYNAMIC)
 
-        dep = dependency.new_dep_from_maven_artifact_def(art_def)
+        dep = dependency.new_dep_from_maven_artifact_def(art_def, None)
 
         self.assertEqual("g1:a1", dep.maven_coordinates_name)
         self.assertIsNone(dep.bazel_label_name)
@@ -134,7 +143,7 @@ class DependencyTest(unittest.TestCase):
         art_def = buildpom.maven_artifact(group_id, artifact_id, version)
         art_def = buildpom._augment_art_def_values(art_def, None, package, None, None, pomgenmode.DYNAMIC)
 
-        dep = dependency.new_dep_from_maven_artifact_def(art_def)
+        dep = dependency.new_dep_from_maven_artifact_def(art_def, None)
 
         self.assertEqual(group_id, dep.group_id)
         self.assertEqual(artifact_id, dep.artifact_id)
@@ -159,7 +168,7 @@ class DependencyTest(unittest.TestCase):
                                             released_version="1.2.3",
                                             released_artifact_hash="123456789")
 
-        dep = dependency.new_dep_from_maven_artifact_def(art_def)
+        dep = dependency.new_dep_from_maven_artifact_def(art_def, None)
 
         self.assertEqual(group_id, dep.group_id)
         self.assertEqual(artifact_id, dep.artifact_id)
@@ -179,8 +188,68 @@ class DependencyTest(unittest.TestCase):
         version = "1.1.0"
         released_version = "1.2.3"
         package = "pack1"
-        art_def = buildpom.maven_artifact(group_id, artifact_id, version)
         art_def = buildpom.MavenArtifactDef(group_id, artifact_id, version,
+                                            bazel_package=package,
+                                            requires_release=False,
+                                            released_version=released_version,
+                                            released_artifact_hash="123456789")
+
+        dep = dependency.new_dep_from_maven_artifact_def(art_def, None)
+
+        self.assertEqual(group_id, dep.group_id)
+        self.assertEqual(artifact_id, dep.artifact_id)
+        self.assertEqual(released_version, dep.version)
+        self.assertEqual(package, dep.bazel_package)
+        self.assertTrue(dep.external)
+
+    def test_source_dependency__bazel_target__defaulted(self):
+        """
+        If bazel_target is not set, it is defaulted based on the package.
+        """
+        target = None
+        group_id = "g1"
+        artifact_id = "a1"
+        version = "1.1.0"
+        released_version = "1.2.3"
+        package = "pack1/pack2"
+        art_def = buildpom.MavenArtifactDef(group_id, artifact_id, version,
+                                            bazel_package=package,
+                                            requires_release=False,
+                                            released_version=released_version,
+                                            released_artifact_hash="123456789")
+
+        dep = dependency.new_dep_from_maven_artifact_def(art_def, target)
+
+        self.assertEqual("pack2", dep.bazel_target)
+
+    def test_source_dependency__bazel_target__explicit(self):
+        """
+        bazel_target can be set explicitly.
+        """
+        target = "foo_target"
+        group_id = "g1"
+        artifact_id = "a1"
+        version = "1.1.0"
+        released_version = "1.2.3"
+        package = "pack1/pack2"
+        art_def = buildpom.MavenArtifactDef(group_id, artifact_id, version,
+                                            bazel_package=package,
+                                            requires_release=False,
+                                            released_version=released_version,
+                                            released_artifact_hash="123456789")
+
+        dep = dependency.new_dep_from_maven_artifact_def(art_def, target)
+
+        self.assertEqual(target, dep.bazel_target)
+
+    def test_source_dependency__references_artifact__skip_pom_gen_mode(self):
+        group_id = "g1"
+        artifact_id = "a1"
+        version = "1.1.0"
+        released_version = "1.2.3"
+        package = "pack1/pack2"
+        art_def = buildpom.MavenArtifactDef(group_id, artifact_id, version,
+                                            pom_generation_mode=pomgenmode.SKIP,
                                             bazel_package=package,
                                             requires_release=False,
                                             released_version=released_version,
@@ -188,11 +257,41 @@ class DependencyTest(unittest.TestCase):
 
         dep = dependency.new_dep_from_maven_artifact_def(art_def)
 
-        self.assertEqual(group_id, dep.group_id)
-        self.assertEqual(artifact_id, dep.artifact_id)
-        self.assertEqual(released_version, dep.version)
-        self.assertEqual(package, dep.bazel_package)
-        self.assertTrue(dep.external)
+        self.assertFalse(dep.references_artifact)
+
+    def test_source_dependency__references_artifact__dynamic_pom_gen_mode(self):
+        group_id = "g1"
+        artifact_id = "a1"
+        version = "1.1.0"
+        released_version = "1.2.3"
+        package = "pack1/pack2"
+        art_def = buildpom.MavenArtifactDef(group_id, artifact_id, version,
+                                            pom_generation_mode=pomgenmode.DYNAMIC,
+                                            bazel_package=package,
+                                            requires_release=False,
+                                            released_version=released_version,
+                                            released_artifact_hash="123456789")
+
+        dep = dependency.new_dep_from_maven_artifact_def(art_def)
+
+        self.assertTrue(dep.references_artifact)
+
+    def test_source_dependency__references_artifact__template_pom_gen_mode(self):
+        group_id = "g1"
+        artifact_id = "a1"
+        version = "1.1.0"
+        released_version = "1.2.3"
+        package = "pack1/pack2"
+        art_def = buildpom.MavenArtifactDef(group_id, artifact_id, version,
+                                            pom_generation_mode=pomgenmode.TEMPLATE,
+                                            bazel_package=package,
+                                            requires_release=False,
+                                            released_version=released_version,
+                                            released_artifact_hash="123456789")
+
+        dep = dependency.new_dep_from_maven_artifact_def(art_def)
+
+        self.assertTrue(dep.references_artifact)
 
     def test_sort_order(self):
         """
@@ -203,10 +302,10 @@ class DependencyTest(unittest.TestCase):
         dep2 = dependency.new_dep_from_maven_art_str("com.google.guava:zoouava:20.0", "name")
         art_def = buildpom.maven_artifact("com.zoogle.guava", "art1", "1.0")
         art_def = buildpom._augment_art_def_values(art_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
-        dep3 = dependency.new_dep_from_maven_artifact_def(art_def)
+        dep3 = dependency.new_dep_from_maven_artifact_def(art_def, None)
         art_def = buildpom.maven_artifact("com.google.guava", "art1", "1.0")
         art_def = buildpom._augment_art_def_values(art_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
-        dep4 = dependency.new_dep_from_maven_artifact_def(art_def)
+        dep4 = dependency.new_dep_from_maven_artifact_def(art_def, None)
         
         l = [dep3, dep2, dep1, dep4]
         l.sort()

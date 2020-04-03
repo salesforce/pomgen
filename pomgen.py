@@ -52,21 +52,22 @@ def _get_output_dir(args):
     logger.info("Output dir [%s]" %  destdir)
     return destdir
 
-if __name__ == "__main__":
-    args = _parse_arguments(sys.argv[1:])
+def main(args):
+    args = _parse_arguments(args)
     repo_root = common.get_repo_root(args.repo_root)
     cfg = config.load(repo_root, args.verbose)
-    workspace = workspace.Workspace(repo_root, cfg.external_dependencies, 
-                                    cfg.excluded_dependency_paths,
-                                    cfg.all_src_exclusions)
+    ws = workspace.Workspace(repo_root, cfg.external_dependencies, 
+                             cfg.excluded_dependency_paths,
+                             cfg.all_src_exclusions)
 
     packages = argsupport.get_all_packages(repo_root, args.package)
+    packages = ws.filter_artifact_producing_packages(packages)
     if len(packages) == 0:
-        raise Exception("Did not find any BUILD.pom packages at [%s]" % args.package)
-    crawler = crawler.Crawler(workspace, cfg.pom_template)
-    result = crawler.crawl(packages,
-                           follow_monorepo_references=args.recursive,
-                           force=args.force)
+        raise Exception("Did not find any artifact producing BUILD.pom packages at [%s]" % args.package)
+    spider = crawler.Crawler(ws, cfg.pom_template)
+    result = spider.crawl(packages,
+                          follow_monorepo_references=args.recursive,
+                          force=args.force)
 
     if len(result.pomgens) == 0:
         logger.info("No releases are required. pomgen will not generate any pom files. To force pom generation, use pomgen's --force option.")
@@ -92,3 +93,6 @@ if __name__ == "__main__":
                 with open(pom_path, "w") as f:
                     f.write(pom_content)
                 logger.info("Wrote pom file to [%s]" % pom_path)
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

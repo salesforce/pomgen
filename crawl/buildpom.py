@@ -97,7 +97,7 @@ class MavenArtifactDef(object):
                  group_id,
                  artifact_id,
                  version,
-                 pom_generation_mode=None,
+                 pom_generation_mode=pomgenmode.DEFAULT,
                  pom_template_file=None,
                  deps=[],
                  include_deps=True,
@@ -178,6 +178,9 @@ class MavenArtifactDef(object):
 
     @property
     def requires_release(self):
+        if not self._pom_generation_mode.produces_artifact:
+            # nothing ever to release
+            return False
         return self._requires_release
 
     @requires_release.setter
@@ -251,15 +254,23 @@ def parse_maven_artifact_def(root_path, package):
         print("[ERROR] Cannot parse [%s]: %s" % (path, sys.exc_info()))
         raise
 
-    rel_art_def = _parse_released_maven_artifact_def(root_path, package)
-    released_pom_content = _read_released_pom(root_path, package)
+    if pom_generation_mode.produces_artifact:
+        rel_art_def = _parse_released_maven_artifact_def(root_path, package)
+        released_pom_content = _read_released_pom(root_path, package)
 
-    version_increment_strategy = version.get_version_increment_strategy(content, path)
+        vers_incr_strat = version.get_version_increment_strategy(content, path)
 
-    return _augment_art_def_values(art_def, rel_art_def, package,
-                                   released_pom_content,
-                                   version_increment_strategy,
-                                   pom_generation_mode)
+        return _augment_art_def_values(art_def, rel_art_def, package,
+                                       released_pom_content,
+                                       vers_incr_strat,
+                                       pom_generation_mode)
+    else:
+        return _augment_art_def_values(art_def, 
+                                       user_rel_art_def=None, 
+                                       bazel_package=package,
+                                       released_pom_content=None,
+                                       version_increment_strategy=None,
+                                       pom_generation_mode=pom_generation_mode)
 
 def _read_released_pom(root_path, package):
     content, _ = mdfiles.read_file(root_path, package, mdfiles.POM_XML_RELEASED_FILE_NAME)
@@ -290,15 +301,16 @@ def _augment_art_def_values(user_art_def, user_rel_art_def, bazel_package,
     Args:
         user_art_def: the MavenArtifactDef instance from the BUILD.pom file
 
-        user_art_rel_def: the ReleasedMavenArtifactDef instance from the 
+        user_rel_art_def: the ReleasedMavenArtifactDef instance from the 
             BUILD.pom.released file, may be None
 
         bazel_package: the bazel package the parsed BUILD.pom file lives in
 
-        released_pom_content: the content of the pom.xml.released file
+        released_pom_content: the content of the pom.xml.released file, may
+            be None
 
         version_increment_strategy: the artifacts version increment strategy,
-            as specified in the BUILD.pom file
+            as specified in the BUILD.pom file, may be None
 
         pom_generation_mode: the strongly typed pom_generation_mode 
             (common.pomgenmode.PomGenMode)

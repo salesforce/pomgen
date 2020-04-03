@@ -149,7 +149,7 @@ def _get_dependency_from_xml_element(el, version_must_be_set):
         # we currently don't support "type" (for no particular reason, we could)
         raise Exception("we are dropping type on the floor %s" % _str(el))
 
-    return dependency.ThirdPartyDependency(bazel_label=None, 
+    return dependency.ThirdPartyDependency(bazel_label_name=None, 
                                            group_id=group_id, 
                                            artifact_id=artifact_id, 
                                            version=version,
