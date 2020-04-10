@@ -110,7 +110,7 @@ if __name__ == "__main__":
                 attr_filter_name, attr_filter_value = args.filter.split("=")
                 if hasattr(maven_artifact, attr_filter_name):
                     value = getattr(maven_artifact, attr_filter_name)
-                    if attr_filter_value != value:
+                    if attr_filter_value != str(value):
                         continue
             attrs = OrderedDict()
             attrs["artifact_id"] = maven_artifact.artifact_id
