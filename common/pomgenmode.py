@@ -34,7 +34,7 @@ class PomGenMode:
         self.produces_artifact = produces_artifact
 
     def __str__(self):
-        return "PomGenMode: %s" % self.name
+        return self.name
 
     __repr__ = __str__
 
