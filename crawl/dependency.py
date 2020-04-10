@@ -123,7 +123,10 @@ class AbstractDependency(object):
                 return (self.group_id, self.artifact_id) < (other.group_id, other.artifact_id)
 
     def __str__(self):
-        return self.maven_coordinates_name
+        if self.references_artifact:
+            return self.maven_coordinates_name
+        else:
+            return "%s (ref)" % self.bazel_package
 
     def __repr__(self):
         return self.__str__()

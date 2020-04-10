@@ -140,19 +140,7 @@ class Crawler:
 
 
         # augment pom generators with deps discovered while crawling
-        # there are 2 types of dep registrations: 
-        #   -> local, only the deps actually belonging to each pomgen instance
-        #   -> global, ie all deps discovered, set on each pomgen instance
-        crawled_bazel_packages = set([dependency.new_dep_from_maven_artifact_def(a, bazel_target=None) for a in list(self.package_to_artifact.values())])
-        for p in self.pomgens:
-            # 1) local
-            target_key = self._get_target_key(p.bazel_package, p.dependency)
-            dependencies = self.target_to_dependencies[target_key]
-            p.register_dependencies(dependencies)
-
-            # 2) global
-            p.register_dependencies_globally(
-                crawled_bazel_packages, self.crawled_external_dependencies)
+        self._register_dependencies_with_pomgen_instances()
 
 
         # for each artifact, if its pom changed since the last release
@@ -170,12 +158,39 @@ class Crawler:
         # included in the result
         result_pomgens = []
         for p in self.pomgens:
-            if (p.artifact_def.pom_generation_mode.produces_artifact and 
-                p.artifact_def.requires_release):
+            if p.artifact_def.requires_release:
                 result_pomgens.append(p)
 
+        crawled_bazel_packages = self._get_crawled_packages_as_deps()
 
         return CrawlerResult(result_pomgens, nodes, crawled_bazel_packages)
+
+    def _register_dependencies_with_pomgen_instances(self):
+        """
+        This method sets deps on pomgen instances. These are the deps that the
+        pomgen instances will actually end up using when generating pom.xml
+        files.
+        """
+        # there are 2 types of dep registrations: 
+        #   -> local, only the deps actually belonging to each pomgen instance
+        #   -> global, ie all deps discovered, set on each pomgen instance
+
+        # 1) local
+        for p in self.pomgens:
+            target_key = self._get_target_key(p.bazel_package, p.dependency)
+            dependencies = self.target_to_dependencies[target_key]
+            p.register_dependencies(dependencies)
+
+        # 2) global
+        deps = self._get_crawled_packages_as_deps()
+        for p in self.pomgens:
+            p.register_dependencies_globally(deps, 
+                                             self.crawled_external_dependencies)
+
+    def _get_crawled_packages_as_deps(self):
+        deps = [dependency.new_dep_from_maven_artifact_def(art_def, bazel_target=None) for art_def in self.package_to_artifact.values()]
+        deps = set(self._filter_non_artifact_referencing_deps(deps))
+        return deps
 
     def _get_unprocessed_packages(self):
         """
@@ -257,7 +272,7 @@ class Crawler:
     def _process_collected_dep_lists(self, collected_dep_lists):
         deps = reversed(collected_dep_lists)
         deps = self._flatten_and_dedupe(deps)
-        deps = [d for d in deps if d.references_artifact]
+        deps = self._filter_non_artifact_referencing_deps(deps)
         return deps
 
     def _flatten_and_dedupe(self, list_of_lists):
@@ -269,6 +284,9 @@ class Crawler:
                     flattened.append(item)
                     processed.add(item)
         return flattened
+
+    def _filter_non_artifact_referencing_deps(self, deps):
+        return [d for d in deps if d.references_artifact]
 
     def _calculate_artifact_release_flag(self, force_release):
         """

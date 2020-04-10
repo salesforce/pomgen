@@ -32,7 +32,11 @@ def pretty_print(pom_content):
     #removing the comments from the pom file
     for c in comments:
         p = c.getparent()
-        p.remove(c)
+        if p is None:
+            # no parent for root-level comments
+            pass
+        else:
+            p.remove(c)
     return _pretty_str(tree)
 
 def indent_xml(xml_content, indent):
