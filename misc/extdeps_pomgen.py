@@ -57,14 +57,14 @@ def _starts_with_ignored_prefix(line):
             return True
     return False
 
-if __name__ == "__main__":
-    args = _parse_arguments(sys.argv[1:])
+def main(args):
+    args = _parse_arguments(args)
     repo_root = common.get_repo_root(args.repo_root)    
     cfg = config.load(repo_root)
-    workspace = workspace.Workspace(repo_root, 
-                                    cfg.external_dependencies, 
-                                    cfg.excluded_dependency_paths,
-                                    cfg.all_src_exclusions)
+    ws = workspace.Workspace(repo_root, 
+                             cfg.external_dependencies, 
+                             cfg.excluded_dependency_paths,
+                             cfg.all_src_exclusions)
 
     group_id = "all_ext_deps_group" if args.group_id is None else args.group_id
     artifact_id = "all_ext_deps_art" if args.artifact_id is None else args.artifact_id
@@ -88,12 +88,16 @@ if __name__ == "__main__":
             if _starts_with_ignored_prefix(line):
                 continue
             dep_labels.append(line)
-        unique_dependencies = set(workspace.parse_dep_labels(dep_labels))
+        unique_dependencies = set(ws.parse_dep_labels(dep_labels))
         dependencies = list(unique_dependencies)
     else:
-        dependencies = list(workspace.name_to_external_dependencies.values())
+        dependencies = list(ws.name_to_external_dependencies.values())
 
     dependencies.sort()
-    pomgen = ThirdPartyDepsPomGen(workspace, artifact_def, dependencies, cfg.pom_template)
+    pomgen = ThirdPartyDepsPomGen(ws, artifact_def, dependencies,
+                                  cfg.pom_template)
     pomgen.process_dependencies()
-    print(pomgen.gen())
+    return pomgen.gen()
+
+if __name__ == "__main__":
+    print(main(sys.argv[1:]))
