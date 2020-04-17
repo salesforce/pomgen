@@ -38,6 +38,14 @@ def update_build_pom_file(root_path,
             raise Exception("Invalid package [%s]" % package)
         try:
             current_version = version.parse_build_pom_version(build_pom_content)
+
+            if current_version is None:
+                # only possible if pom_generation_mode=skip. this isn't quite
+                # right, but we'll just ignore these type of packages
+                # for simplicitly, because there isn't much metadata to
+                # update anyway (only pom_generation_mode is specified)
+                continue
+
             updated_version = new_version
 
             # increment current version using version increment strategy

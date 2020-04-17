@@ -2,6 +2,7 @@ maven_artifact(
     group_id = "com.pomgen.example",
     artifact_id = "wintervegetables",
     version = "2.0.0-SNAPSHOT",
+    pom_generation_mode = "dynamic",
 )
 
 maven_artifact_update(

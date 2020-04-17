@@ -11,7 +11,7 @@ def from_string(pomgenmode_string):
     `pom_generation_mode`.
     """
     if pomgenmode_string is None:
-        return DEFAULT
+        raise Exception("pom_generation_mode must be specified")
     for mode in ALL_MODES:
         if pomgenmode_string == mode.name:
             return mode
