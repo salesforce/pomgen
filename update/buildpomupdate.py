@@ -8,6 +8,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 This module is responsible for updating BUILD.pom and BUILD.pom.released files.
 """
 from common import mdfiles
+from common import pomgenmode
 from common import version
 from crawl import git
 import os
@@ -21,7 +22,8 @@ def update_build_pom_file(root_path,
                           new_version_incr_strat=None,
                           set_version_to_last_released_version=False,
                           version_qualifier_to_add=None,
-                          new_pom_generation_mode=None):
+                          new_pom_generation_mode=None,
+                          add_pom_generation_mode_if_missing=False):
     """
     If a non-None value is provided, updates the following values in BUILD.pom 
     files in the specified packages:
@@ -66,6 +68,8 @@ def update_build_pom_file(root_path,
                 build_pom_content = _update_version_incr_strategy_in_build_pom_content(build_pom_content, new_version_incr_strat)
             if new_pom_generation_mode is not None:
                 build_pom_content = _update_pom_generation_mode_in_build_pom_content(build_pom_content, new_pom_generation_mode)
+            if add_pom_generation_mode_if_missing:
+                build_pom_content = _add_pom_generation_mode_if_missing_in_build_pom_content(build_pom_content)
                     
             mdfiles.write_file(build_pom_content, root_path, package, mdfiles.BUILD_POM_FILE_NAME)
         except:
@@ -143,6 +147,13 @@ def _update_pom_generation_mode_in_build_pom_content(build_pom_content, new_pom_
                 build_pom_content[insert_at:]
     else:
         return "%s%s%s" % (m.group(1), value, m.group(3))
+
+def _add_pom_generation_mode_if_missing_in_build_pom_content(build_pom_content):
+    m = pom_generation_mode_re.search(build_pom_content)
+    if m is None:
+        return _update_pom_generation_mode_in_build_pom_content(build_pom_content, pomgenmode.DEFAULT.name)
+    else:
+        return build_pom_content
 
 def _update_version_in_build_pom_released_content(build_pom_released_content, new_released_version):
     m = version.version_re.search(build_pom_released_content)

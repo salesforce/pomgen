@@ -51,7 +51,8 @@ def _parse_arguments(args):
         help="Adds the specified string to the end of the version, using '-' as a separator. If the version ends with \"-SNAPSHOT\", the specified qualifier is added before the snapshot suffix")
     parser.add_argument("--new_pom_generation_mode", required=False, type=str,
         help="Adds or updates the value of 'pom_generation_mode' in BUILD.pom files")
-
+    parser.add_argument("--add_missing_pom_generation_mode", required=False, action='store_true',
+        help="Adds missing 'pom_generation_mode' to BUILD.pom files")
 
     parser.add_argument("--repo_root", type=str, required=False,
         help="the root of the repository")    
@@ -70,7 +71,8 @@ if __name__ == "__main__":
         args.set_version_to_last_released or
         args.add_version_qualifier is not None or
         args.new_version_increment_strategy is not None or
-        args.new_pom_generation_mode is not None):
+        args.new_pom_generation_mode is not None or
+        args.add_missing_pom_generation_mode):
 
         buildpomupdate.update_build_pom_file(
             repo_root, packages, args.new_version,
@@ -78,7 +80,8 @@ if __name__ == "__main__":
             args.new_version_increment_strategy,
             args.set_version_to_last_released,
             args.add_version_qualifier,
-            args.new_pom_generation_mode)
+            args.new_pom_generation_mode,
+            args.add_missing_pom_generation_mode)
 
     if (args.new_released_version is not None or
         args.new_released_artifact_hash is not None or
