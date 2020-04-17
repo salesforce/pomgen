@@ -92,3 +92,7 @@ excluded_extensions=
 ```
 
 Running pomgen with `--verbose` causes the current config to be echoed.
+
+## CI setup
+
+[This document](ci.md) goes over the CI setup.
