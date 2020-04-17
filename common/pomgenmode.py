@@ -39,13 +39,17 @@ class PomGenMode:
     __repr__ = __str__
 
 
-# dynamic: the pom is generated from scratch, using a common base template
+# the pom is generated from scratch, using a common skeleton base template
+# "interesting" pom content is only the <dependencies> section, which is based
+# on BUILD file content
 DYNAMIC = PomGenMode("dynamic", produces_artifact=True)
 
-# template: the pom is generated based on a custom template file
+# the pom is generated based on a custom template file only
 TEMPLATE = PomGenMode("template", produces_artifact=True)
 
-# skip: this bazel package is skipped over at pom generation time
+# this bazel package is skipped over at pom generation time
+# dependencies from this bazel package are "pushed up" to the closest parent
+# that has an artifact producing pom_generation_mode
 SKIP = PomGenMode("skip", produces_artifact=False)
 
 

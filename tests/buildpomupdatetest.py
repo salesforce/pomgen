@@ -454,21 +454,69 @@ maven_artifact_update(
             self.assertIn('version = "3.2.1-the_qual"', content)
             self.assertIn(')', content)
 
+    def test_update_pom_generation_mode_in_BUILD_pom(self):
+        pack1 = "somedir/p1"
+        repo_root = tempfile.mkdtemp("monorepo")
+        pack1_path = os.path.join(repo_root, pack1)
+        os.makedirs(pack1_path)
+        self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1",
+                              pom_generation_mode="jar")
+
+        buildpomupdate.update_build_pom_file(
+            repo_root, [pack1], new_pom_generation_mode="template")
+
+        with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
+            content = f.read()
+            self.assertIn('maven_artifact(', content)
+            self.assertIn('group_id = "p1g"', content)
+            self.assertIn('artifact_id = "p1a"', content)
+            self.assertIn('version = "3.2.1"', content)
+            self.assertIn('pom_generation_mode = "template"', content)
+            self.assertIn(')', content)
+
+    def test_add_pom_generation_mode_to_BUILD_pom(self):
+        pack1 = "somedir/p1"
+        repo_root = tempfile.mkdtemp("monorepo")
+        pack1_path = os.path.join(repo_root, pack1)
+        os.makedirs(pack1_path)
+        self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1",
+                              pom_generation_mode=None)
+
+        buildpomupdate.update_build_pom_file(
+            repo_root, [pack1], new_pom_generation_mode="mypomgenmode")
+
+        with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
+            content = f.read()
+            print(content)
+            self.assertIn('maven_artifact(', content)
+            self.assertIn('    group_id = "p1g"', content)
+            self.assertIn('    artifact_id = "p1a"', content)
+            self.assertIn('    version = "3.2.1"', content)
+            self.assertIn('    pom_generation_mode = "mypomgenmode"', content)
+            self.assertIn(')', content)
+
     def _write_build_pom(self, package_path, artifact_id, group_id, version,
+                         pom_generation_mode=None,
                          version_increment_strategy="minor"):
         build_pom = """
 maven_artifact(
     artifact_id = "%s",
     group_id = "%s",
-    version = "%s",
+    version = "%s","""
+
+        build_pom = build_pom % (artifact_id, group_id, version)
+
+        if pom_generation_mode is not None:
+            build_pom += "    pom_generation_mode = \"%s\"," % pom_generation_mode
+
+        build_pom += """
 )
 
 maven_artifact_update(
     version_increment_strategy = "%s",
 )
 """
-        build_pom = build_pom % (artifact_id, group_id, version,
-                                version_increment_strategy)
+        build_pom = build_pom % version_increment_strategy
 
         path = os.path.join(package_path, "MVN-INF")
         if not os.path.exists(path):
