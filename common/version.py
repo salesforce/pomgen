@@ -46,8 +46,11 @@ def parse_build_pom_version(build_pom_content):
     Returns the value of maven_artifact.version.
     """
     m = version_re.search(build_pom_content)
-    assert m is not None
-    return m.group(2).strip()
+    if m is None:
+        # possible if pom_generation_mode=skip
+        return None
+    else:
+        return m.group(2).strip()
 
 def parse_build_pom_released_version(build_pom_released_content):
     """
