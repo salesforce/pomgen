@@ -20,10 +20,15 @@ def update_build_pom_file(root_path,
                           update_version_using_version_incr_strat=False,
                           new_version_incr_strat=None,
                           set_version_to_last_released_version=False,
-                          version_qualifier_to_add=None):
+                          version_qualifier_to_add=None,
+                          new_pom_generation_mode=None):
     """
-    Updates the version and/or version_increment_strategy in BUILD.pom files in 
-    the specified packages. 
+    If a non-None value is provided, updates the following values in BUILD.pom 
+    files in the specified packages:
+        - version (also version qualifier)
+        - version_increment_strategy
+        - pom_generation_mode
+        - pom_generation_mode
     """
     for package in packages:
         build_pom_content, build_pom_path = mdfiles.read_file(root_path, package, mdfiles.BUILD_POM_FILE_NAME)
@@ -59,6 +64,8 @@ def update_build_pom_file(root_path,
                 build_pom_content = _update_version_in_build_pom_content(build_pom_content, updated_version)
             if new_version_incr_strat is not None:
                 build_pom_content = _update_version_incr_strategy_in_build_pom_content(build_pom_content, new_version_incr_strat)
+            if new_pom_generation_mode is not None:
+                build_pom_content = _update_pom_generation_mode_in_build_pom_content(build_pom_content, new_pom_generation_mode)
                     
             mdfiles.write_file(build_pom_content, root_path, package, mdfiles.BUILD_POM_FILE_NAME)
         except:
@@ -101,13 +108,12 @@ def update_released_artifact(root_path, packages, source_exclusions, new_version
             print("[ERROR] Cannot update BUILD.pom.released [%s]: %s" % (path, sys.exc_info()))
             raise
 
-artifact_id_re = re.compile("^.*(artifact_id).*?=.*?[\"'].*?([\"'],?).*$", re.S)
-version_incr_strat_re = re.compile("(^.*version_increment_strategy *= *[\"'])(.*?)([\"'].*)$", re.S)
-
 def _update_version_in_build_pom_content(build_pom_content, new_version):
     m = version.version_re.search(build_pom_content)
     assert m is not None
     return "%s%s%s" % (m.group(1), new_version.strip(), m.group(3))
+
+version_incr_strat_re = re.compile("(^.*version_increment_strategy *= *[\"'])(.*?)([\"'].*)$", re.S)
 
 def _update_version_incr_strategy_in_build_pom_content(build_pom_content, new_version_increment_strategy):
     m = version_incr_strat_re.search(build_pom_content)
@@ -120,6 +126,23 @@ maven_artifact_update(
         return build_pom_content % new_version_increment_strategy.strip()
     else:
         return "%s%s%s" % (m.group(1), new_version_increment_strategy.strip(), m.group(3))
+
+pom_generation_mode_re = re.compile("(^.*pom_generation_mode *= *[\"'])(.*?)([\"'].*)$", re.S)
+
+def _update_pom_generation_mode_in_build_pom_content(build_pom_content, new_pom_generation_mode):
+    value = new_pom_generation_mode.strip()
+    m = pom_generation_mode_re.search(build_pom_content)
+    if m is None:
+        # add it to the end of maven_artifact
+        maven_artifact = "maven_artifact("
+        i = build_pom_content.index(maven_artifact)
+        j = build_pom_content.index(")", i + len(maven_artifact))
+        insert_at = j
+        return build_pom_content[:insert_at] + \
+            '    pom_generation_mode = "%s",%s' % (value, os.linesep) + \
+                build_pom_content[insert_at:]
+    else:
+        return "%s%s%s" % (m.group(1), value, m.group(3))
 
 def _update_version_in_build_pom_released_content(build_pom_released_content, new_released_version):
     m = version.version_re.search(build_pom_released_content)
