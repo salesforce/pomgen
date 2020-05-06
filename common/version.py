@@ -63,6 +63,8 @@ def get_release_version(version):
     If version ends with "-SNAPSHOT", removes that, otherwise returns the
     version without modifications.
     """
+    if version is None:
+        return None
     if version.endswith("-SNAPSHOT"):
         return version[0:-len("-SNAPSHOT")]
     return version
@@ -72,6 +74,8 @@ def get_next_dev_version(version, version_increment_strategy):
     Returns the next development version to use, based on the specified
     version_increment_strategy.
     """
+    if version is None:
+        return None
     next_version = version_increment_strategy(version)
     if not next_version.endswith("-SNAPSHOT"):
         next_version += "-SNAPSHOT"
