@@ -351,6 +351,7 @@ maven_artifact(
     artifact_id = "%s",
     group_id = "%s",
     version = "%s",
+    pom_generation_mode = "dynamic",
 )
 
 maven_artifact_update(

@@ -100,6 +100,7 @@ py_test(
     name = "buildpomupdatetest",
     srcs = ["common/code.py",
             "common/mdfiles.py",
+            "common/pomgenmode.py",
             "common/version.py",
             "config/exclusions.py",
             "crawl/git.py",

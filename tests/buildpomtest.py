@@ -71,7 +71,7 @@ class BuildPomTest(unittest.TestCase):
         repo_root = tempfile.mkdtemp("monorepo")
         repo_package = os.path.join(repo_root, package_rel_path)
         os.makedirs(repo_package)
-        self._write_build_pom(repo_package, artifact_id, group_id, version, pom_gen_mode=None)
+        self._write_build_pom(repo_package, artifact_id, group_id, version, pom_gen_mode="dynamic")
 
         art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
 
@@ -152,7 +152,7 @@ maven_artifact(
     artifact_id = "%s",
     group_id = "%s",
     version = "%s",
-    %s # pom_generation_mode
+    pom_generation_mode = '%s',
 )
 
 maven_artifact_update(
@@ -164,8 +164,7 @@ maven_artifact_update(
         if not os.path.exists(path):
             os.makedirs(path)
         with open(os.path.join(path, "BUILD.pom"), "w") as f:
-           f.write(build_pom % (artifact_id, group_id, version,
-           ("" if pom_gen_mode is None else 'pom_generation_mode = "%s"' % pom_gen_mode)))
+           f.write(build_pom % (artifact_id, group_id, version, pom_gen_mode))
 
     def _write_build_pom_skip_generation_mode(self, package_path):
         build_pom = """
