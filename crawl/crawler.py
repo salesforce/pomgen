@@ -68,9 +68,10 @@ class CrawlerResult:
 
 class Crawler:
 
-    def __init__(self, workspace, pom_template):
+    def __init__(self, workspace, pom_template, verbose=False):
         self.workspace = workspace
         self.pom_template = pom_template
+        self.verbose = verbose # verbose logging
         self.package_to_artifact = {} # bazel package -> artifact def instance
         self.library_to_artifact = defaultdict(list) # library root path -> list of its artifact def instances
         self.library_to_nodes = defaultdict(list) # library root path -> list of its DAG Node instances
@@ -226,7 +227,7 @@ class Crawler:
                 previous_pom = pomparser.pretty_print(art_def.released_pom_content)
                 pom_changed = current_pom != previous_pom
                 if pom_changed:
-                    logger.debug("pom change for %s" % art_def)
+                    logger.debug("pom change for %s %s" % (art_def, art_def.bazel_package))
                     art_def.requires_release = True
                     art_def.release_reason = ReleaseReason.POM
 
@@ -234,6 +235,11 @@ class Crawler:
                     diff = difflib.unified_diff(previous_pom.splitlines(True),
                                                 current_pom.splitlines(True))
                     logger.raw(''.join(diff))
+                    if self.verbose:
+                        logger.debug("%s computed pom:" % art_def)
+                        logger.raw(current_pom)
+                        logger.debug("%s released pom:" % art_def)
+                        logger.raw(previous_pom)
 
     def _push_transitives_to_parent(self):
         """
@@ -381,16 +387,29 @@ class Crawler:
             node.children = cached_node.children
             self.library_to_nodes[node.artifact_def.library_path].append(node)
             self._store_if_leafnode(node)
+            if self.verbose:
+                logger.debug("Skipping re-crawling of artifact [%s] with target key [%s] because it has already happened" % (cached_node.artifact_def, target_key))
             return node
         else:
             logger.info("Processing [%s]" % target_key)
             artifact_def = self.workspace.parse_maven_artifact_def(package)
+
+            if artifact_def is None:
+                raise Exception("No artifact defined at package %s" % package)
+            
+            self._validate_default_target_dep(parent_node, dep, artifact_def)
+
             self.package_to_artifact[package] = artifact_def
             self.library_to_artifact[artifact_def.library_path].append(artifact_def)
             pomgen = self._get_pom_generator(artifact_def, dep)
             self.pomgens.append(pomgen)
             source_deps, ext_deps, all_deps = pomgen.process_dependencies()
             self.target_to_dependencies[target_key] = all_deps
+            if self.verbose:
+                logger.debug("Determined deps for artifact: [%s] with target key [%s]" % (artifact_def, target_key))
+                logger.debug("Source deps: %s" % "\n".join([str(d) for d in source_deps]))
+                logger.debug("Ext deps: %s" % "\n".join([str(d) for d in ext_deps]))
+                logger.debug("All deps: %s" % "\n".join([str(d) for d in all_deps]))
             self.crawled_external_dependencies.update(ext_deps)
             node = Node(parent_node, artifact_def, pomgen.dependency)
             if follow_monorepo_references:
@@ -404,6 +423,20 @@ class Crawler:
             self.library_to_nodes[node.artifact_def.library_path].append(node)
             self._store_if_leafnode(node)
             return node
+
+    def _validate_default_target_dep(self, parent_node, dep, artifact_def):
+        if dep is not None:
+            if artifact_def.pom_generation_mode.produces_artifact:
+                # if the current bazel target produces an artifact 
+                # (pom/jar that goes to Nexus), validate that the BUILD 
+                # file pointing at this target uses the default bazel 
+                # package target 
+                # this is a current pomgen requirement: 
+                # 1 bazel package produces one artifact, named after the 
+                # bazel package
+                dflt_package_name = os.path.basename(artifact_def.bazel_package)
+                if dep.bazel_target != dflt_package_name:
+                    raise Exception("Non default-package references are only supported to non-artifact producing packages: [%s] can only reference [%s], [%s:%s] is not allowed" % (parent_node.artifact_def.bazel_package, artifact_def.bazel_package, artifact_def.bazel_package, dep.bazel_target))
 
     def _get_pom_generator(self, artifact_def, dep):
         if dep is None:

@@ -64,7 +64,7 @@ def main(args):
     packages = ws.filter_artifact_producing_packages(packages)
     if len(packages) == 0:
         raise Exception("Did not find any artifact producing BUILD.pom packages at [%s]" % args.package)
-    spider = crawler.Crawler(ws, cfg.pom_template)
+    spider = crawler.Crawler(ws, cfg.pom_template, args.verbose)
     result = spider.crawl(packages,
                           follow_monorepo_references=args.recursive,
                           force=args.force)
