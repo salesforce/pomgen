@@ -54,6 +54,9 @@ def _parse_arguments(args):
                         required=False,
                         help="Prints release information about the artifacts in the monorepo - output is json")
 
+    parser.add_argument("--verbose", required=False, action='store_true',
+        help="Verbose output")
+
     # this is experimental and not generalized yet
     parser.add_argument("--filter", type=str, required=False,
         help="Generic query filter, currently only supported for artifact queries")
@@ -139,7 +142,7 @@ if __name__ == "__main__":
                                    args.artifact_release_plan)
 
     if crawl_artifact_dependencies:
-        crawler = crawler.Crawler(ws, cfg.pom_template)
+        crawler = crawler.Crawler(ws, cfg.pom_template, args.verbose)
         artifact_result = crawler.crawl(packages)
         library_nodes = libaggregator.get_libraries_to_release(artifact_result.nodes)
 

@@ -29,6 +29,17 @@ def _ls_files(repo_root_path, rel_path, source_exclusions):
     excluded_rel_path_files = [os.path.join(rel_path, f) for f in ["BUILD",]]
     excluded_rel_path_files += [os.path.join(rel_path, f) for f in mdfiles.get_package_relative_metadata_file_paths()]
 
+    # special case for exluding nested pomgen metadata (MVN-INF) directories.
+    # this is to avoid the edge case that updating metadata in a inner bazel
+    # package would cause the outer package to be marked as modified
+    excluded_path_components = []
+    for d in mdfiles.get_package_relative_metadata_directory_paths():
+        if not d.startswith(os.sep):
+            d = os.sep + d
+        if not d.endswith(os.sep):
+            d = d + os.sep
+        excluded_path_components.append(d)
+
     output = run_cmd("git ls-files -s %s" % rel_path, cwd=repo_root_path).splitlines()
     filtered_output = []
     for line in output:
@@ -38,6 +49,11 @@ def _ls_files(repo_root_path, rel_path, source_exclusions):
         include_file = True
         for excluded_rel_path in excluded_rel_paths:
             if file_rel_path.startswith(excluded_rel_path):
+                include_file = False
+                break
+
+        for excluded_path_component in excluded_path_components:
+            if excluded_path_component in file_rel_path:
                 include_file = False
                 break
 

@@ -213,6 +213,36 @@ class ArtifactProcessorTest(unittest.TestCase):
         self.assertNotEqual(None, art_def.requires_release)
         self.assertFalse(art_def.requires_release)
 
+    def test_nested_metadata_file_changes_are_ignored(self):
+        """
+        lib/a1/src/...
+        lib/a1/MVN-INF/...
+        lib/a1/a2/src/...
+        lib/a1/a2/MVN-INF/...
+
+        Changes to files in lib/a1/a2/MVN-INF should be ignored by
+        lib/a1's hash calculation.
+        """
+        a1_package = "lib/a1"
+        a2_package = "lib/a1/a2"
+        repo_root_path = self._setup_repo_with_package(a1_package)
+        self._touch_file_at_path(repo_root_path, a1_package, "MVN-INF", "BUILD.pom.released")
+        self._touch_file_at_path(repo_root_path, a1_package, "", "some_file")
+
+        self._touch_file_at_path(repo_root_path, a2_package, "MVN-INF", "BUILD.pom.released")
+        self._touch_file_at_path(repo_root_path, a2_package, "", "some_file")
+
+        self._commit(repo_root_path)
+
+        a1_hash = git.get_dir_hash(repo_root_path, a1_package, exclusions.src_exclusions())
+        # modify file under a2 metadata - should be ignored
+        self._touch_file_at_path(repo_root_path, a2_package, "MVN-INF", "BUILD.pom.released")
+        self._commit(repo_root_path)
+
+        updated_a1_hash = git.get_dir_hash(repo_root_path, a1_package, exclusions.src_exclusions())
+
+        self.assertEqual(a1_hash, updated_a1_hash)
+
     def _setup_repo_with_package(self, package_rel_path):
         repo_root_path = tempfile.mkdtemp("monorepo")
         self._touch_file_at_path(repo_root_path, "", "MVN-INF", "LIBRARY.root")
