@@ -195,8 +195,63 @@ class PomTest(unittest.TestCase):
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep,template_content = """
             srpc #{g:a:version}""")
-        d = dependency.MonorepoDependency(buildpom.maven_artifact("g","a","1"), bazel_target=None)
+        art = buildpom.MavenArtifactDef("g","a","1", bazel_package="a/b/c")
+        d = dependency.MonorepoDependency(art, bazel_target=None)
         pomgen.register_dependencies_globally(set([d]), set())
+
+        with self.assertRaises(Exception) as ctx:
+            pomgen.gen()
+
+        self.assertIn("Found multiple artifacts with the same groupId:artifactId", str(ctx.exception))
+        self.assertIn("g:a", str(ctx.exception))
+
+    def test_template_var_sub__multiple_ext_deps_with_same_gav(self):
+        """
+        Verifies that pomgen is ok with multiple external deps with the same
+        gav. This is an edge case, where the WORKSPACE file defines 2 (or more)
+        differnently named maven_jars, that all point back to the same artifact.
+        """
+        ws = workspace.Workspace("some/path", """
+            native.maven_jar(
+                name = "name1",
+                artifact = "g:a:20",
+            )
+
+            native.maven_jar(
+                name = "name2",
+                artifact = "g:a:20",
+            )
+
+        """, [], exclusions.src_exclusions())
+        artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.2.3")
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        pomgen = pom.TemplatePomGen(ws, artifact_def, dep,template_content = """
+            srpc #{g:a:version}""")
+
+        pomgen.gen()
+
+    def test_template_var_sub__multiple_ext_deps_with_same_ga_diff_vers(self):
+        """
+        Verifies that pomgen is NOT OK with multiple external deps with the same
+        groupId/artifactId but with a different version (as this would break
+        the #{<groupId>:<artifactId>:version} syntax).
+        """
+        ws = workspace.Workspace("some/path", """
+            native.maven_jar(
+                name = "name1",
+                artifact = "g:a:20",
+            )
+
+            native.maven_jar(
+                name = "name2",
+                artifact = "g:a:21",
+            )
+
+        """, [], exclusions.src_exclusions())
+        artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.2.3")
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        pomgen = pom.TemplatePomGen(ws, artifact_def, dep,template_content = """
+            srpc #{g:a:version}""")
 
         with self.assertRaises(Exception) as ctx:
             pomgen.gen()
