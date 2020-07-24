@@ -324,27 +324,46 @@ class TemplatePomGen(AbstractPomGen):
         # the latter form is being phased out to avoid having to change pom
         # templates when dependencies move in (and out?) of the monorepo.
 
-        properties = {}
+        #{<groupId>:<artifactId>:[<classifier>:]version} -> version value
+        #{com_google_guava_guava.version} -> version value
+        key_to_version = {}
 
-        all_deps = list(self._workspace.name_to_external_dependencies.values())+\
+        # internal bookeeping for this method
+        key_to_dep = {}
+
+        all_deps = \
+            list(self._workspace.name_to_external_dependencies.values()) + \
             list(self.crawled_bazel_packages)
+
         for dep in all_deps:
             key = "%s:version" % dep.maven_coordinates_name
-            if key in properties:
-                msg = "Found multiple artifacts with the same groupId:artifactId: \"%s\". This means that there are either multiple BUILD.pom files defining the same artifact, or that a BUILD.pom defined artifact has the same groupId and artifactId as a referenced Nexus jar" % dep.maven_coordinates_name
-                raise Exception(msg)
-            properties[key] = self._dep_version(pomcontenttype, dep)
+            if key in key_to_version:
+                found_conflicting_deps = True
+                conflicting_dep = key_to_dep[key]
+                if dep.bazel_package is None and conflicting_dep.bazel_package is None:
+                    # both deps are external (Nexus) deps, this is weird, but
+                    # ok, as long as their versions are identical, so check for
+                    # that
+                    if dep.version == conflicting_dep.version:
+                        found_conflicting_deps = False # ok
+
+                if found_conflicting_deps:
+                    msg = "Found multiple artifacts with the same groupId:artifactId: \"%s\". This means that there are multiple BUILD.pom files defining the same artifact, or that a BUILD.pom defined artifact has the same groupId and artifactId as a referenced maven_jar, or that multiple maven_jars reference the same groupId/artifactId but different versions" % dep.maven_coordinates_name
+                    raise Exception(msg)
+            key_to_version[key] = self._dep_version(pomcontenttype, dep)
+            key_to_dep[key] = dep
             if dep.bazel_label_name is not None:
                 key = "%s.version" % dep.bazel_label_name
-                assert key not in properties
-                properties[key] = dep.version
+                assert key not in key_to_version
+                key_to_version[key] = dep.version
+                key_to_dep[key] = dep
 
         # the maven coordinates of this artifact can be referenced directly:
-        properties["artifact_id"] = self._artifact_def.artifact_id
-        properties["group_id"] = self._artifact_def.group_id
-        properties["version"] = self._artifact_def_version(pomcontenttype)
+        key_to_version["artifact_id"] = self._artifact_def.artifact_id
+        key_to_version["group_id"] = self._artifact_def.group_id
+        key_to_version["version"] = self._artifact_def_version(pomcontenttype)
 
-        return properties
+        return key_to_version
 
     def _get_crawled_dependencies_properties(self, pomcontenttype, pom_template_parsed_deps):
         # this is somewhat lame: an educated guess on where the properties
