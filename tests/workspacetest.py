@@ -12,14 +12,28 @@ from crawl import git
 from crawl import buildpom
 from crawl import dependency
 from crawl import workspace
+from crawl import bazel
+
 import os
 import tempfile
 import unittest
 
 class WorkspaceTest(unittest.TestCase):
 
+    def setUp(self):
+        self.orig_bazel_query_maven_install = bazel.query_maven_install
+        query_result = {
+            'org_apache_maven_maven_artifact': 'org.apache.maven:maven-artifact:3.3.9',
+            'com_google_guava_guava': 'com.google.guava:guava:23.0',
+            'ch_qos_logback_logback_classic': 'ch.qos.logback:logback-classic:1.2.3',
+        }
+        bazel.query_maven_install = lambda rp, name: query_result
+    
+    def tearDown(self):
+        bazel.query_maven_install = self.orig_bazel_query_maven_install
+
     def test_normalize_deps__default_removes_refs_to_same_package(self):
-        ws = workspace.Workspace("so/path", "", [], exclusions.src_exclusions())
+        ws = workspace.Workspace("so/path", [], exclusions.src_exclusions())
         package = "a/b/c"
         art1 = buildpom.MavenArtifactDef("g1", "a1", "1", bazel_package=package,
                                          pom_generation_mode=pomgenmode.DYNAMIC)
@@ -36,7 +50,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertEqual([dep3, dep4], deps)
 
     def test_normalize_deps__skip_pomgen_mode_allows_refs_to_same_package(self):
-        ws = workspace.Workspace("so/path", "", [], exclusions.src_exclusions())
+        ws = workspace.Workspace("so/path", [], exclusions.src_exclusions())
         package = "a/b/c"
         art1 = buildpom.MavenArtifactDef("g1", "a1", "1", bazel_package=package,
                                          pom_generation_mode=pomgenmode.SKIP)
@@ -57,18 +71,14 @@ class WorkspaceTest(unittest.TestCase):
         Verifies that an external dependency label is correctly parsed into a 
         Dependency instance.
         """
-        ws = workspace.Workspace("some/path", """
-            native.maven_jar(
-                name = "ch_qos_logback_logback_classic",
-                artifact = "ch.qos.logback:logback-classic:1.4.4",
-            )""", [], exclusions.src_exclusions())
+        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions())
 
         deps = ws.parse_dep_labels(["@ch_qos_logback_logback_classic//jar"])
 
         self.assertEqual(1, len(deps))
         self.assertEqual("ch.qos.logback", deps[0].group_id)
         self.assertEqual("logback-classic", deps[0].artifact_id)
-        self.assertEqual("1.4.4", deps[0].version)
+        self.assertEqual("1.2.3", deps[0].version)
         self.assertTrue(deps[0].external)
         self.assertIsNone(deps[0].bazel_package)
 
@@ -77,11 +87,7 @@ class WorkspaceTest(unittest.TestCase):
         Verifies that a label for an exluced external dependency is skipped
         as expected
         """
-        ws = workspace.Workspace("some/path", """
-            native.maven_jar(
-                name = "ch_qos_logback_logback_classic",
-                artifact = "ch.qos.logback:logback-classic:1.4.4",
-            )""", [], exclusions.src_exclusions())
+        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions())
 
         deps = ws.parse_dep_labels(["@ch_qos_logback_logback_classic//jar",
                                     "@com_google_api_grpc_proto_google_common_protos//jar",])
@@ -89,7 +95,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertEqual(1, len(deps))
         self.assertEqual("ch.qos.logback", deps[0].group_id)
         self.assertEqual("logback-classic", deps[0].artifact_id)
-        self.assertEqual("1.4.4", deps[0].version)
+        self.assertEqual("1.2.3", deps[0].version)
         self.assertTrue(deps[0].external)
         self.assertIsNone(deps[0].bazel_package)
 
@@ -98,18 +104,13 @@ class WorkspaceTest(unittest.TestCase):
         Verifies that an external dependency label is correctly parsed into a 
         Dependency instance - test parsing with single-quote delimited strings.
         """
-        ws = workspace.Workspace("some/path", """
-            native.maven_jar(
-                name = 'ch_qos_logback_logback_classic',
-                artifact = 'ch.qos.logback:logback-classic:1.4.4',
-            )""", [], exclusions.src_exclusions())
-
+        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions())
         deps = ws.parse_dep_labels(["@ch_qos_logback_logback_classic//jar"])
 
         self.assertEqual(1, len(deps))
         self.assertEqual("ch.qos.logback", deps[0].group_id)
         self.assertEqual("logback-classic", deps[0].artifact_id)
-        self.assertEqual("1.4.4", deps[0].version)
+        self.assertEqual("1.2.3", deps[0].version)
         self.assertTrue(deps[0].external)
         self.assertIsNone(deps[0].bazel_package)
 
@@ -118,18 +119,14 @@ class WorkspaceTest(unittest.TestCase):
         Verifies that an external dependency label is correctly parsed into a 
         Dependency instance - test parsing with single-quote delimited strings.
         """
-        ws = workspace.Workspace("some/path", """
-            native.maven_jar(
-                name = 'ch_qos_logback_logback_classic",
-                artifact = "ch.qos.logback:logback-classic:1.4.4',
-            )""", [], exclusions.src_exclusions())
+        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions())
 
         deps = ws.parse_dep_labels(["@ch_qos_logback_logback_classic//jar"])
 
         self.assertEqual(1, len(deps))
         self.assertEqual("ch.qos.logback", deps[0].group_id)
         self.assertEqual("logback-classic", deps[0].artifact_id)
-        self.assertEqual("1.4.4", deps[0].version)
+        self.assertEqual("1.2.3", deps[0].version)
         self.assertTrue(deps[0].external)
         self.assertIsNone(deps[0].bazel_package)
 
@@ -137,11 +134,7 @@ class WorkspaceTest(unittest.TestCase):
         """
         Verifies that proto labels are ignored and not added to the list of dependencies
         """
-        ws = workspace.Workspace("some/path", """
-            native.maven_jar(
-                name = 'ch_qos_logback_logback_classic",
-                artifact = "ch.qos.logback:logback-classic:1.4.4',
-            )""", 
+        ws = workspace.Workspace("some/path",
             excluded_dependency_paths=["projects/protos/",], 
             source_exclusions=exclusions.src_exclusions())
 
@@ -149,7 +142,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertEqual(1, len(deps))
         self.assertEqual("ch.qos.logback", deps[0].group_id)
         self.assertEqual("logback-classic", deps[0].artifact_id)
-        self.assertEqual("1.4.4", deps[0].version)
+        self.assertEqual("1.2.3", deps[0].version)
         self.assertIsNone(deps[0].bazel_package)
         
     def test_parse_ext_dep_with_reserved_words(self):
@@ -158,11 +151,7 @@ class WorkspaceTest(unittest.TestCase):
         Dependency instance when the strings being parsed contain reserved words
         such as "artifact".
         """
-        ws = workspace.Workspace("some/path", """
-            native.maven_jar(
-                name = "org_apache_maven_maven_artifact",
-                artifact = "org.apache.maven:maven-artifact:3.3.9",
-            )""", [], exclusions.src_exclusions())
+        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions())
 
         deps = ws.parse_dep_labels(["@org_apache_maven_maven_artifact//jar"])
 
@@ -183,7 +172,7 @@ class WorkspaceTest(unittest.TestCase):
         repo_root = tempfile.mkdtemp("monorepo")
         self._touch_file_at_path(repo_root, "", "MVN-INF", "LIBRARY.root")
         self._write_build_pom(repo_root, package_name, artifact_id, group_id, artifact_version)
-        ws = workspace.Workspace(repo_root, "", [], exclusions.src_exclusions())
+        ws = workspace.Workspace(repo_root, [], exclusions.src_exclusions())
 
         deps = ws.parse_dep_labels(["//%s" % package_name])
 
@@ -206,7 +195,7 @@ class WorkspaceTest(unittest.TestCase):
         repo_root = tempfile.mkdtemp("monorepo")
         self._touch_file_at_path(repo_root, "", "MVN-INF", "LIBRARY.root")
         self._write_build_pom(repo_root, package_name, artifact_id, group_id, artifact_version)
-        ws = workspace.Workspace(repo_root, "", [], exclusions.src_exclusions())
+        ws = workspace.Workspace(repo_root, [], exclusions.src_exclusions())
 
         deps = ws.parse_dep_labels(["//%s:my_cool_target" % package_name])
 
@@ -233,7 +222,7 @@ class WorkspaceTest(unittest.TestCase):
         bad_package_name = "bad_package"
         os.mkdir(os.path.join(repo_root, bad_package_name)) # no BUILD.pom
 
-        ws = workspace.Workspace(repo_root, "", [], exclusions.src_exclusions())
+        ws = workspace.Workspace(repo_root, [], exclusions.src_exclusions())
 
         with self.assertRaises(Exception) as ctx:
             deps = ws.parse_dep_labels(["//%s" % package_name,
@@ -246,7 +235,7 @@ class WorkspaceTest(unittest.TestCase):
         """
         Verifies that parsing of an invalid label behaves as expected.
         """
-        ws = workspace.Workspace("some/path", "", [], exclusions.src_exclusions())
+        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions())
 
         with self.assertRaises(Exception) as ctx:
             deps = ws.parse_dep_labels(["this is a label"])
@@ -275,7 +264,7 @@ class WorkspaceTest(unittest.TestCase):
         self._setup_repo(repo_root)
         package_hash = git.get_dir_hash(repo_root, package_name, exclusions.src_exclusions())
         self._write_build_pom_released(repo_root, package_name, released_version, package_hash)
-        ws = workspace.Workspace(repo_root, "", [], exclusions.src_exclusions())
+        ws = workspace.Workspace(repo_root, [], exclusions.src_exclusions())
 
         deps = ws.parse_dep_labels(["//%s" % package_name])
 
@@ -308,7 +297,7 @@ class WorkspaceTest(unittest.TestCase):
         self._write_build_pom_released(repo_root, package_name, released_version, package_hash)
         self._touch_file_at_path(repo_root, package_name, "", "myfile")
         self._commit(repo_root)
-        ws = workspace.Workspace(repo_root, "", [], exclusions.src_exclusions())
+        ws = workspace.Workspace(repo_root, [], exclusions.src_exclusions())
 
         deps = ws.parse_dep_labels(["//%s" % package_name])
 
@@ -375,6 +364,7 @@ released_maven_artifact(
             os.makedirs(path)
         with open(os.path.join(path, "BUILD.pom.released"), "w") as f:
            f.write(build_pom_released % (released_version, released_artifact_hash))
+
 
 if __name__ == '__main__':
     unittest.main()

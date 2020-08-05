@@ -37,7 +37,7 @@ class CrawlerTest(unittest.TestCase):
         self._add_artifact(repo_root_path, "lib/a1", "template", deps=[])
         self._add_artifact(repo_root_path, "lib/a2", "template", deps=["//lib/a1"])
 
-        ws = workspace.Workspace(repo_root_path, "", [],
+        ws = workspace.Workspace(repo_root_path, [],
                                  exclusions.src_exclusions())
         crawler = crawlerm.Crawler(ws, pom_template="")
 
@@ -57,7 +57,7 @@ class CrawlerTest(unittest.TestCase):
         self._add_artifact(repo_root_path, "lib/a1", "template", deps=[])
         self._add_artifact(repo_root_path, "lib/a2", "template", deps=["//lib/a1:a1"])
 
-        ws = workspace.Workspace(repo_root_path, "", [],
+        ws = workspace.Workspace(repo_root_path, [],
                                  exclusions.src_exclusions())
         crawler = crawlerm.Crawler(ws, pom_template="")
 
@@ -78,7 +78,7 @@ class CrawlerTest(unittest.TestCase):
         self._add_artifact(repo_root_path, "lib/a1", "template", deps=[])
         self._add_artifact(repo_root_path, "lib/a2", "template", deps=["//lib/a1:foo"])
 
-        ws = workspace.Workspace(repo_root_path, "", [],
+        ws = workspace.Workspace(repo_root_path, [],
                                  exclusions.src_exclusions())
         crawler = crawlerm.Crawler(ws, pom_template="")
 
@@ -98,7 +98,7 @@ class CrawlerTest(unittest.TestCase):
         self._add_artifact(repo_root_path, "lib/a1", "skip", deps=[])
         self._add_artifact(repo_root_path, "lib/a2", "template", deps=["//lib/a1:foo"])
 
-        ws = workspace.Workspace(repo_root_path, "", [],
+        ws = workspace.Workspace(repo_root_path, [],
                                  exclusions.src_exclusions())
         crawler = crawlerm.Crawler(ws, pom_template="")
 

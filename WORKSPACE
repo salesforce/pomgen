@@ -1,26 +1,39 @@
 workspace(name = "pomgen")
 
-maven_jar(
-    name = "com_google_guava_guava",
-    artifact = "com.google.guava:guava:23.0",
-    sha256 = "7baa80df284117e5b945b19b98d367a85ea7b7801bd358ff657946c3bd1b6596",    
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+RULES_JVM_EXTERNAL_TAG = "3.3"
+RULES_JVM_EXTERNAL_SHA = "d85951a92c0908c80bd8551002d66cb23c3434409c814179c0ff026b53544dab"
+
+http_archive(
+    name = "rules_jvm_external",
+    strip_prefix = "rules_jvm_external-%s" % RULES_JVM_EXTERNAL_TAG,
+    sha256 = RULES_JVM_EXTERNAL_SHA,
+    url = "https://github.com/bazelbuild/rules_jvm_external/archive/%s.zip" % RULES_JVM_EXTERNAL_TAG,
 )
 
-maven_jar(
-    name = "org_apache_commons_commons_lang3",
-    artifact = "org.apache.commons:commons-lang3:3.9",
-    sha256 = "de2e1dcdcf3ef917a8ce858661a06726a9a944f28e33ad7f9e08bea44dc3c230",
-    sha256_src = "d97341ce0a7554028db3403e407bb51f4d902bf3287f64f709d7a8156eaf1910",
+load("@rules_jvm_external//:defs.bzl", "maven_install")
+load("@rules_jvm_external//:specs.bzl", "maven")
+
+maven_install(
+    name = 'maven',
+    artifacts = [
+        maven.artifact(group = 'com.google.guava', artifact = 'guava', version = '23.0', exclusions = ['*:*']),
+        maven.artifact(group = 'org.apache.commons', artifact = 'commons-lang3', version = '3.9', exclusions = ['*:*']),
+        maven.artifact(group = 'org.apache.commons', artifact = 'commons-math3', version = '3.6.1', exclusions = ['*:*']),
+    ],
+    repositories = [
+        'https://repo1.maven.org/maven2',
+    ],
+    version_conflict_policy = 'pinned',
+    strict_visibility = True,
+    generate_compat_repositories = True,
+    maven_install_json = '//:maven_install.json',  # regenerate: bazel run @unpinned_maven//:pin
+    resolve_timeout = 1800,
 )
 
-maven_jar(
-    name = "org_apache_commons_commons_math3",
-    artifact = "org.apache.commons:commons-math3:3.6.1",
-    sha256 = "1e56d7b058d28b65abd256b8458e3885b674c1d588fa43cd7d1cbb9c7ef2b308",
-    sha256_src = "e2ff85a3c360d56c51a7021614a194f3fbaf224054642ac535016f118322934d",
-)
+load("@maven//:defs.bzl", "pinned_maven_install")
+pinned_maven_install()
 
-
-
-
-
+load("@maven//:compat.bzl", "compat_repositories")
+compat_repositories()

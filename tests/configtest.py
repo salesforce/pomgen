@@ -15,54 +15,46 @@ class ConfigTest(unittest.TestCase):
     def test_pom_template(self):
         repo_root = tempfile.mkdtemp("root")
         pom_template_path = self._write_file(repo_root, "pom_template", "pom")
-        self._write_pomgenrc(repo_root, pom_template_path, ext_deps_path="")
+        self._write_pomgenrc(repo_root, pom_template_path, "")
 
         cfg = config.load(repo_root)
 
         self.assertEqual("pom", cfg.pom_template)
 
-    def test_external_dependencies__single_file(self):
+    def test_maven_install_rule_names_default(self):
         repo_root = tempfile.mkdtemp("root")
         pom_template_path = self._write_file(repo_root, "pom_template", "foo")
-        ext_deps_path = self._write_file(repo_root, "ext_deps", "abc")
-        self._write_pomgenrc(repo_root, pom_template_path, ext_deps_path)
+        self._write_pomgenrc(repo_root, pom_template_path, "")
 
         cfg = config.load(repo_root)
 
-        self.assertEqual("abc\n", cfg.external_dependencies)
+        self.assertEqual(("maven",), cfg.maven_install_rule_names)
 
-    def test_external_dependencies__multiple_files(self):
+    def test_maven_install_rule_names(self):
         repo_root = tempfile.mkdtemp("root")
         pom_template_path = self._write_file(repo_root, "pom_template", "foo")
-        ext_deps_p1 = self._write_file(repo_root, "ext_deps1", "abc")
-        ext_deps_p2 = self._write_file(repo_root, "ext_deps2", "def")
-        ext_deps_p3 = self._write_file(repo_root, "ext_deps3", "ghi")
         self._write_pomgenrc(repo_root, pom_template_path, 
-                             "%s,%s,%s"%(ext_deps_p1, ext_deps_p2, ext_deps_p3))
+                             "eternal,world")
 
         cfg = config.load(repo_root)
 
-        self.assertEqual("abc\ndef\nghi\n", cfg.external_dependencies)
+        self.assertEqual(('eternal', 'world'), cfg.maven_install_rule_names)
 
     def test_str(self):
         repo_root = tempfile.mkdtemp("root")
         pom_template_path = self._write_file(repo_root, "pom_template", "foo")
-        ext_deps_p1 = self._write_file(repo_root, "ext_deps1", "abc")
-        ext_deps_p2 = self._write_file(repo_root, "ext_deps2", "def")
-        self._write_pomgenrc(repo_root, pom_template_path, "%s,%s" %
-                             (ext_deps_p1, ext_deps_p2))
+        self._write_pomgenrc(repo_root, pom_template_path, "maven, misc")
 
         cfg = config.load(repo_root)
 
         self.assertIn("pom_template_path=%s" % pom_template_path, str(cfg))
-        self.assertIn("external_dependencies_path=%s,%s" % 
-                      (ext_deps_p1, ext_deps_p2), str(cfg))
+        self.assertIn("maven_install_rule_names=maven,misc" , str(cfg))
 
-    def _write_pomgenrc(self, repo_root, pom_template_path, ext_deps_path):
+    def _write_pomgenrc(self, repo_root, pom_template_path, maven_install_rule_names):
         self._write_file(repo_root, ".pomgenrc", """[general]
-external_dependencies_path=%s
+maven_install_rule_names=%s
 pom_template_path=%s
-""" % (ext_deps_path, pom_template_path))
+""" % (maven_install_rule_names, pom_template_path))
 
     def _write_file(self, repo_root, relative_path, content):
         path = os.path.join(repo_root, relative_path)

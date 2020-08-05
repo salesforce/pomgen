@@ -52,7 +52,6 @@ def output_args(wrapped_func):
 
     return result
 
-
 def run_cmd(cmd, cwd=os.getcwd()):
     """
     Run OS command return stdout (only).
@@ -63,14 +62,19 @@ def run_cmd(cmd, cwd=os.getcwd()):
     :param cwd: directory to run command in
     :return: stdout
     """
-    process = subprocess.Popen(cmd, shell=True, cwd=cwd, stdout=subprocess.PIPE)
-    return_code = process.wait()
-    output = process.stdout.read()
-    # python3 returns byte objects, python2 return strings
-    try:
-        output = output.decode()
-    except AttributeError:
-        pass
-    if return_code is not 0:
-        raise subprocess.CalledProcessError(return_code, cmd, output)
-    return output
+    env = os.environ.copy()
+    home = env.get('HOME', None)
+    env['HOME'] = home if home is not None else cwd
+
+    with subprocess.Popen(cmd, shell=True, env=env, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as process:
+        return_code = process.wait()
+        output = process.stdout.read()
+        # python3 returns byte objects, python2 return strings
+        try:
+            output = output.decode()
+        except AttributeError:
+            pass
+
+        if return_code != 0:
+            raise subprocess.CalledProcessError(return_code, cmd, output)
+        return output

@@ -20,6 +20,9 @@ def debug(msg):
 def error(msg):
     _log(msg, "ERROR")
 
+def warning(msg):
+    _log(msg, "WARNING")
+
 def raw(msg):
     sys.stderr.write(msg)
 

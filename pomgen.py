@@ -56,9 +56,10 @@ def main(args):
     args = _parse_arguments(args)
     repo_root = common.get_repo_root(args.repo_root)
     cfg = config.load(repo_root, args.verbose)
-    ws = workspace.Workspace(repo_root, cfg.external_dependencies, 
+    ws = workspace.Workspace(repo_root,
                              cfg.excluded_dependency_paths,
-                             cfg.all_src_exclusions)
+                             cfg.all_src_exclusions,
+                             cfg.maven_install_rule_names)
 
     packages = argsupport.get_all_packages(repo_root, args.package)
     packages = ws.filter_artifact_producing_packages(packages)

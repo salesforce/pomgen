@@ -62,9 +62,9 @@ def main(args):
     repo_root = common.get_repo_root(args.repo_root)    
     cfg = config.load(repo_root)
     ws = workspace.Workspace(repo_root, 
-                             cfg.external_dependencies, 
                              cfg.excluded_dependency_paths,
-                             cfg.all_src_exclusions)
+                             cfg.all_src_exclusions,
+                             cfg.maven_install_rule_names)
 
     group_id = "all_ext_deps_group" if args.group_id is None else args.group_id
     artifact_id = "all_ext_deps_art" if args.artifact_id is None else args.artifact_id

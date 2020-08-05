@@ -252,6 +252,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         run_cmd("git init .", cwd=repo_root_path)
         run_cmd("git config user.email 'test@example.com'", cwd=repo_root_path)
         run_cmd("git config user.name 'test example'", cwd=repo_root_path)
+        run_cmd("git config commit.gpgsign false", cwd=repo_root_path)
         run_cmd("git add .", cwd=repo_root_path)
         run_cmd("git commit -m 'test commit'", cwd=repo_root_path)
         return repo_root_path

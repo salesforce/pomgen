@@ -50,9 +50,18 @@ class CrawlerTest(unittest.TestCase):
         self._add_libraries(self.repo_root_path)
         self._setup_repo(self.repo_root_path)
         self._write_all_build_pom_released(self.repo_root_path)
-        ws = workspace.Workspace(self.repo_root_path, "", 
+        self.cwd = os.getcwd()
+        os.chdir(self.repo_root_path)
+        print('root', self.repo_root_path)
+        with open('.bazelversion', 'w') as output:
+            output.write('1.2.1')
+        ws = workspace.Workspace(self.repo_root_path,
                                  [], exclusions.src_exclusions())
         self.crawler = crawler.Crawler(ws, pom_template="")
+        
+
+    def tearDown(self):
+        os.chdir(self.cwd)
 
     def test_setup(self):
         """
@@ -477,6 +486,7 @@ class CrawlerTest(unittest.TestCase):
         run_cmd("git init .", cwd=repo_root_path)
         run_cmd("git config user.email 'test@example.com'", cwd=repo_root_path)
         run_cmd("git config user.name 'test example'", cwd=repo_root_path)
+        run_cmd("git config commit.gpgsign false", cwd=repo_root_path)
         self._commit(repo_root_path)
 
     def _commit(self, repo_root_path):

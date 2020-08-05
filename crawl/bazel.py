@@ -13,7 +13,10 @@ requested data.
 
 from common import mdfiles
 from common.os_util import run_cmd
+from common import logger
 import os
+import re
+import json
 
 def query_java_library_deps_attributes(repository_root_path, target_pattern):
     """
@@ -83,6 +86,23 @@ def query_all_libraries(repository_root_path, packages):
 
     return lib_roots
 
+def query_maven_install(repository_root_path, rule_name):
+    result = {}
+    install_json_file = os.path.join(repository_root_path, '%s_install.json' % rule_name)
+    if not os.path.isfile(install_json_file):
+        logger.warning('Skipping maven_install rule: %s - %s does not exist' % (rule_name, install_json_file))
+        return {}
+    with open(install_json_file, 'r') as install_input:
+        install_json = json.load(install_input)
+        deps = install_json['dependency_tree']['dependencies']
+        for each_dep in deps:
+            coord = each_dep['coord']
+            dropped_version = '_'.join(coord.split(':')[:-1])
+            name = re.sub(r'[.-]', '_', dropped_version)
+            result[name] = coord
+    return result
+
+
 def target_pattern_to_path(target_pattern):
     """
     Converts a bazel target pattern to a directory path.
@@ -110,8 +130,12 @@ def _sanitize_deps(deps):
     return updated_deps
 
 def _sanitize_dep(dep):
-    if dep.startswith('@') and dep.endswith(":jar"):
-        return dep[:-4] # remove :jar suffix
+    if dep.startswith('@'):
+        if dep.endswith(":jar"):
+            return dep[:-4] # remove :jar suffix
+        dep_split = dep.split(':')
+        if len(dep_split) == 2 and len(dep_split[1]) > 0:
+            return dep_split[1]
     elif dep.startswith("//"):
         return dep
     # dep is not something we want, ignore (e.g. log lines from tools/bazel can fall into here)

@@ -11,6 +11,7 @@ This module manages Bazel workspace-level entities.
 from crawl import artifactprocessor
 from crawl import buildpom
 from crawl import dependency
+from crawl import bazel
 
 class Workspace:
     """
@@ -18,12 +19,12 @@ class Workspace:
     Maven concepts.
     """
 
-    def __init__(self, repo_root_path, external_deps, 
-                 excluded_dependency_paths, source_exclusions):
+    def __init__(self, repo_root_path, 
+                 excluded_dependency_paths, source_exclusions, maven_install_rule_names=('maven',)):
         self.repo_root_path = repo_root_path
         self.excluded_dependency_paths = excluded_dependency_paths
         self.source_exclusions = source_exclusions
-        self._name_to_ext_deps = self._parse_maven_jars(external_deps)
+        self._name_to_ext_deps = self._parse_maven_install(maven_install_rule_names)
         self._package_to_artifact_def = {} # cache for artifact_def instances
 
     @property
@@ -113,7 +114,11 @@ class Workspace:
             if self._is_special_case_excluded_ext_dep(ext_dep_name):
                 return None
             else:
-                return self._name_to_ext_deps[ext_dep_name]
+                dep_split = ext_dep_name.split(':')
+                if len(dep_split) == 1:
+                    return self._name_to_ext_deps.get(ext_dep_name, None)
+                else:
+                    return self._name_to_ext_deps.get(dep_split[1], None)
         elif dep_label.startswith("//"):
             # monorepo src ref:
             package_path = dep_label[2:] # remove leading "//"
@@ -141,6 +146,26 @@ class Workspace:
              # grpc stubs, it is probably ok to exclude this one
              "com_google_api_grpc_proto_google_common_protos",
             )
+
+    def _parse_maven_install(self, rule_names):
+        """
+        Parse the dependencies inside each maven_install in rule_names.
+        There should be a ${rule}_install.json file at the root of the repository for
+        each rule.
+
+        rule_names are processed in reverse order so that the first one wins. This is to handle
+        the legacy naming case. The full name used my maven_install should be used in
+        future versions. This is accomodate repositories to be able to migrate to
+        maven_install dependency names.
+
+        Returns a dictionary mapping the value of the coord santized for Bazel to a
+        Dependency instance.
+        """
+        result = {}
+        for each_rule in rule_names[::-1]:
+            for name, coord in bazel.query_maven_install(self.repo_root_path, each_rule).items():
+                result[name] = dependency.ThirdPartyDependency.from_coordinates(name, coord)
+        return result
 
     def _parse_maven_jars(self, external_deps):
         """

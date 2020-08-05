@@ -80,9 +80,10 @@ if __name__ == "__main__":
     args = _parse_arguments(sys.argv[1:])
     repo_root = common.get_repo_root(args.repo_root)
     cfg = config.load(repo_root)
-    ws = workspace.Workspace(repo_root, cfg.external_dependencies, 
+    ws = workspace.Workspace(repo_root,
                              cfg.excluded_dependency_paths, 
-                             cfg.all_src_exclusions)
+                             cfg.all_src_exclusions,
+                             cfg.maven_install_rule_names)
 
     determine_packages_to_process = (args.list_libraries or 
                                      args.list_artifacts or
@@ -124,7 +125,7 @@ if __name__ == "__main__":
         print(_to_json(all_artifacts))
 
     if args.list_all_external_dependencies:
-        external_dependencies = list(ws.name_to_external_dependencies.values())
+        external_dependencies = list(set(ws.name_to_external_dependencies.values()))
         external_dependencies.sort()
         all_ext_deps = []
         for external_dependency in external_dependencies:

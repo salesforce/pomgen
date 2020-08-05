@@ -61,10 +61,10 @@ The file format is:
 # Default value: config/pom_template.xml
 pom_template_path=
 
-# Path to the file that lists external dependencies - multiple files are supported, comma-separated
-# Default value: WORKSPACE
-# Example value: path/to/file1,path/to/file2
-external_dependencies_path=
+# The list of every maven_install rule name defined in WORKSPACE where dependencies are defined, comma-separated
+# Default value: maven
+# Example value: maven,deprecated
+maven_install_rule_names=
 
 [crawler]
 # A list of path prefixes that are not crawled by pomgen.  Any dependency

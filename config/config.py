@@ -72,11 +72,10 @@ def load(repo_root, verbose=False):
             parser.readfp(f)
 
     pom_template_p = gen("pom_template_path", ["config/pom_template.xml"])
-    external_deps_p=gen("external_dependencies_path", ["WORKSPACE"])
 
     cfg = Config(
         pom_template_path_and_content=_read_files(repo_root, pom_template_p)[0],
-        external_deps_path_and_content=_read_files(repo_root, external_deps_p),
+        maven_install_rule_names=gen("maven_install_rule_names", ("maven",)),
         excluded_dependency_paths=crawl("excluded_dependency_paths", ()),
         excluded_src_relpaths=artifact("excluded_relative_paths", ("src/test",)),
         excluded_src_file_names=artifact("excluded_filenames", (".gitignore",)),
@@ -98,14 +97,16 @@ def _get_value_with_default(parser, section, option, dflt):
 class Config:
     def __init__(self, 
                  pom_template_path_and_content=("",""),
-                 external_deps_path_and_content=[],
+                 maven_install_rule_names=(),
                  excluded_dependency_paths=(),
                  excluded_src_relpaths=(),
                  excluded_src_file_names=(),
                  excluded_src_file_extensions=()):
         # general
         self.pom_template_path_and_content=pom_template_path_and_content
-        self.external_deps_path_and_content = external_deps_path_and_content
+        if len(maven_install_rule_names) == 0:
+            maven_install_rule_names = ('maven',)
+        self.maven_install_rule_names = _to_tuple(maven_install_rule_names)
 
         # crawler
         self.excluded_dependency_paths = _add_pathsep(_to_tuple(excluded_dependency_paths))
@@ -120,14 +121,6 @@ class Config:
         return self.pom_template_path_and_content[1]
 
     @property
-    def external_dependencies(self):
-        # we'll just append the content of each file here
-        all_content = ""
-        for path,content in self.external_deps_path_and_content:
-            all_content += content + "\n"
-        return all_content
-
-    @property
     def all_src_exclusions(self):
         """
         Convenience method that returns a named tuple of all source exclusions.
@@ -139,7 +132,7 @@ class Config:
     def __str__(self):
         return """[general]
 pom_template_path=%s
-external_dependencies_path=%s
+maven_install_rule_names=%s
 
 [crawler]
 excluded_dependency_paths=%s
@@ -149,7 +142,7 @@ excluded_relative_paths=%s
 excluded_filenames=%s
 excluded_extensions=%s
 """ % (self.pom_template_path_and_content[0],
-       ",".join([t[0] for t in self.external_deps_path_and_content]),
+       ','.join(self.maven_install_rule_names),
        self.excluded_dependency_paths,
        self.excluded_src_relpaths,
        self.excluded_src_file_names,
