@@ -159,12 +159,15 @@ class Workspace:
         maven_install dependency names.
 
         Returns a dictionary mapping the value of the coord santized for Bazel to a
-        Dependency instance.
+        Dependency instance. It also has keys for the fully qualified maven_install rule.
         """
         result = {}
         for each_rule in rule_names[::-1]:
             for name, coord in bazel.query_maven_install(self.repo_root_path, each_rule).items():
-                result[name] = dependency.ThirdPartyDependency.from_coordinates(name, coord)
+                # This should be factored out eventually and use fully qualified name
+                result[name] = dependency.new_dep_from_maven_art_str(coord, name)
+                fully_qualified_name = '@%s//:%s' % (each_rule, name)
+                result[fully_qualified_name] = dependency.new_dep_from_maven_art_str(coord, fully_qualified_name)
         return result
 
     def _parse_maven_jars(self, external_deps):

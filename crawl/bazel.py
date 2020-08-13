@@ -87,6 +87,10 @@ def query_all_libraries(repository_root_path, packages):
     return lib_roots
 
 def query_maven_install(repository_root_path, rule_name):
+    """
+    Return a dict of all dependencies defined for rule_name in ${rule_name}_install.json
+    The results are keyed by sanitized maven coord and value is maven coord.
+    """
     result = {}
     install_json_file = os.path.join(repository_root_path, '%s_install.json' % rule_name)
     if not os.path.isfile(install_json_file):

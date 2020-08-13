@@ -133,17 +133,6 @@ class AbstractDependency(object):
 
 
 class ThirdPartyDependency(AbstractDependency):
-    @classmethod
-    def from_coordinates(cls, bazel_label_name, coord_str):
-        parts = coord_str.split(':')
-        if len(parts) == 3:
-            return cls(bazel_label_name, parts[0], parts[1], parts[2])
-        if len(parts) == 4:
-            return cls(bazel_label_name, parts[0], parts[1], parts[3], scope=parts[2])
-        if len(parts) == 5:
-            return cls(bazel_label_name, parts[0], parts[1], parts[4], scope=parts[2], classifier=parts[3])
-        raise Exception('Illegal maven coordinate: %s' % coord_str)
-
     def __init__(self, bazel_label_name, group_id, artifact_id, version, classifier=None, scope=None):
         super(ThirdPartyDependency, self).__init__(group_id, artifact_id, classifier, scope)
         self._version = version
