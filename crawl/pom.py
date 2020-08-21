@@ -350,11 +350,13 @@ class TemplatePomGen(AbstractPomGen):
                 if found_conflicting_deps:
                     msg = "Found multiple artifacts with the same groupId:artifactId: \"%s\". This means that there are multiple BUILD.pom files defining the same artifact, or that a BUILD.pom defined artifact has the same groupId and artifactId as a referenced maven_jar, or that multiple maven_jars reference the same groupId/artifactId but different versions" % dep.maven_coordinates_name
                     raise Exception(msg)
-            key_to_version[key] = self._dep_version(pomcontenttype, dep)
+            version_from_dep = self._dep_version(pomcontenttype, dep)
+            key_to_version[key] = version_from_dep
             key_to_dep[key] = dep
             if dep.bazel_label_name is not None:
                 key = "%s.version" % dep.bazel_label_name
-                assert key not in key_to_version
+                if key in key_to_version and version_from_dep != key_to_version[key]:
+                    raise Exception("%s version: %s is already in versions, previous: %s" % (key, self._dep_version(pomcontenttype, dep), key_to_version[key]))
                 key_to_version[key] = dep.version
                 key_to_dep[key] = dep
 

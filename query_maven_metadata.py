@@ -125,7 +125,7 @@ if __name__ == "__main__":
         print(_to_json(all_artifacts))
 
     if args.list_all_external_dependencies:
-        external_dependencies = list(set(ws.name_to_external_dependencies.values()))
+        external_dependencies = list(set(each for each in ws.name_to_external_dependencies.values() if each.bazel_label_name.startswith('@')))
         external_dependencies.sort()
         all_ext_deps = []
         for external_dependency in external_dependencies:
