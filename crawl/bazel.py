@@ -101,7 +101,10 @@ def query_maven_install(repository_root_path, rule_name):
         deps = install_json['dependency_tree']['dependencies']
         for each_dep in deps:
             coord = each_dep['coord']
-            dropped_version = '_'.join(coord.split(':')[:-1])
+            coord_parts = coord.split(':')
+            if len(coord_parts) == 5 or len(coord_parts) == 4:
+                del coord_parts[2] # remove artifact type from coordinates
+            dropped_version = '_'.join(coord_parts[:-1])
             name = re.sub(r'[.-]', '_', dropped_version)
             result[name] = coord
     return result
