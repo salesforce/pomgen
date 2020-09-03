@@ -83,8 +83,6 @@ def main(args):
                 continue
             if not line.startswith("@"):
                 continue
-            if not line.endswith("//jar"):
-                continue
             if _starts_with_ignored_prefix(line):
                 continue
             dep_labels.append(line)
