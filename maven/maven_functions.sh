@@ -84,19 +84,24 @@ _for_each_pom() {
             # the filename of the jar built by Bazel uses this pattern:
             jar_artifact_path="$build_dir_package_path/lib${package_name}.jar"
             if [ ! -f "${jar_artifact_path}" ]; then
+                echo "WARN lib${package_name}.jar not found, looking for alternatives"
                 # we also support executable jars - this is an edge case but
                 # there are use-cases where it is convenient to be able to
                 # upload a "uber jar" to Nexus instead of building a docker
                 # image for it
 
-                # first, look for the jar matching the package name under
-                # bazel-bin
-                jar_artifact_path="$build_dir_package_path/${package_name}.jar"
-                if [ ! -f "${jar_artifact_path}" ]; then
-                    # second, we also support jars produced by Bazel's
-                    # java_binary rule, so look whether that one
-                    # exists (the name of the jar ends with _deploy.jar)
-                    jar_artifact_path="$build_dir_package_path/${package_name}_deploy.jar"
+                # first we look for the special <target-name>_deploy.jar
+                # created by java_binary
+                jar_artifact_path="$build_dir_package_path/${package_name}_deploy.jar"
+                if [ -f "${jar_artifact_path}" ]; then
+                    echo "INFO Found ${package_name}_deploy.jar"
+                else
+                    # last attempt: maybe a jar called <target-name>.jar
+                    # exists
+                    jar_artifact_path="$build_dir_package_path/${package_name}.jar"
+                fi
+                if [ -f "${jar_artifact_path}" ]; then
+                    echo "INFO Found ${package_name}.jar"
                 fi
 
                 # we've seen jar break in weird ways when trying to unjar large
