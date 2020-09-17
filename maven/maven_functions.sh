@@ -84,7 +84,7 @@ _for_each_pom() {
             # the filename of the jar built by Bazel uses this pattern:
             jar_artifact_path="$build_dir_package_path/lib${package_name}.jar"
             if [ ! -f "${jar_artifact_path}" ]; then
-                echo "WARN lib${package_name}.jar not found, looking for alternatives"
+                echo "WARN: lib${package_name}.jar not found, looking for alternatives"
                 # we also support executable jars - this is an edge case but
                 # there are use-cases where it is convenient to be able to
                 # upload a "uber jar" to Nexus instead of building a docker
@@ -94,16 +94,15 @@ _for_each_pom() {
                 # created by java_binary
                 jar_artifact_path="$build_dir_package_path/${package_name}_deploy.jar"
                 if [ -f "${jar_artifact_path}" ]; then
-                    echo "INFO Found ${package_name}_deploy.jar"
+                    echo "INFO: Found ${package_name}_deploy.jar"
                 else
                     # last attempt: maybe a jar called <target-name>.jar
                     # exists
                     jar_artifact_path="$build_dir_package_path/${package_name}.jar"
+                    if [ -f "${jar_artifact_path}" ]; then
+                        echo "INFO: Found ${package_name}.jar"
+                    fi
                 fi
-                if [ -f "${jar_artifact_path}" ]; then
-                    echo "INFO Found ${package_name}.jar"
-                fi
-
                 # we've seen jar break in weird ways when trying to unjar large
                 # "uber" jars:
                 # java.io.FileNotFoundException: META-INF/LICENSE (Is a directory)
@@ -135,14 +134,14 @@ _for_each_pom() {
 
         elif [ "$action" == "build_sources_and_javadoc_jars" ]; then
             if [ "$is_pom_only_artifact" == 1 ]; then
-                echo "INFO Skipping sources/javadoc building for pom-only artifact"
+                echo "INFO: Skipping sources/javadoc building for pom-only artifact"
             else
                 _build_source_and_javadoc_jars $pom_path $src_dir_package_path
             fi
 
         elif [ "$action" == "install_sources_and_javadoc_jars" ]; then
             if [ "$is_pom_only_artifact" == 1 ]; then
-                echo "INFO Skipping sources/javadoc installing for pom-only artifact"
+                echo "INFO: Skipping sources/javadoc installing for pom-only artifact"
             else
                 _install_artifact $pom_path $sources_jar_path "sources"
                 _install_artifact $pom_path $javadoc_jar_path "javadoc"
