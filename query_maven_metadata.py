@@ -7,7 +7,7 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 
 
-Command line utility that shows information about libraries in the monorepo.
+Command line utility that shows information about Maven artifacts.
 """
 
 from collections import OrderedDict
@@ -24,6 +24,7 @@ import argparse
 import json
 import os
 import sys
+
 
 def _parse_arguments(args):
     parser = argparse.ArgumentParser(description="Query Maven artifact metadata")
@@ -63,6 +64,7 @@ def _parse_arguments(args):
 
     return parser.parse_args(args)
 
+
 def _target_for_monorepo_dep(repo_root, dep):
     assert dep.bazel_package is not None
     # not all monorepo artifacts have valid bazel targets, some
@@ -73,8 +75,22 @@ def _target_for_monorepo_dep(repo_root, dep):
     else:
         return None
 
+
 def _to_json(thing):
     return json.dumps(thing, indent=2)
+
+
+def _matches_filter(maven_artifact, all_filters):
+    if all_filters is None:
+        return True
+    for fil in [f.strip() for f in all_filters.split("and")]:
+        attr_filter_name, attr_filter_value = fil.split("=")
+        if hasattr(maven_artifact, attr_filter_name):
+            value = getattr(maven_artifact, attr_filter_name)
+            if attr_filter_value != str(value):
+                return False
+    return True
+
 
 if __name__ == "__main__":
     args = _parse_arguments(sys.argv[1:])
@@ -109,12 +125,8 @@ if __name__ == "__main__":
         maven_artifacts = [buildpom.parse_maven_artifact_def(repo_root, p) for p in packages]
         all_artifacts = []
         for maven_artifact in maven_artifacts:
-            if args.filter is not None:
-                attr_filter_name, attr_filter_value = args.filter.split("=")
-                if hasattr(maven_artifact, attr_filter_name):
-                    value = getattr(maven_artifact, attr_filter_name)
-                    if attr_filter_value != str(value):
-                        continue
+            if not _matches_filter(maven_artifact, args.filter):
+                continue
             attrs = OrderedDict()
             attrs["artifact_id"] = maven_artifact.artifact_id
             attrs["group_id"] = maven_artifact.group_id
