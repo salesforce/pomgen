@@ -8,7 +8,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 class ReleaseReason(object):
     FIRST = "artifact has never been released"
     ARTIFACT = "binary artifact changed"
-    ALWAYS = "always released (--force option used or change detection disabled)"
+    ALWAYS = "always released"
     TRANSITIVE = "transitive dependency changed"
     POM = "pom changed"
 

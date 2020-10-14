@@ -62,7 +62,7 @@ def _parse_arguments(args):
     parser.add_argument("--filter", type=str, required=False,
         help="Generic query filter, currently only supported for artifact queries")
     parser.add_argument("--force", required=False, action='store_true',
-        help="If set, always generated poms, regardless of whether an artifact has changed since it was last released")
+        help="Simulates release information when --force option is used")
 
     return parser.parse_args(args)
 
