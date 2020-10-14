@@ -32,10 +32,27 @@ class BuildPomTest(unittest.TestCase):
         self.assertIs(pomgenmode.DYNAMIC, art_def.pom_generation_mode)
         self.assertEqual(None, art_def.pom_template_file)
         self.assertTrue(art_def.include_deps)
+        self.assertTrue(art_def.change_detection)
         self.assertEqual(package_rel_path, art_def.bazel_package)
         self.assertEqual(None, art_def.released_version)
         self.assertEqual(None, art_def.released_artifact_hash)
         self.assertIsNotNone(art_def.version_increment_strategy)
+
+    def test_parse_BUILD_pom_with_change_detection(self):
+        package_rel_path = "package1/package2"
+        group_id = "group1"
+        artifact_id = "art1"
+        version = "1.2.3"
+        repo_root = tempfile.mkdtemp("monorepo")
+        repo_package = os.path.join(repo_root, package_rel_path)
+        os.makedirs(repo_package)
+        self._write_build_pom_set_change_detection_false(repo_package, artifact_id, group_id, version, "dynamic")
+        art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
+        self.assertFalse(art_def.change_detection)
+
+        self._write_build_pom_set_change_detection_true(repo_package, artifact_id, group_id, version, "dynamic")
+        art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
+        self.assertTrue(art_def.change_detection)
 
     def test_parse_BUILD_pom_and_BUILD_pom_released(self):
         package_rel_path = "package1/package2"
@@ -59,6 +76,7 @@ class BuildPomTest(unittest.TestCase):
         self.assertIs(pomgenmode.DYNAMIC, art_def.pom_generation_mode)
         self.assertEqual(None, art_def.pom_template_file)
         self.assertTrue(art_def.include_deps)
+        self.assertTrue(art_def.change_detection)
         self.assertEqual(package_rel_path, art_def.bazel_package)
         self.assertEqual(released_version, art_def.released_version)
         self.assertEqual(released_artifact_hash, art_def.released_artifact_hash)
@@ -124,6 +142,7 @@ class BuildPomTest(unittest.TestCase):
         self.assertEqual([], art_def.deps)
         self.assertEqual(None, art_def.pom_template_file)
         self.assertTrue(art_def.include_deps)
+        self.assertTrue(art_def.change_detection)
         self.assertEqual(package_rel_path, art_def.bazel_package)
         self.assertEqual(None, art_def.released_version)
         self.assertEqual(None, art_def.released_artifact_hash)
@@ -153,6 +172,48 @@ maven_artifact(
     group_id = "%s",
     version = "%s",
     pom_generation_mode = '%s',
+)
+
+maven_artifact_update(
+    version_increment_strategy = "major",
+)
+"""
+
+        path = os.path.join(package_path, "MVN-INF")
+        if not os.path.exists(path):
+            os.makedirs(path)
+        with open(os.path.join(path, "BUILD.pom"), "w") as f:
+           f.write(build_pom % (artifact_id, group_id, version, pom_gen_mode))
+
+    def _write_build_pom_set_change_detection_true(self, package_path, artifact_id, group_id, version, pom_gen_mode):
+        build_pom = """
+maven_artifact(
+    artifact_id = "%s",
+    group_id = "%s",
+    version = "%s",
+    pom_generation_mode = '%s',
+    change_detection = True,
+)
+
+maven_artifact_update(
+    version_increment_strategy = "major",
+)
+"""
+
+        path = os.path.join(package_path, "MVN-INF")
+        if not os.path.exists(path):
+            os.makedirs(path)
+        with open(os.path.join(path, "BUILD.pom"), "w") as f:
+           f.write(build_pom % (artifact_id, group_id, version, pom_gen_mode))
+
+    def _write_build_pom_set_change_detection_false(self, package_path, artifact_id, group_id, version, pom_gen_mode):
+        build_pom = """
+maven_artifact(
+    artifact_id = "%s",
+    group_id = "%s",
+    version = "%s",
+    pom_generation_mode = '%s',
+    change_detection = False,
 )
 
 maven_artifact_update(

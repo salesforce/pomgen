@@ -111,35 +111,35 @@ class LibAggregatorTest(unittest.TestCase):
         self.assertEqual(ReleaseReason.FIRST, crawl.libaggregator._get_lib_release_reason(ReleaseReason.FIRST, ReleaseReason.FIRST))
         self.assertEqual(ReleaseReason.FIRST, crawl.libaggregator._get_lib_release_reason(ReleaseReason.FIRST, ReleaseReason.TRANSITIVE))
         self.assertEqual(ReleaseReason.FIRST, crawl.libaggregator._get_lib_release_reason(ReleaseReason.FIRST, ReleaseReason.POM))
-        self.assertEqual(ReleaseReason.FORCE, crawl.libaggregator._get_lib_release_reason(ReleaseReason.FIRST, ReleaseReason.FORCE))
+        self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.FIRST, ReleaseReason.ALWAYS))
 
     def test_release_reason_precedence__artifact(self):
         self.assertEqual(ReleaseReason.ARTIFACT, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ARTIFACT, ReleaseReason.ARTIFACT))
         self.assertEqual(ReleaseReason.FIRST, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ARTIFACT, ReleaseReason.FIRST))
         self.assertEqual(ReleaseReason.ARTIFACT, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ARTIFACT, ReleaseReason.TRANSITIVE))
         self.assertEqual(ReleaseReason.ARTIFACT, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ARTIFACT, ReleaseReason.POM))
-        self.assertEqual(ReleaseReason.FORCE, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ARTIFACT, ReleaseReason.FORCE))
+        self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ARTIFACT, ReleaseReason.ALWAYS))
 
     def test_release_reason_precedence__transitive(self):
         self.assertEqual(ReleaseReason.ARTIFACT, crawl.libaggregator._get_lib_release_reason(ReleaseReason.TRANSITIVE, ReleaseReason.ARTIFACT))
         self.assertEqual(ReleaseReason.FIRST, crawl.libaggregator._get_lib_release_reason(ReleaseReason.TRANSITIVE, ReleaseReason.FIRST))
         self.assertEqual(ReleaseReason.TRANSITIVE, crawl.libaggregator._get_lib_release_reason(ReleaseReason.TRANSITIVE, ReleaseReason.TRANSITIVE))
         self.assertEqual(ReleaseReason.POM, crawl.libaggregator._get_lib_release_reason(ReleaseReason.TRANSITIVE, ReleaseReason.POM))
-        self.assertEqual(ReleaseReason.FORCE, crawl.libaggregator._get_lib_release_reason(ReleaseReason.TRANSITIVE, ReleaseReason.FORCE))
+        self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.TRANSITIVE, ReleaseReason.ALWAYS))
 
     def test_release_reason_precedence__pom(self):
         self.assertEqual(ReleaseReason.ARTIFACT, crawl.libaggregator._get_lib_release_reason(ReleaseReason.POM, ReleaseReason.ARTIFACT))
         self.assertEqual(ReleaseReason.FIRST, crawl.libaggregator._get_lib_release_reason(ReleaseReason.POM, ReleaseReason.FIRST))
         self.assertEqual(ReleaseReason.POM, crawl.libaggregator._get_lib_release_reason(ReleaseReason.POM, ReleaseReason.TRANSITIVE))
         self.assertEqual(ReleaseReason.POM, crawl.libaggregator._get_lib_release_reason(ReleaseReason.POM, ReleaseReason.POM))
-        self.assertEqual(ReleaseReason.FORCE, crawl.libaggregator._get_lib_release_reason(ReleaseReason.POM, ReleaseReason.FORCE))
+        self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.POM, ReleaseReason.ALWAYS))
         
     def test_release_reason_precedence__force(self):
-        self.assertEqual(ReleaseReason.FORCE, crawl.libaggregator._get_lib_release_reason(ReleaseReason.FORCE, ReleaseReason.ARTIFACT))
-        self.assertEqual(ReleaseReason.FORCE, crawl.libaggregator._get_lib_release_reason(ReleaseReason.FORCE, ReleaseReason.FIRST))
-        self.assertEqual(ReleaseReason.FORCE, crawl.libaggregator._get_lib_release_reason(ReleaseReason.FORCE, ReleaseReason.TRANSITIVE))
-        self.assertEqual(ReleaseReason.FORCE, crawl.libaggregator._get_lib_release_reason(ReleaseReason.FORCE, ReleaseReason.POM))
-        self.assertEqual(ReleaseReason.FORCE, crawl.libaggregator._get_lib_release_reason(ReleaseReason.FORCE, ReleaseReason.FORCE))
+        self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ALWAYS, ReleaseReason.ARTIFACT))
+        self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ALWAYS, ReleaseReason.FIRST))
+        self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ALWAYS, ReleaseReason.TRANSITIVE))
+        self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ALWAYS, ReleaseReason.POM))
+        self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ALWAYS, ReleaseReason.ALWAYS))
 
     def _create_library_artifact_node(self, group_id, artifact_id, version,
                                       library_path, requires_release,
