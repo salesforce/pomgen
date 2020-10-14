@@ -25,13 +25,17 @@ def augment_artifact_def(repo_root_path, art_def, source_exclusions):
         # never released?
         art_def.requires_release = True
         art_def.release_reason = releasereason.ReleaseReason.FIRST
-    else:    
-        has_changed = _has_changed_since_last_release(repo_root_path, art_def, source_exclusions)
-        if has_changed:
-            art_def.requires_release = True
-            art_def.release_reason = releasereason.ReleaseReason.ARTIFACT
+    else:
+        if art_def.change_detection:
+            has_changed = _has_changed_since_last_release(repo_root_path, art_def, source_exclusions)
+            if has_changed:
+                art_def.requires_release = True
+                art_def.release_reason = releasereason.ReleaseReason.ARTIFACT
+            else:
+                art_def.requires_release = False
         else:
-            art_def.requires_release = False
+            art_def.requires_release = True
+            art_def.release_reason = releasereason.ReleaseReason.ALWAYS
     return art_def
 
 def _get_library_path(repo_root_path, art_def):

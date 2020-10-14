@@ -139,7 +139,7 @@ class CrawlerTest(unittest.TestCase):
 
         self.assertEqual(6, len(result.pomgens))
         for p in result.pomgens:
-            self.assertEqual(rr.ReleaseReason.FORCE,
+            self.assertEqual(rr.ReleaseReason.ALWAYS,
                 p.artifact_def.release_reason)
 
     def test_all_libs_changed(self):

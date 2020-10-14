@@ -90,6 +90,8 @@ class LibraryNode:
             return "+"
         elif release_reason == ReleaseReason.FIRST:
             return "++"
+        elif release_reason == ReleaseReason.ALWAYS:
+            return "!"
         else:
             raise Exception("Unhandled release reason: %s" % self.release_reason)
     
@@ -131,23 +133,23 @@ def _get_lib_release_reason(current_release_reason, proposed_release_reason):
     Since we are concerned with libraries here, not artifacts, this method
     defines the precedence for release reasons.
     """
-    if current_release_reason == ReleaseReason.FORCE:
+    if current_release_reason == ReleaseReason.ALWAYS:
         pass
     if current_release_reason == ReleaseReason.FIRST:
-        if proposed_release_reason in (ReleaseReason.FORCE,):
+        if proposed_release_reason in (ReleaseReason.ALWAYS,):
             return proposed_release_reason
     if current_release_reason == ReleaseReason.ARTIFACT:
         if proposed_release_reason in (ReleaseReason.FIRST,
-                                       ReleaseReason.FORCE,):
+                                       ReleaseReason.ALWAYS,):
             return proposed_release_reason
     if current_release_reason == ReleaseReason.POM:
         if proposed_release_reason in (ReleaseReason.FIRST,
-                                       ReleaseReason.FORCE,
+                                       ReleaseReason.ALWAYS,
                                        ReleaseReason.ARTIFACT,):
             return proposed_release_reason
     if current_release_reason == ReleaseReason.TRANSITIVE:
         if proposed_release_reason in (ReleaseReason.FIRST,
-                                       ReleaseReason.FORCE,
+                                       ReleaseReason.ALWAYS,
                                        ReleaseReason.ARTIFACT,
                                        ReleaseReason.POM,):
             return proposed_release_reason

@@ -330,7 +330,7 @@ class Crawler:
                     elif transitive_dep_requires_release:
                         artifact_def.release_reason = ReleaseReason.TRANSITIVE
                     else:
-                        artifact_def.release_reason = ReleaseReason.FORCE
+                        artifact_def.release_reason = ReleaseReason.ALWAYS
                     updated_artifact_defs.append(artifact_def)
 
         # process all artifact nodes belonging to the current library, 
