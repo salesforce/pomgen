@@ -25,9 +25,11 @@ Please see the [hello-world example](examples/hello-world/README.md) to see how 
 
 ## External Dependencies
 
+- Bazel, ideally through [bazelisk](https://github.com/bazelbuild/bazelisk)
+    - This branch has been testing with Bazel 1.2.1.  Other Bazel versions may work.
 - Python 3 is required and must be in your PATH
 - You need to install [lxml](https://lxml.de): pip install --user lxml
-- Everything has been testing with Bazel 1.0.  Other Bazel versions may work.
+
 
 ## Running pomgen in your own repository
 
