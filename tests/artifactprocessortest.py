@@ -70,6 +70,17 @@ class ArtifactProcessorTest(unittest.TestCase):
         self.assertFalse(art_def.requires_release)
         self.assertEqual(None, art_def.release_reason)
 
+    def test_artifact_without_changes_always_release(self):
+        repo_root_path = self._setup_repo_with_package("pack1/pack2")
+        current_artifact_hash = git.get_dir_hash(repo_root_path, "pack1/pack2", exclusions.src_exclusions())
+        art_def = buildpom.MavenArtifactDef("g1", "a1", "1.1.0", bazel_package="pack1/pack2", released_version="1.2.0", released_artifact_hash=current_artifact_hash, change_detection=False)
+
+        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions())
+
+        self.assertNotEqual(None, art_def.requires_release)
+        self.assertTrue(art_def.requires_release, "Expected artifact to require release")
+        self.assertEqual(releasereason.ReleaseReason.ALWAYS, art_def.release_reason)
+
     def test_artifact_with_changes_since_last_release__new_file(self):
         package = "pack1/pack2"
         repo_root_path = self._setup_repo_with_package(package)

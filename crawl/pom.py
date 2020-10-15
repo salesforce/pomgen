@@ -129,9 +129,8 @@ class AbstractPomGen(object):
         """
         pass
 
-    def register_dependencies_globally(self, 
-                                       crawled_bazel_packages, 
-                                       crawled_external_dependencies):
+    def register_all_dependencies(self, crawled_bazel_packages,
+                                  crawled_external_dependencies):
         """
         This method is called after all bazel packages have been crawled and
         processed, with the following sets of Dependency instances:
@@ -262,9 +261,9 @@ class TemplatePomGen(AbstractPomGen):
         self.crawled_bazel_packages = set()
         self.crawled_external_dependencies = set()
 
-    def register_dependencies_globally(self, 
-                                       crawled_bazel_packages, 
-                                       crawled_external_dependencies):
+    def register_all_dependencies(self,
+                                  crawled_bazel_packages,
+                                  crawled_external_dependencies):
         self.crawled_bazel_packages = crawled_bazel_packages
         self.crawled_external_dependencies = crawled_external_dependencies
 

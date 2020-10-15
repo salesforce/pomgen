@@ -61,6 +61,8 @@ def _parse_arguments(args):
     # this is experimental and not generalized yet
     parser.add_argument("--filter", type=str, required=False,
         help="Generic query filter, currently only supported for artifact queries")
+    parser.add_argument("--force", required=False, action='store_true',
+        help="Simulates release information when --force option is used")
 
     return parser.parse_args(args)
 
@@ -156,7 +158,7 @@ if __name__ == "__main__":
 
     if crawl_artifact_dependencies:
         crawler = crawler.Crawler(ws, cfg.pom_template, args.verbose)
-        artifact_result = crawler.crawl(packages)
+        artifact_result = crawler.crawl(packages, force_release=args.force)
         library_nodes = libaggregator.get_libraries_to_release(artifact_result.nodes)
 
         if args.library_release_plan_tree:

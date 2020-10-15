@@ -83,7 +83,7 @@ class Crawler:
 
         self.crawled_external_dependencies = set() # all external dependencies discovered while crawling around
 
-    def crawl(self, packages, follow_monorepo_references=True, force=False):
+    def crawl(self, packages, follow_monorepo_references=True, force_release=False):
         """
         Crawls monorepo dependencies, starting at the specified packages.
 
@@ -98,9 +98,8 @@ class Crawler:
 
             This is typically only used for debugging.
 
-        force:
-            Generate poms for all artifacts, even when they do not need to
-            be released
+        force_release:
+            Mark all artifacts as requiring to be released
 
         Returns a CrawlerResult instance.
         """
@@ -152,7 +151,7 @@ class Crawler:
 
         # figure out whether artifacts need to be released because a transitive
         # dependency needs to be released
-        self._calculate_artifact_release_flag(force)
+        self._calculate_artifact_release_flag(force_release)
 
 
         # only pomgen instances for artifacts that need to be released are
@@ -173,8 +172,10 @@ class Crawler:
         files.
         """
         # there are 2 types of dep registrations: 
-        #   -> local, only the deps actually belonging to each pomgen instance
-        #   -> global, ie all deps discovered, set on each pomgen instance
+        #   -> private/local, only the deps belonging to each pomgen instance
+        #      (the deps that will end up in the generated pom file)
+        #   -> global/all, all deps discovered during crawling
+        #      (can be used for a global dependencyManagement section)
 
         # 1) local
         for p in self.pomgens:
@@ -182,11 +183,10 @@ class Crawler:
             dependencies = self.target_to_dependencies[target_key]
             p.register_dependencies(dependencies)
 
-        # 2) global
+        # 2) all
         deps = self._get_crawled_packages_as_deps()
         for p in self.pomgens:
-            p.register_dependencies_globally(deps, 
-                                             self.crawled_external_dependencies)
+            p.register_all_dependencies(deps, self.crawled_external_dependencies)
 
     def _get_crawled_packages_as_deps(self):
         deps = [dependency.new_dep_from_maven_artifact_def(art_def, bazel_target=None) for art_def in self.package_to_artifact.values()]
@@ -323,15 +323,16 @@ class Crawler:
             # update all artifacts belonging to the library at once
             updated_artifact_defs = []
             for artifact_def in all_artifact_defs:
-                if not artifact_def.requires_release:
+                if force_release or not artifact_def.requires_release:
                     artifact_def.requires_release = True
-                    if sibling_artifact_requires_release:
-                        artifact_def.release_reason = sibling_release_reason
-                    elif transitive_dep_requires_release:
-                        artifact_def.release_reason = ReleaseReason.TRANSITIVE
-                    else:
-                        artifact_def.release_reason = ReleaseReason.FORCE
                     updated_artifact_defs.append(artifact_def)
+                    if force_release:
+                        artifact_def.release_reason = ReleaseReason.ALWAYS
+                    else:
+                        if sibling_artifact_requires_release:
+                            artifact_def.release_reason = sibling_release_reason
+                        elif transitive_dep_requires_release:
+                            artifact_def.release_reason = ReleaseReason.TRANSITIVE
 
         # process all artifact nodes belonging to the current library, 
         # otherwise we may miss some references to other libraries

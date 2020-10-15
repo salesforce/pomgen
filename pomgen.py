@@ -68,7 +68,7 @@ def main(args):
     spider = crawler.Crawler(ws, cfg.pom_template, args.verbose)
     result = spider.crawl(packages,
                           follow_monorepo_references=args.recursive,
-                          force=args.force)
+                          force_release=args.force)
 
     if len(result.pomgens) == 0:
         logger.info("No releases are required. pomgen will not generate any pom files. To force pom generation, use pomgen's --force option.")
