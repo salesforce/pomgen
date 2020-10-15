@@ -158,7 +158,7 @@ if __name__ == "__main__":
 
     if crawl_artifact_dependencies:
         crawler = crawler.Crawler(ws, cfg.pom_template, args.verbose)
-        artifact_result = crawler.crawl(packages, force=args.force)
+        artifact_result = crawler.crawl(packages, force_release=args.force)
         library_nodes = libaggregator.get_libraries_to_release(artifact_result.nodes)
 
         if args.library_release_plan_tree:
