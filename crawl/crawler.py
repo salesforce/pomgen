@@ -83,7 +83,7 @@ class Crawler:
 
         self.crawled_external_dependencies = set() # all external dependencies discovered while crawling around
 
-    def crawl(self, packages, follow_monorepo_references=True, force=False):
+    def crawl(self, packages, follow_monorepo_references=True, force_release=False):
         """
         Crawls monorepo dependencies, starting at the specified packages.
 
@@ -98,9 +98,8 @@ class Crawler:
 
             This is typically only used for debugging.
 
-        force:
-            Generate poms for all artifacts, even when they do not need to
-            be released
+        force_release:
+            Mark all artifacts as requiring to be released
 
         Returns a CrawlerResult instance.
         """
@@ -152,7 +151,7 @@ class Crawler:
 
         # figure out whether artifacts need to be released because a transitive
         # dependency needs to be released
-        self._calculate_artifact_release_flag(force)
+        self._calculate_artifact_release_flag(force_release)
 
 
         # only pomgen instances for artifacts that need to be released are
@@ -323,15 +322,16 @@ class Crawler:
             # update all artifacts belonging to the library at once
             updated_artifact_defs = []
             for artifact_def in all_artifact_defs:
-                if not artifact_def.requires_release:
+                if force_release or not artifact_def.requires_release:
                     artifact_def.requires_release = True
-                    if sibling_artifact_requires_release:
-                        artifact_def.release_reason = sibling_release_reason
-                    elif transitive_dep_requires_release:
-                        artifact_def.release_reason = ReleaseReason.TRANSITIVE
-                    else:
-                        artifact_def.release_reason = ReleaseReason.ALWAYS
                     updated_artifact_defs.append(artifact_def)
+                    if force_release:
+                        artifact_def.release_reason = ReleaseReason.ALWAYS
+                    else:
+                        if sibling_artifact_requires_release:
+                            artifact_def.release_reason = sibling_release_reason
+                        elif transitive_dep_requires_release:
+                            artifact_def.release_reason = ReleaseReason.TRANSITIVE
 
         # process all artifact nodes belonging to the current library, 
         # otherwise we may miss some references to other libraries

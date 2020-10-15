@@ -135,7 +135,7 @@ class CrawlerTest(unittest.TestCase):
         If no library changed, we do not get any pom generator instances, unless
         we use force.
         """
-        result = self.crawler.crawl(["libs/a/a1"], force=True)
+        result = self.crawler.crawl(["libs/a/a1"], force_release=True)
 
         self.assertEqual(6, len(result.pomgens))
         for p in result.pomgens:
@@ -145,15 +145,34 @@ class CrawlerTest(unittest.TestCase):
     def test_all_libs_changed(self):
         """
         All 3 libraries have changed, we end up with one pom generator for each
-        artifact.
+        artifact, each marked with the expected release reason.
         """
         self._update_files(self.repo_root_path, ["libs/a/a2", "libs/b/a2", "libs/c/a1"])
-        self._commit(self.repo_root_path) 
+        self._commit(self.repo_root_path)
 
         result = self.crawler.crawl(["libs/a/a1"])
 
         all = set(["libs/a/a1", "libs/a/a2", "libs/b/a1", "libs/b/a2", "libs/c/a1", "libs/c/a2"])
         self.assertEqual(all, set([p.artifact_def.bazel_package for p in result.pomgens]))
+        for p in result.pomgens:
+            self.assertEqual(rr.ReleaseReason.ARTIFACT,
+                p.artifact_def.release_reason)
+
+    def test_all_libs_changed__force_release(self):
+        """
+        When 'force_release' is specified, it takes precedence over any other
+        release reason.
+        """
+        self._update_files(self.repo_root_path, ["libs/a/a2", "libs/b/a2", "libs/c/a1"])
+        self._commit(self.repo_root_path)
+
+        result = self.crawler.crawl(["libs/a/a1"], force_release=True)
+
+        all = set(["libs/a/a1", "libs/a/a2", "libs/b/a1", "libs/b/a2", "libs/c/a1", "libs/c/a2"])
+        self.assertEqual(all, set([p.artifact_def.bazel_package for p in result.pomgens]))
+        for p in result.pomgens:
+            self.assertEqual(rr.ReleaseReason.ALWAYS,
+                p.artifact_def.release_reason)
 
     def test_all_libs_changed__dont_follow_monorepo_refs(self):
         """
