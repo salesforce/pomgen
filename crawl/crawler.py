@@ -172,8 +172,10 @@ class Crawler:
         files.
         """
         # there are 2 types of dep registrations: 
-        #   -> local, only the deps actually belonging to each pomgen instance
-        #   -> global, ie all deps discovered, set on each pomgen instance
+        #   -> private/local, only the deps belonging to each pomgen instance
+        #      (the deps that will end up in the generated pom file)
+        #   -> global/all, all deps discovered during crawling
+        #      (can be used for a global dependencyManagement section)
 
         # 1) local
         for p in self.pomgens:
@@ -181,11 +183,10 @@ class Crawler:
             dependencies = self.target_to_dependencies[target_key]
             p.register_dependencies(dependencies)
 
-        # 2) global
+        # 2) all
         deps = self._get_crawled_packages_as_deps()
         for p in self.pomgens:
-            p.register_dependencies_globally(deps, 
-                                             self.crawled_external_dependencies)
+            p.register_all_dependencies(deps, self.crawled_external_dependencies)
 
     def _get_crawled_packages_as_deps(self):
         deps = [dependency.new_dep_from_maven_artifact_def(art_def, bazel_target=None) for art_def in self.package_to_artifact.values()]

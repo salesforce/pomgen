@@ -63,7 +63,7 @@ class CrawlerTest(unittest.TestCase):
 
         result = self.crawler.crawl(["libs/a/a1"])
 
-        # we root nodes: 
+        # we have root nodes:
         # A_a1 - starting point
         # A_a2 - added because part of A library (but not referenced)
         # B_a2 - added because part of B library (but not referenced)
