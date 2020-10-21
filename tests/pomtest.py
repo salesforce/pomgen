@@ -4,7 +4,6 @@ All rights reserved.
 SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
-from common.os_util import run_cmd
 from common import pomgenmode
 from config import exclusions
 from crawl import bazel
@@ -39,7 +38,6 @@ class PomTest(unittest.TestCase):
     def tearDown(self):
         bazel.query_maven_install = self.orig_bazel_query_maven_install
 
-
     def test_dynamic_pom__sanity(self):
         """
         Ensures that dynamic pom generation isn't totally broken.
@@ -55,7 +53,7 @@ class PomTest(unittest.TestCase):
             bazel.query_java_library_deps_attributes = lambda r, p: ("@com_google_guava_guava//jar", "@aopalliance_aopalliance//jar", )
             _, _, deps = pomgen.process_dependencies()
             pomgen.register_dependencies(deps)
-            generated_pom = pomgen.gen()
+            generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
 
             self.assertIn("""<groupId>g1</groupId>
     <artifactId>a2</artifactId>
@@ -92,7 +90,7 @@ class PomTest(unittest.TestCase):
         try:
             bazel.query_java_library_deps_attributes = lambda r, p: 1/0 # fails
             pomgen.process_dependencies()
-            generated_pom = pomgen.gen()
+            generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
 
             self.assertNotIn("dependencies", generated_pom)
         finally:
@@ -150,7 +148,7 @@ class PomTest(unittest.TestCase):
             logback_new_syntax #{ch.qos.logback:logback-classic:version}
             monorepo artifact version #{version}""")
 
-        generated_pom = pomgen.gen()
+        generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
 
         self.assertIn("logback_old_syntax 1.2.3", generated_pom)
         self.assertIn("logback_new_syntax 1.2.3", generated_pom)
@@ -167,9 +165,9 @@ class PomTest(unittest.TestCase):
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep,template_content = """
             srpc #{com.grail.srpc:srpc-api:version}""")
-        pomgen.register_all_dependencies(set([dependency.MonorepoDependency(srpc_artifact_def, bazel_target=None)]), set())
+        pomgen.register_all_dependencies(set([dependency.MonorepoDependency(srpc_artifact_def, bazel_target=None)]), set(), ())
 
-        generated_pom = pomgen.gen()
+        generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
         
         self.assertIn("srpc 5.6.7", generated_pom)
 
@@ -185,10 +183,10 @@ class PomTest(unittest.TestCase):
             srpc #{g:a:version}""")
         art = buildpom.MavenArtifactDef("com.google.guava","guava","26.0", bazel_package="a/b/c")
         d = dependency.MonorepoDependency(art, bazel_target=None)
-        pomgen.register_all_dependencies(set([d]), set())
+        pomgen.register_all_dependencies(set([d]), set(), ())
 
         with self.assertRaises(Exception) as ctx:
-            pomgen.gen()
+            pomgen.gen(pom.PomContentType.RELEASE)
 
         self.assertIn("Found multiple artifacts with the same groupId:artifactId", str(ctx.exception))
         self.assertIn("com.google.guava:guava", str(ctx.exception))
@@ -207,7 +205,7 @@ class PomTest(unittest.TestCase):
             this artifact version #{version}
             logback #{ch.qos.logback:logback-classic:version}
             srpc #{com.grail.srpc:srpc-api:version}""")
-        pomgen.register_all_dependencies(set([dependency.MonorepoDependency(srpc_artifact_def, bazel_target=None)]), set())
+        pomgen.register_all_dependencies(set([dependency.MonorepoDependency(srpc_artifact_def, bazel_target=None)]), set(), ())
 
         generated_pom = pomgen.gen(pomcontenttype=pom.PomContentType.GOLDFILE)
 
@@ -244,7 +242,7 @@ __pomgen.end_dependency_customization__
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep, pom_template)
 
-        generated_pom = pomgen.gen()
+        generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
 
         self.assertEqual(expected_pom, generated_pom)
 
@@ -300,7 +298,7 @@ __pomgen.end_dependency_customization__
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep, pom_template)
 
-        generated_pom = pomgen.gen()
+        generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
 
         self.assertEqual(expected_pom, generated_pom)
 
@@ -337,9 +335,9 @@ __pomgen.end_dependency_customization__
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep, pom_template)
         crawled_package = dependency.ThirdPartyDependency("name", "c.s.sconems", "abstractions", "0.0.1")
-        pomgen.register_all_dependencies(set([crawled_package]), set())
+        pomgen.register_all_dependencies(set([crawled_package]), set(), ())
 
-        generated_pom = pomgen.gen()
+        generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
 
         self.assertEqual(expected_pom, generated_pom)
 
@@ -376,9 +374,9 @@ __pomgen.end_dependency_customization__
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep, pom_template)
         crawled_dep = dependency.ThirdPartyDependency("name", "cg", "ca", "0.0.1")
-        pomgen.register_all_dependencies(set(), set([crawled_dep]))
+        pomgen.register_all_dependencies(set(), set([crawled_dep]), ())
 
-        generated_pom = pomgen.gen()
+        generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
 
         self.assertEqual(expected_pom, generated_pom)
 
@@ -444,9 +442,9 @@ __pomgen.end_dependency_customization__
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep, pom_template)
         crawled_dep = dependency.ThirdPartyDependency("name", "cg", "ca", "0.0.1")
-        pomgen.register_all_dependencies(set(), set([crawled_dep]))
+        pomgen.register_all_dependencies(set(), set([crawled_dep]), ())
 
-        generated_pom = pomgen.gen()
+        generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
 
         self.assertEqual(expected_pom, generated_pom)
 
@@ -494,9 +492,9 @@ __pomgen.end_dependency_customization__
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep, pom_template)
         crawled_dep = dependency.ThirdPartyDependency("name", "cg", "ca", "0.0.1")
-        pomgen.register_all_dependencies(set(), set([crawled_dep]))
+        pomgen.register_all_dependencies(set(), set([crawled_dep]), ())
 
-        generated_pom = pomgen.gen()
+        generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
 
         self.assertEqual(expected_pom, generated_pom)
 
@@ -513,14 +511,32 @@ __pomgen.end_dependency_customization__
             my pom template with a bad ref #{bad1} and also #{bad2}""")
 
         with self.assertRaises(Exception) as ctx:
-            generated_pom = pomgen.gen()
+            generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
 
         self.assertIn("bad1", str(ctx.exception))
         self.assertIn("bad2", str(ctx.exception))
 
-    def _write_maven_install(self):
-        pass
-            
+    def test_depman_pom__sanity(self):
+        """
+        Ensures that dependency management pom generation isn't totally broken.
+        """
+        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions())
+        artifact_def = buildpom.MavenArtifactDef(
+            "g1", "a2", "1.2.3", gen_dependency_management_pom=True)
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        pomgen = pom.DependencyManagementPomGen(ws, artifact_def, dep, TEST_POM_TEMPLATE)
+        guava = dependency.new_dep_from_maven_art_str("google:guava:1", "guav")
+        force = dependency.new_dep_from_maven_art_str("force:commons:1", "forc")
+
+        pomgen.register_all_dependencies(set(), set(), (guava, force,))
+        generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
+        
+        self.assertIn("<packaging>pom</packaging>", generated_pom)
+        self.assertIn("<dependencyManagement>", generated_pom)
+        self.assertIn("<artifactId>guava</artifactId>", generated_pom)
+        self.assertIn("<artifactId>commons</artifactId>", generated_pom)
+
+
 if __name__ == '__main__':
     unittest.main()
         
