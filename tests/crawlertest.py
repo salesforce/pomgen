@@ -53,8 +53,6 @@ class CrawlerTest(unittest.TestCase):
         self._write_all_build_pom_released(self.repo_root_path)
         self.cwd = os.getcwd()
         os.chdir(self.repo_root_path)
-        with open('.bazelversion', 'w') as output:
-            output.write('1.2.1')
         ws = workspace.Workspace(self.repo_root_path,
                                  [], exclusions.src_exclusions())
         self.crawler = crawler.Crawler(ws, pom_template="")
