@@ -39,7 +39,8 @@ class PomContentType:
 
 def get_pom_generator(workspace, pom_template, artifact_def, dependency):
     """
-    Returns a concrete implementation of AbstractPomGen.
+    Returns a pom.xml generator (AbstractPomGen implementation) for the
+    specified artifact_def.
 
     Arguments:
         workspace: the crawl.workspace.Workspace singleton
@@ -53,7 +54,13 @@ def get_pom_generator(workspace, pom_template, artifact_def, dependency):
 
     mode = artifact_def.pom_generation_mode
     if mode is pomgenmode.DYNAMIC:
-        return DynamicPomGen(workspace, artifact_def, dependency, pom_template)
+        also_generate_dep_man_pom = artifact_def.gen_dependency_management_pom
+        if also_generate_dep_man_pom:
+            return PomWithCompanionDependencyManagementPomGen(
+                workspace, artifact_def, dependency, pom_template)
+        else:
+            return DynamicPomGen(
+                workspace, artifact_def, dependency, pom_template)
     elif mode is pomgenmode.TEMPLATE:
         content, _ = mdfiles.read_file(workspace.repo_root_path,
                                        artifact_def.bazel_package,
@@ -96,6 +103,8 @@ class AbstractPomGen(object):
             l1: all source dependencies (== references to other bazel packages)
             l2: all external dependencies (maven jars)
             l3: l1 and l2 together, in "discovery order"
+
+        This method is not meant to be overwritten by subclasses.
         """
         all_deps = ()
         if self._artifact_def.deps is not None:
@@ -124,13 +133,13 @@ class AbstractPomGen(object):
         This method *must* be called before requesting this instance to generate
         a pom.
 
-        Subclasses that care about this must implement this method and
-        do something with the arguments passed into this method.
+        Subclasses may implement.
         """
         pass
 
     def register_all_dependencies(self, crawled_bazel_packages,
-                                  crawled_external_dependencies):
+                                  crawled_external_dependencies,
+                                  transitive_closure_dependencies):
         """
         This method is called after all bazel packages have been crawled and
         processed, with the following sets of Dependency instances:
@@ -139,18 +148,32 @@ class AbstractPomGen(object):
                   the set of ALL crawled bazel packages
             - crawled_external_dependencies: 
                   the set of ALL crawled (discovered) external dependencies
+            - transitive_closure_dependencies
+                  for this pom, all its dependencies AND all the dependencies
+                  of its dependencies, all the way down.
 
-        Subclasses that care about this must implement this method and
-        do something with the arguments passed into this method.
+        Subclasses may implement.
         """
         pass
 
-    def gen(self, pomcontenttype=PomContentType.RELEASE):
+    def gen(self, pomcontenttype):
         """
         Returns the generated pom.xml as a string.  This method may be called
         multiple times, and must therefore be idempotent.
+
+        Subclasses must implement.
         """
         raise Exception("must be implemented by subclass")
+
+    def get_companion_generators(self):
+        """
+        Returns an iterable of companion generators. These poms are not used
+        as inputs to any pomgen algorithm.  They are only part of the final
+        outputs.
+
+        Subclasses may implement.
+        """
+        return ()
 
     def _load_additional_dependencies_hook(self):
         """
@@ -166,7 +189,7 @@ class AbstractPomGen(object):
         Returns the associated artifact's version, based on the specified 
         PomContentType.
 
-        This is a utility method for subclasses.
+        This method is only intended to be called by subclasses.
         """
         return PomContentType.MASKED_VERSION if pomcontenttype is PomContentType.GOLDFILE else self._artifact_def.version
 
@@ -200,7 +223,7 @@ class AbstractPomGen(object):
         Returns the generated content and the current identation level as a 
         tuple: (content, indent)
 
-        This is a utility method for subclasses.
+        This method is only intended to be called by subclasses.
         """
         content, indent = self._xml(content, "dependency", indent)
         content, indent = self._xml(content, "groupId", indent, dep.group_id)
@@ -215,6 +238,9 @@ class AbstractPomGen(object):
         return content, indent
 
     def _gen_exclusions(self, content, indent, group_and_artifact_ids):
+        """
+        This method is only intended to be called by subclasses.
+        """
         content, indent = self._xml(content, "exclusions", indent)
         for ga in group_and_artifact_ids:
             content, indent = self._xml(content, "exclusion", indent)
@@ -263,11 +289,12 @@ class TemplatePomGen(AbstractPomGen):
 
     def register_all_dependencies(self,
                                   crawled_bazel_packages,
-                                  crawled_external_dependencies):
+                                  crawled_external_dependencies,
+                                  transitive_closure_dependencies):
         self.crawled_bazel_packages = crawled_bazel_packages
         self.crawled_external_dependencies = crawled_external_dependencies
 
-    def gen(self, pomcontenttype=PomContentType.RELEASE):
+    def gen(self, pomcontenttype):
         pom_content, parsed_dependencies = self._process_pom_template_content(self.template_content)
 
         properties = self._get_properties(pomcontenttype, parsed_dependencies)
@@ -443,14 +470,14 @@ class DynamicPomGen(AbstractPomGen):
 
     Generates a pom.xm file based on the specified singleton (shared) template.
 
-    This generator assumes that the following placesholders exist in the
-    specified template:
+    The following placesholders must exist in the specified template:
+       ${dependencies} - will be replaced with the <dependencies> section
+
+    The following placesholders may exist in the specified template:
 
        ${artifact_id}
        ${group_id}
        ${version}
-       ${dependencies}
-
     """
     def __init__(self, workspace, artifact_def, dependency, pom_template):
         super(DynamicPomGen, self).__init__(workspace, artifact_def, dependency)
@@ -460,7 +487,7 @@ class DynamicPomGen(AbstractPomGen):
     def register_dependencies(self, dependencies):
         self.dependencies = dependencies
 
-    def gen(self, pomcontenttype=PomContentType.RELEASE):
+    def gen(self, pomcontenttype):
         content = self.pom_template.replace("${group_id}", self._artifact_def.group_id)
         content = content.replace("${artifact_id}", self._artifact_def.artifact_id)
         version = self._artifact_def_version(pomcontenttype)
@@ -511,6 +538,101 @@ class DynamicPomGen(AbstractPomGen):
                     ("org.apache.zookeeper", "zookeeper-client"))
 
         return ()
+
+
+class DependencyManagementPomGen(AbstractPomGen):
+    """
+    Generates a dependency management" only pom, containing a
+    <dependencyManagement> section with the transitive closure of all
+    dependencies of the backing artifact.
+
+    The following placesholders must exist in the specified template:
+       ${dependencies} - will be replaced with the <dependencyManagement> section
+
+    The following placesholders may exist in the specified template:
+
+       ${artifact_id}
+       ${group_id}
+       ${version}
+
+    """
+    def __init__(self, workspace, artifact_def, dependency, pom_template):
+        super(DependencyManagementPomGen, self).__init__(workspace, artifact_def, dependency)
+        self.pom_template = pom_template
+        self.transitive_closure_dependencies = ()
+
+    def register_all_dependencies(self, crawled_bazel_packages,
+                                  crawled_external_dependencies,
+                                  transitive_closure_dependencies):
+        self.transitive_closure_dependencies = transitive_closure_dependencies
+
+    def gen(self, pomcontenttype):
+        assert pomcontenttype == PomContentType.RELEASE
+        content = self.pom_template.replace("${group_id}", self._artifact_def.group_id)
+        # by convention, we add the suffix ".depmanagement" to the artifactId
+        # so com.blah is the real jar artifact and com.blah.depmanagement
+        # is the dependency management pom for that artficat
+        content = content.replace("${artifact_id}", "%s.depmanagement" % self._artifact_def.artifact_id)
+        version = self._artifact_def_version(pomcontenttype)
+        content = content.replace("${version}", version)
+        content = content.replace("${dependencies}", self._gen_dependency_management())
+
+        # we assume the template specified <packaging>jar</packaging>
+        # there room for improvement here for sure
+        expected_packaging = "<packaging>jar</packaging>"
+        if not expected_packaging in content:
+            raise Exception("The pom template must have %s" % expected_packaging)
+        content = content.replace(expected_packaging, expected_packaging.replace("jar", "pom"))
+        
+        return content
+
+    def _gen_dependency_management(self):
+        if len(self.transitive_closure_dependencies) == 0:
+            return ""
+
+        deps = self.transitive_closure_dependencies
+        content = ""
+        content, indent = self._xml(content, "dependencyManagement", indent=_INDENT)
+        content, indent = self._xml(content, "dependencies", indent)
+        for dep in deps:
+            content, indent = self._gen_dependency_element(PomContentType.RELEASE, dep, content, indent, close_element=True)
+        content, indent = self._xml(content, "dependencies", indent, close_element=True)
+        content, indent = self._xml(content, "dependencyManagement", indent, close_element=True)
+        return content
+
+
+class PomWithCompanionDependencyManagementPomGen(AbstractPomGen):
+    """
+    Composite PomGen implementation with a companion PomGen the generates a
+    DependencyManagement pom.
+    """
+    def __init__(self, workspace, artifact_def, dependency, pom_template):
+        super(PomWithCompanionDependencyManagementPomGen, self).__init__(workspace, artifact_def, dependency)
+        self.pomgen = DynamicPomGen(workspace, artifact_def, dependency, pom_template)
+        self.depmanpomgen = DependencyManagementPomGen(workspace, artifact_def, dependency, pom_template)
+
+    def register_dependencies(self, dependencies):
+        self.pomgen.register_dependencies(dependencies)
+        self.depmanpomgen.register_dependencies(dependencies)
+
+    def register_all_dependencies(self, crawled_bazel_packages,
+                                  crawled_external_dependencies,
+                                  transitive_closure_dependencies):
+        self.pomgen.register_all_dependencies(crawled_bazel_packages,
+                                              crawled_external_dependencies,
+                                              transitive_closure_dependencies)
+        self.depmanpomgen.register_all_dependencies(crawled_bazel_packages,
+                                                    crawled_external_dependencies,
+                                                    transitive_closure_dependencies)
+
+    def gen(self, pomcontenttype):
+        return self.pomgen.gen(pomcontenttype)
+
+    def get_companion_generators(self):
+        return (self.depmanpomgen,)
+
+    def _load_additional_dependencies_hook(self):
+        return self.pomgen._load_additional_dependencies_hook()
 
 
 _INDENT = pomparser.INDENT

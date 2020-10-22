@@ -30,8 +30,8 @@ class Node:
         assert artifact_def is not None, "artifact_def cannot be None"
         assert dependency is not None, "dependency cannot be None"
 
-        # the parent Node, None if no parent
-        self.parent = parent
+        # the parent Nodes
+        self.parents = [] if parent is None else [parent]
         # parsed metadata (BUILD.pom etc) files
         self.artifact_def = artifact_def
         # the dependency pointing to this target
@@ -128,7 +128,7 @@ class Crawler:
 
 
 
-        # Crawling is complete at this point, now process the nodes
+        # crawling is complete at this point, now process the nodes
 
         
         # for bazel targets that do not generate a pom 
@@ -139,8 +139,16 @@ class Crawler:
         self._push_transitives_to_parent()
 
 
+        # computing the right set of dependencies for each Node is done
+        # now compute the transitive closure of deps for each node
+        # we could do this only for the notes that care about this (those that
+        # need to generate a dependency management companion pom), but it is
+        # easier to run the same code for all of them
+        target_to_transitive_closure_deps = self._compute_transitive_closures_of_deps()
+
+
         # augment pom generators with deps discovered while crawling
-        self._register_dependencies_with_pomgen_instances()
+        self._register_dependencies_with_pomgen_instances(target_to_transitive_closure_deps)
 
 
         # for each artifact, if its pom changed since the last release
@@ -165,7 +173,7 @@ class Crawler:
 
         return CrawlerResult(result_pomgens, nodes, crawled_bazel_packages)
 
-    def _register_dependencies_with_pomgen_instances(self):
+    def _register_dependencies_with_pomgen_instances(self, target_to_transitive_closure_deps):
         """
         This method sets deps on pomgen instances. These are the deps that the
         pomgen instances will actually end up using when generating pom.xml
@@ -186,7 +194,11 @@ class Crawler:
         # 2) all
         deps = self._get_crawled_packages_as_deps()
         for p in self.pomgens:
-            p.register_all_dependencies(deps, self.crawled_external_dependencies)
+            target_key = self._get_target_key(p.artifact_def.bazel_package, p.dependency)
+            transitive_closure_deps = target_to_transitive_closure_deps[target_key]
+            p.register_all_dependencies(deps, 
+                                        self.crawled_external_dependencies,
+                                        transitive_closure_deps)
 
     def _get_crawled_packages_as_deps(self):
         deps = [dependency.new_dep_from_maven_artifact_def(art_def, bazel_target=None) for art_def in self.package_to_artifact.values()]
@@ -241,6 +253,65 @@ class Crawler:
                         logger.debug("%s released pom:" % art_def)
                         logger.raw(previous_pom)
 
+
+    def _compute_transitive_closures_of_deps(self):
+        """
+        For every target, compute its full transitive closure of deps.
+        
+        Returns a dictionary: target -> iterable of deps (transitive closure)
+
+        For example, with targets:
+        A->B->C, each target referencing also some other (3rd party) 
+        dependencies, the deps returns for A include the deps of B and C.
+
+        Algorithm: we just walk up from the leafnodes to parents, accumulating
+        deps along the way.
+
+        Note that this method requires the target_to_dependencies dictionary
+        to be up-to-date.
+        """
+        target_to_all_dependencies = {}
+        for node in self.leafnodes:
+            accumulated_deps = []
+            self._accumulate_deps_and_walk(node, accumulated_deps,
+                                           target_to_all_dependencies)
+        return target_to_all_dependencies
+
+    def _accumulate_deps_and_walk(self, node, accumulated_deps,
+                                  target_to_all_dependencies):
+        """
+        node: the current node to process
+        accumulated_deps: a list of deps, each node's deps are added to to it
+        target_to_all_dependencies: the result dictionary being built
+        """
+        package = node.artifact_def.bazel_package
+        target_key = self._get_target_key(package, node.dependency)
+        this_node_deps = self.target_to_dependencies[target_key]
+
+        processed_deps = set() # to remove duplicate deps
+
+        this_node_all_deps = list(this_node_deps)
+        processed_deps.update(this_node_all_deps)
+
+        # when encountering a duplicate dep, we keep this order:
+        # 1) current deps from target
+        # 2) previous transitive closure computation
+        # 3) accumulated deps from child
+
+        this_node_current_transitives = target_to_all_dependencies.get(target_key, ())
+        this_node_all_deps += [d for d in this_node_current_transitives if d not in processed_deps]
+        processed_deps.update(this_node_all_deps)
+
+        this_node_all_deps += [d for d in accumulated_deps if d not in processed_deps]
+        processed_deps.update(this_node_all_deps)
+
+        target_to_all_dependencies[target_key] = this_node_all_deps
+
+        for parent in node.parents:
+            accumulated_deps = this_node_all_deps + [d for d in accumulated_deps if d not in processed_deps]
+            self._accumulate_deps_and_walk(parent, accumulated_deps,
+                                           target_to_all_dependencies)
+
     def _push_transitives_to_parent(self):
         """
         For special pom generation modes that do not actually produce
@@ -271,8 +342,8 @@ class Crawler:
             if node not in processed_nodes:
                 processed_nodes.add(node)
                 collected_dep_lists.append(deps)
-        if node.parent is not None:
-            self._push_transitives_and_walk(node.parent, collected_dep_lists,
+        for parent in node.parents:
+            self._push_transitives_and_walk(parent, collected_dep_lists,
                                             processed_nodes)
 
     def _process_collected_dep_lists(self, collected_dep_lists):
@@ -338,13 +409,13 @@ class Crawler:
         # otherwise we may miss some references to other libraries
         all_artifact_nodes = self.library_to_nodes[library_path]
         for n in all_artifact_nodes:
-            if n.parent is not None:
-                if n.parent.artifact_def.library_path == n.artifact_def.library_path:
+            for parent in n.parents:
+                if parent.artifact_def.library_path == n.artifact_def.library_path:
                     # no need to crawl within the same library
                     continue
                 if n.artifact_def.requires_release and not force_release:
                     transitive_dep_requires_release = True
-                self._propagate_req_rel(n.parent,
+                self._propagate_req_rel(parent,
                                         transitive_dep_requires_release,
                                         force_release)
 
@@ -386,6 +457,10 @@ class Crawler:
             node = Node(parent_node, cached_node.artifact_def, 
                         cached_node.dependency)
             node.children = cached_node.children
+            # also add the new parent to the cached_node - this is important
+            # because we have logic that traverses the nodes from children to
+            # parent nodes
+            cached_node.parents.append(node)
             self.library_to_nodes[node.artifact_def.library_path].append(node)
             self._store_if_leafnode(node)
             if self.verbose:
@@ -448,12 +523,13 @@ class Crawler:
                                      self.pom_template, artifact_def,
                                      dep)
 
-    def _get_target_key(self, package, dep):
+    @classmethod
+    def _get_target_key(clazz, package, dep):
         if dep is None:
             target = os.path.basename(package)
         else:
             target = dep.bazel_target
-        assert target is not None
+        assert target is not None, "Target is None for dep %s" % dep
         return "%s:%s" % (package, target)
 
     def _store_if_leafnode(self, node):

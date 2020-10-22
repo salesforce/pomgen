@@ -9,6 +9,7 @@ from common.os_util import run_cmd
 from config import exclusions
 from crawl import crawler
 from crawl import git
+from crawl import pom as pomm
 from crawl import releasereason as rr
 from crawl import workspace
 import os
@@ -50,7 +51,11 @@ class CrawlerTest(unittest.TestCase):
         self._add_libraries(self.repo_root_path)
         self._setup_repo(self.repo_root_path)
         self._write_all_build_pom_released(self.repo_root_path)
-        ws = workspace.Workspace(self.repo_root_path, "", 
+        self.cwd = os.getcwd()
+        os.chdir(self.repo_root_path)
+        with open('.bazelversion', 'w') as output:
+            output.write('0.0.0')
+        ws = workspace.Workspace(self.repo_root_path, "",
                                  [], exclusions.src_exclusions())
         self.crawler = crawler.Crawler(ws, pom_template="")
 
@@ -75,14 +80,14 @@ class CrawlerTest(unittest.TestCase):
         self.assertEqual("libs/a", node_a_a1.artifact_def.library_path)
         self.assertEqual("libs/a/a1", node_a_a1.artifact_def.bazel_package)
         self.assertEqual("1.0.0", node_a_a1.artifact_def.version)
-        self.assertEqual(None, node_a_a1.parent)
+        self.assertEqual(0, len(node_a_a1.parents))
         self.assertEqual(2, len(node_a_a1.children)) # b_a1 and c_a1
 
         node_a_a2 = self._get_node_by_bazel_package(result.nodes, "libs/a/a2")
         self.assertEqual("libs/a", node_a_a2.artifact_def.library_path)
         self.assertEqual("libs/a/a2", node_a_a2.artifact_def.bazel_package)
         self.assertEqual("1.0.0", node_a_a2.artifact_def.version)
-        self.assertEqual(None, node_a_a2.parent)
+        self.assertEqual(0, len(node_a_a2.parents))
         self.assertEqual(0, len(node_a_a2.children))
 
         # LIB B
@@ -90,14 +95,14 @@ class CrawlerTest(unittest.TestCase):
         self.assertEqual("libs/b", node_b_a1.artifact_def.library_path)
         self.assertEqual("libs/b/a1", node_b_a1.artifact_def.bazel_package)
         self.assertEqual("2.0.0", node_b_a1.artifact_def.version)
-        self.assertEqual(node_a_a1, node_b_a1.parent)
+        self.assertEqual(node_a_a1, node_b_a1.parents[0])
         self.assertEqual(1, len(node_b_a1.children)) # c_a1
 
         node_b_a2 = self._get_node_by_bazel_package(result.nodes, "libs/b/a2")
         self.assertEqual("libs/b", node_b_a2.artifact_def.library_path)
         self.assertEqual("libs/b/a2", node_b_a2.artifact_def.bazel_package)
         self.assertEqual("2.0.0", node_b_a2.artifact_def.version)
-        self.assertEqual(None, node_b_a2.parent)
+        self.assertEqual(0, len(node_b_a2.parents))
         self.assertEqual(0, len(node_b_a2.children))
 
         # LIB C
@@ -105,21 +110,21 @@ class CrawlerTest(unittest.TestCase):
         self.assertEqual("libs/c", node_c_a1.artifact_def.library_path)
         self.assertEqual("libs/c/a1", node_c_a1.artifact_def.bazel_package)
         self.assertEqual("3.0.0", node_c_a1.artifact_def.version)
-        self.assertEqual(node_b_a1, node_c_a1.parent)
+        self.assertEqual(node_b_a1, node_c_a1.parents[0])
         self.assertEqual(0, len(node_c_a1.children))
 
         node_c_a2 = self._get_node_by_bazel_package(result.nodes, "libs/c/a2")
         self.assertEqual("libs/c", node_c_a2.artifact_def.library_path)
         self.assertEqual("libs/c/a2", node_c_a2.artifact_def.bazel_package)
         self.assertEqual("3.0.0", node_c_a2.artifact_def.version)
-        self.assertEqual(None, node_c_a2.parent)
+        self.assertEqual(0, len(node_c_a2.parents))
         self.assertEqual(0, len(node_c_a2.children))
 
         node_c_a1_from_a_a1 = node_a_a1.children[1]
         self.assertEqual("libs/c", node_c_a1_from_a_a1.artifact_def.library_path)
         self.assertEqual("libs/c/a1", node_c_a1_from_a_a1.artifact_def.bazel_package)
         self.assertEqual("3.0.0", node_c_a1_from_a_a1.artifact_def.version)
-        self.assertEqual(node_a_a1, node_c_a1_from_a_a1.parent)
+        self.assertEqual(node_a_a1, node_c_a1_from_a_a1.parents[0])
         self.assertEqual(0, len(node_c_a1_from_a_a1.children))
 
     def test_no_lib_changed(self):
@@ -230,7 +235,7 @@ class CrawlerTest(unittest.TestCase):
 
         result = self.crawler.crawl(["libs/a/a1"])
 
-        pom = result.pomgens[0].gen()
+        pom = result.pomgens[0].gen(pomm.PomContentType.RELEASE)
         
         self.assertIn("<version>0.0.2</version>", pom)
         self.assertIn("<version>0.0.3</version>", pom)

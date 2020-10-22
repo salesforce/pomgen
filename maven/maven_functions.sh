@@ -25,7 +25,9 @@ _for_each_pom() {
 
     abs_pom_root_path=$repo_build_dir_path$pom_root_path
 
-    find -L $abs_pom_root_path -name "pom.xml"|while read pom_path; do
+    # look for pom files - the pom* glob is here so that we also find
+    # files using the format "pom_companion.xml" (see pomgen.py)
+    find -L $abs_pom_root_path -name "pom*.xml"|while read pom_path; do
         echo "INFO: Processing pom: $pom_path"
         build_dir_package_path="$(dirname "$pom_path")"
         src_dir_rel_path=${build_dir_package_path#$repo_build_dir_path}
