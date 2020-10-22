@@ -132,6 +132,14 @@ py_test(
 )
 
 py_test(
+    name = "crawlerunittest",
+    srcs = [":pomgen_files", "tests/crawlerunittest.py"],
+    imports = ["."],
+    size = "small",
+    python_version = python_version,
+)
+
+py_test(
     name = "crawlertest_misc",
     srcs = [":pomgen_files", "tests/crawlertest_misc.py"],
     imports = ["."],

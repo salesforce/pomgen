@@ -50,12 +50,17 @@ class MavenArtifactDef(object):
         Setting this to False also disables crawling source dependencies 
         referenced by this bazel package.
 
-    change_detection: whether pomgen should only generate pom when it detects changes.
-        This defaults to True, because if there is no change, ideally we don't want to
-        regenerate pom.  However, there are some edge cases, for example, the module
-        did not change but its deps have changed. When include_deps is set to false, 
-        pomgen would skip generating pom. In this case it would be useful to set this
-        flag to False so that pomgen would still generate pom for the module.
+    change_detection: whether pomgen should mark this artifact as needing to be
+        released based on whether changes have been made made to the artifact
+        since it was last released.  Defaults to True.
+        If set explicitly to False, then the artifact is unconditionally marked
+        as needing to be released.
+
+    gen_dependency_management_pom: whether to generate an additional pom.xml
+       that only contains <dependencyManagement>. Defaults to False.
+
+    version_increment_strategy: specifies how this artifacts version should
+        be incremented. Current supported values are: major|minor|patch
         
 
     ==== Read out of the optional BUILD.pom.released file ====
@@ -68,26 +73,20 @@ class MavenArtifactDef(object):
 
     ===== Internal attributes (never specified by the user) ====
 
-
     deps: additional targets this package depends on; list of Bazel labels.
         For example: deps = ["//projects/libs/servicelibs/srpc/srpc-thrift-svc-runtime"]
 
         Only used by tests.
 
-
     bazel_package: the bazel package the BUILD.pom file lives in 
-
 
     library_path: the path to the root directory of the library this
         monorepo package is part of
 
-
     requires_release: whether this monorepo package should be released (to Nexus
                       or local Maven repository)
 
-
     release_reason: the reason for releasing this artifact
-
 
     released_pom_content: if the file pom.xml.released exists next to the 
                           BUILD.pom file, the content of the pom.xml.released 
@@ -106,24 +105,27 @@ class MavenArtifactDef(object):
                  version,
                  pom_generation_mode=pomgenmode.DEFAULT,
                  pom_template_file=None,
-                 deps=[],
                  include_deps=True,
                  change_detection=True,
+                 gen_dependency_management_pom=False,
+                 deps=[],
+                 version_increment_strategy=None,
                  released_version=None,
                  released_artifact_hash=None,
                  bazel_package=None,
                  library_path=None,
                  requires_release=None,
-                 released_pom_content=None,
-                 version_increment_strategy=None):
+                 released_pom_content=None):
         self._group_id = group_id
         self._artifact_id = artifact_id
         self._version = version
         self._pom_generation_mode = pom_generation_mode
         self._pom_template_file = pom_template_file
-        self._deps = deps
         self._include_deps = include_deps
         self._change_detection = change_detection
+        self._gen_dependency_management_pom = gen_dependency_management_pom
+        self._deps = deps
+        self._version_increment_strategy = version_increment_strategy
         self._released_version = released_version
         self._released_artifact_hash = released_artifact_hash
         self._bazel_package = bazel_package
@@ -131,7 +133,6 @@ class MavenArtifactDef(object):
         self._requires_release = requires_release
         self._release_reason = None
         self._released_pom_content = released_pom_content
-        self._version_increment_strategy = version_increment_strategy
 
     @property
     def group_id(self):
@@ -154,16 +155,20 @@ class MavenArtifactDef(object):
         return self._pom_template_file
 
     @property
-    def deps(self):
-        return self._deps
-
-    @property
     def include_deps(self):
         return self._include_deps
 
     @property
     def change_detection(self):
         return self._change_detection
+
+    @property
+    def gen_dependency_management_pom(self):
+        return self._gen_dependency_management_pom
+
+    @property
+    def deps(self):
+        return self._deps
 
     @property
     def released_version(self):
@@ -232,18 +237,20 @@ def maven_artifact(group_id=None,
                    pom_template_file=None,
                    include_deps=True,
                    change_detection=True,
+                   generate_dependency_management_pom=False,
                    deps=[]):
     """
     This function is only intended to be called from BUILD.pom files.    
     """
-    return MavenArtifactDef(group_id,
-                            artifact_id,
-                            version,
-                            pom_generation_mode,
-                            pom_template_file,
-                            deps,
-                            include_deps,
-                            change_detection)
+    return MavenArtifactDef(group_id=group_id,
+                            artifact_id=artifact_id,
+                            version=version,
+                            pom_generation_mode=pom_generation_mode,
+                            pom_template_file=pom_template_file,
+                            include_deps=include_deps,
+                            change_detection=change_detection,
+                            gen_dependency_management_pom=generate_dependency_management_pom,
+                            deps=deps)
 
 def released_maven_artifact(version, artifact_hash):
     """
@@ -331,16 +338,17 @@ def _augment_art_def_values(user_art_def, user_rel_art_def, bazel_package,
             (common.pomgenmode.PomGenMode)
     """
     return MavenArtifactDef(
-        user_art_def.group_id,
-        user_art_def.artifact_id,
-        user_art_def.version,
-        pom_generation_mode,
-        user_art_def.pom_template_file,
-        user_art_def.deps,
-        True if user_art_def.include_deps is None else user_art_def.include_deps,
-        True if user_art_def.change_detection is None else user_art_def.change_detection,
-        user_rel_art_def.version if user_rel_art_def is not None else None,
-        user_rel_art_def.artifact_hash if user_rel_art_def is not None else None,
-        bazel_package,
+        group_id=user_art_def.group_id,
+        artifact_id=user_art_def.artifact_id,
+        version=user_art_def.version,
+        pom_generation_mode=pom_generation_mode,
+        pom_template_file=user_art_def.pom_template_file,
+        include_deps=True if user_art_def.include_deps is None else user_art_def.include_deps,
+        change_detection=True if user_art_def.change_detection is None else user_art_def.change_detection,
+        gen_dependency_management_pom=False if user_art_def.gen_dependency_management_pom is None else user_art_def.gen_dependency_management_pom,
+        deps=user_art_def.deps,
+        released_version=user_rel_art_def.version if user_rel_art_def is not None else None,
+        released_artifact_hash=user_rel_art_def.artifact_hash if user_rel_art_def is not None else None,
+        bazel_package=bazel_package,
         released_pom_content=released_pom_content,
         version_increment_strategy=version_increment_strategy)

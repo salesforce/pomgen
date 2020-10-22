@@ -1,0 +1,10 @@
+maven_artifact(
+    group_id = "com.pomgen.depman.example",
+    artifact_id = "vegetable-api",
+    version = "1.0.0-SNAPSHOT",
+    pom_generation_mode = "dynamic",
+)
+
+maven_artifact_update(
+    version_increment_strategy = "minor",
+)

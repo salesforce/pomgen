@@ -23,6 +23,12 @@ import os
 import re
 import sys
 
+
+def _write_file(path, content):                    
+    with open(path, "w") as f:
+        f.write(content)
+
+
 def _parse_arguments(args):
     parser = argparse.ArgumentParser(description="Monorepo Pom Generator")
     parser.add_argument("--package", type=str, required=True,
@@ -41,6 +47,7 @@ def _parse_arguments(args):
         help="Verbose output")
     return parser.parse_args(args)
 
+
 def _get_output_dir(args):
     if not args.destdir:
         return None
@@ -51,6 +58,7 @@ def _get_output_dir(args):
     destdir = os.path.realpath(args.destdir)
     logger.info("Output dir [%s]" %  destdir)
     return destdir
+
 
 def main(args):
     args = _parse_arguments(args)
@@ -79,20 +87,23 @@ def main(args):
             if not os.path.exists(pom_dest_dir):
                 os.makedirs(pom_dest_dir)
 
-            genmode = pom.PomContentType.GOLDFILE if args.pom_goldfile else pom.PomContentType.RELEASE
-            pom_content = pomgen.gen(genmode)
-
             # the goldfile pom is actually a pomgen metadata file, so we 
             # write it using the mdfiles module, which ensures it goes 
             # into the proper location within the specified bazel package
             if args.pom_goldfile:
+                pom_content = pomgen.gen(pom.PomContentType.GOLDFILE)
                 pom_goldfile_path = mdfiles.write_file(pom_content, output_dir, pomgen.bazel_package, mdfiles.POM_XML_RELEASED_FILE_NAME)
                 logger.info("Wrote pom goldfile to [%s]" % pom_goldfile_path)
             else:
+                pom_content = pomgen.gen(pom.PomContentType.RELEASE)
                 pom_path = os.path.join(pom_dest_dir, "pom.xml")
-                with open(pom_path, "w") as f:
-                    f.write(pom_content)
+                _write_file(pom_path, pom_content)
                 logger.info("Wrote pom file to [%s]" % pom_path)
+                for i, companion_pomgen in enumerate(pomgen.get_companion_generators()):
+                    pom_content = companion_pomgen.gen(pom.PomContentType.RELEASE)
+                    pom_path = os.path.join(pom_dest_dir, "pom_companion%s.xml" % i)
+                    _write_file(pom_path, pom_content)
+                    logger.info("Wrote companion pom file to [%s]" % pom_path)
 
 if __name__ == "__main__":
     main(sys.argv[1:])
