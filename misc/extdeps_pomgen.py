@@ -95,7 +95,7 @@ def main(args):
     pomgen = ThirdPartyDepsPomGen(ws, artifact_def, dependencies,
                                   cfg.pom_template)
     pomgen.process_dependencies()
-    return pomgen.gen()
+    return pomgen.gen(pom.PomContentType.RELEASE)
 
 if __name__ == "__main__":
     print(main(sys.argv[1:]))
