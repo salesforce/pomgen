@@ -67,17 +67,6 @@ def _parse_arguments(args):
     return parser.parse_args(args)
 
 
-def _target_for_monorepo_dep(repo_root, dep):
-    assert dep.bazel_package is not None
-    # not all monorepo artifacts have valid bazel targets, some
-    # are pom-only artifacts without BUILD file, so we check
-    # for BUILD file presence here
-    if os.path.exists(os.path.join(repo_root, dep.bazel_package, "BUILD")):
-        return "//%s" % dep.bazel_package
-    else:
-        return None
-
-
 def _to_json(thing):
     return json.dumps(thing, indent=2)
 
@@ -189,6 +178,6 @@ if __name__ == "__main__":
                     attrs["group_id"] = dep.group_id
                     attrs["version"] = dep.version
                     attrs["requires_release"] = not dep.external
-                    attrs["bazel_target"] = _target_for_monorepo_dep(repo_root, dep)
+                    attrs["bazel_label"] = "//%s" % dep.bazel_package if dep.bazel_buildable else None
                     all_artifacts_json.append(attrs)
                 print(_to_json(all_artifacts_json))

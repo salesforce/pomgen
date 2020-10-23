@@ -29,6 +29,10 @@ class AbstractDependency(object):
                          artifact
                          False -> this is a "traversal only" dependency
 
+    bazel_buildable: True -> this dependency is built by bazel (-> this
+                     dependency repesents a jar built by bazel)
+                     False -> this is an external dependency or a pom artifact
+                     or something else that bazel cannot build
 
     Optional/may be None:
 
@@ -86,6 +90,10 @@ class AbstractDependency(object):
 
     @property
     def references_artifact(self):
+        raise Exception("must be implemented in subclass")
+
+    @property
+    def bazel_buildable(self):
         raise Exception("must be implemented in subclass")
 
     def __hash__(self):
@@ -163,6 +171,11 @@ class ThirdPartyDependency(AbstractDependency):
     def bazel_label_name(self):
         return self._bazel_label_name
 
+    @property
+    def bazel_buildable(self):
+        return False
+
+
 class MonorepoDependency(AbstractDependency):
 
     def __init__(self, artifact_def, bazel_target):
@@ -188,6 +201,10 @@ class MonorepoDependency(AbstractDependency):
     @property
     def bazel_target(self):
         return self._bazel_target
+
+    @property
+    def bazel_buildable(self):
+        return self._artifact_def.pom_generation_mode.bazel_produced_artifact
 
     @property
     def references_artifact(self):
