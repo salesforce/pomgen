@@ -2,7 +2,7 @@
 
 ## Looking around
 
-This example shows how `pom_generation_mode = "skip"` can be used. [This pom generation mode](lib1_transitives/MVN-INF/BUILD.pom) can be used to mark bazel targets that [provide dependencies only](lib1_transitives/BUILD), but that do not produce any Maven artifacts. All dependencies of these types of targets will be added to pom generated for the referencing target.
+The [skip pom generation mode](lib1_transitives/MVN-INF/BUILD.pom) can be used to mark bazel targets that [provide dependencies only](lib1_transitives/BUILD), but that do not produce any Maven artifacts. All dependencies of these types of targets will be added to pom generated for the referencing target.
 
 The libraries in this example reference each other the following way:
 
