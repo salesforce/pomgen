@@ -11,6 +11,8 @@ The set of scripts in this repository provides a solution for:
  - For each Maven Artifact producing Bazel Package, a [BUILD.pom](examples/hello-world/healthyfoods/fruit-api/MVN-INF/BUILD.pom) file defines Maven specific metadata
  - A special [marker file](examples/hello-world/healthyfoods/MVN-INF/LIBRARY.root) groups one or more Maven Artifacts into a Library
 
+See [this doc](docs/mdfiles.md) for more information on pomgen files.
+
 ## Bazel Package References
 
 The BUILD file of a Maven Artifact producing Bazel Package may obviously reference other Bazel Packages in the repository. pomgen will follow these references and generate pom.xmls for all referenced Bazel Packages. 
@@ -97,4 +99,4 @@ Running pomgen with `--verbose` causes the current config to be echoed.
 
 ## CI setup
 
-[This document](ci.md) goes over the CI setup.
+[This document](docs/ci.md) goes over the CI setup.
