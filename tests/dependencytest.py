@@ -418,6 +418,47 @@ class DependencyTest(unittest.TestCase):
         self.assertEqual("classifier", dep_copy.classifier)
         self.assertEqual("scope", dep_copy.scope)
 
+    def test_bazel_buildable__external_dep(self):
+        artifact = "com.google.guava:guava:20.0"
+
+        dep = dependency.new_dep_from_maven_art_str(artifact, "name")
+
+        self.assertFalse(dep.bazel_buildable)
+
+    def test_bazel_buildable__source_dep__skip_pom_gen(self):
+        art_def = buildpom.maven_artifact("g1", "a1", "1.0")
+        art_def = buildpom._augment_art_def_values(art_def, None, "pack1", None, None, pomgenmode.SKIP)
+
+        dep = dependency.new_dep_from_maven_artifact_def(art_def, None)
+
+        self.assertFalse(dep.bazel_buildable)
+
+    def test_bazel_buildable__source_dep__dynamic_pom_gen(self):
+        art_def = buildpom.maven_artifact("g1", "a1", "1.0")
+        art_def = buildpom._augment_art_def_values(art_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
+
+        dep = dependency.new_dep_from_maven_artifact_def(art_def, None)
+
+        self.assertTrue(dep.bazel_buildable)
+
+    def test_bazel_buildable__source_dep__template_pom_gen__pom_packaging(self):
+        art_def = buildpom.maven_artifact("g1", "a1", "1.0")
+        art_def = buildpom._augment_art_def_values(art_def, None, "pack1", None, None, pomgenmode.TEMPLATE)
+        art_def.custom_pom_template_content = "<packaging>pom</packaging>"
+
+        dep = dependency.new_dep_from_maven_artifact_def(art_def, None)
+
+        self.assertFalse(dep.bazel_buildable)
+
+    def test_bazel_buildable__source_dep__template_pom_gen__other_packaging(self):
+        art_def = buildpom.maven_artifact("g1", "a1", "1.0")
+        art_def = buildpom._augment_art_def_values(art_def, None, "pack1", None, None, pomgenmode.TEMPLATE)
+        art_def.custom_pom_template_content = "<packaging>maven-plugin</packaging>"
+
+        dep = dependency.new_dep_from_maven_artifact_def(art_def, None)
+
+        self.assertTrue(dep.bazel_buildable)
+
 if __name__ == '__main__':
     unittest.main()
 

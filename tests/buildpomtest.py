@@ -30,7 +30,7 @@ class BuildPomTest(unittest.TestCase):
         self.assertEqual(version, art_def.version)
         self.assertEqual([], art_def.deps)
         self.assertIs(pomgenmode.DYNAMIC, art_def.pom_generation_mode)
-        self.assertEqual(None, art_def.pom_template_file)
+        self.assertEqual(None, art_def.custom_pom_template_content)
         self.assertTrue(art_def.include_deps)
         self.assertTrue(art_def.change_detection)
         self.assertEqual(package_rel_path, art_def.bazel_package)
@@ -74,7 +74,7 @@ class BuildPomTest(unittest.TestCase):
         self.assertEqual(version, art_def.version)
         self.assertEqual([], art_def.deps)
         self.assertIs(pomgenmode.DYNAMIC, art_def.pom_generation_mode)
-        self.assertEqual(None, art_def.pom_template_file)
+        self.assertEqual(None, art_def.custom_pom_template_content)
         self.assertTrue(art_def.include_deps)
         self.assertTrue(art_def.change_detection)
         self.assertEqual(package_rel_path, art_def.bazel_package)
@@ -108,6 +108,7 @@ class BuildPomTest(unittest.TestCase):
         art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
 
         self.assertIs(pomgenmode.DYNAMIC, art_def.pom_generation_mode)
+        self.assertTrue(art_def.pom_generation_mode.produces_artifact)
 
     def test_parse_BUILD_pom__template_pomgen_mode(self):
         package_rel_path = "package1/package2"
@@ -122,6 +123,7 @@ class BuildPomTest(unittest.TestCase):
         art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
 
         self.assertIs(pomgenmode.TEMPLATE, art_def.pom_generation_mode)
+        self.assertTrue(art_def.pom_generation_mode.produces_artifact)
 
     def test_parse_BUILD_pom__skip_pomgen_mode(self):
         package_rel_path = "package1/package2"
@@ -140,13 +142,14 @@ class BuildPomTest(unittest.TestCase):
         self.assertEqual(None, art_def.artifact_id)
         self.assertEqual(None, art_def.version)
         self.assertEqual([], art_def.deps)
-        self.assertEqual(None, art_def.pom_template_file)
+        self.assertEqual(None, art_def.custom_pom_template_content)
         self.assertTrue(art_def.include_deps)
         self.assertTrue(art_def.change_detection)
         self.assertEqual(package_rel_path, art_def.bazel_package)
         self.assertEqual(None, art_def.released_version)
         self.assertEqual(None, art_def.released_artifact_hash)
         self.assertEqual(None, art_def.version_increment_strategy)
+        self.assertFalse(art_def.pom_generation_mode.produces_artifact)
 
     def test_load_pom_xml_released(self):
         package_rel_path = "package1/package2"

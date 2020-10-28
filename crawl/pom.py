@@ -8,7 +8,6 @@ This module contains pom.xml generation logic.
 """
 
 from common import pomgenmode
-from common import mdfiles
 import copy
 from crawl import bazel
 from crawl import pomparser
@@ -62,10 +61,7 @@ def get_pom_generator(workspace, pom_template, artifact_def, dependency):
             return DynamicPomGen(
                 workspace, artifact_def, dependency, pom_template)
     elif mode is pomgenmode.TEMPLATE:
-        content, _ = mdfiles.read_file(workspace.repo_root_path,
-                                       artifact_def.bazel_package,
-                                       artifact_def.pom_template_file)
-        return TemplatePomGen(workspace, artifact_def, dependency, content)
+        return TemplatePomGen(workspace, artifact_def, dependency)
     elif mode is pomgenmode.SKIP:
         return NoopPomGen(workspace, artifact_def, dependency)
     else:
@@ -281,9 +277,8 @@ class TemplatePomGen(AbstractPomGen):
     """
     Generates a pom.xml based on a template file.
     """
-    def __init__(self, workspace, artifact_def, dependency, template_content):
+    def __init__(self, workspace, artifact_def, dependency):
         super(TemplatePomGen, self).__init__(workspace, artifact_def, dependency)
-        self.template_content = template_content
         self.crawled_bazel_packages = set()
         self.crawled_external_dependencies = set()
 
@@ -295,7 +290,7 @@ class TemplatePomGen(AbstractPomGen):
         self.crawled_external_dependencies = crawled_external_dependencies
 
     def gen(self, pomcontenttype):
-        pom_content, parsed_dependencies = self._process_pom_template_content(self.template_content)
+        pom_content, parsed_dependencies = self._process_pom_template_content(self.artifact_def.custom_pom_template_content)
 
         properties = self._get_properties(pomcontenttype, parsed_dependencies)
 

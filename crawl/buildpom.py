@@ -27,20 +27,15 @@ class MavenArtifactDef(object):
 
     group_id: the maven artifact groupId of the bazel package.
 
-
     artifact_id: the maven artifact id (artifactId) of the bazel package.
 
-
     version: the maven artifact version of the bazel package.
-
 
     pom_generation_mode: the pom generation strategy, the type is
         common.pomgenmode.PomGenMode
 
-
-    pom_template_file: if the pom_generation_mode is "template" (see above),
-        this value has the template file name to use as pom template.
-
+    custom_pom_template: if the pom_generation_mode is "template",
+        this is the content of the specified pom template file
 
     include_deps: whether pomgen should include dependencies in the generated
         pom. This defaults to True, because figuring out dependencies and 
@@ -104,7 +99,7 @@ class MavenArtifactDef(object):
                  artifact_id,
                  version,
                  pom_generation_mode=pomgenmode.DEFAULT,
-                 pom_template_file=None,
+                 custom_pom_template_content=None,
                  include_deps=True,
                  change_detection=True,
                  gen_dependency_management_pom=False,
@@ -120,7 +115,7 @@ class MavenArtifactDef(object):
         self._artifact_id = artifact_id
         self._version = version
         self._pom_generation_mode = pom_generation_mode
-        self._pom_template_file = pom_template_file
+        self._custom_pom_template_content = custom_pom_template_content
         self._include_deps = include_deps
         self._change_detection = change_detection
         self._gen_dependency_management_pom = gen_dependency_management_pom
@@ -151,8 +146,12 @@ class MavenArtifactDef(object):
         return self._pom_generation_mode
 
     @property
-    def pom_template_file(self):
-        return self._pom_template_file
+    def custom_pom_template_content(self):
+        return self._custom_pom_template_content
+
+    @custom_pom_template_content.setter
+    def custom_pom_template_content(self, value):
+        self._custom_pom_template_content = value
 
     @property
     def include_deps(self):
@@ -240,13 +239,15 @@ def maven_artifact(group_id=None,
                    generate_dependency_management_pom=False,
                    deps=[]):
     """
-    This function is only intended to be called from BUILD.pom files.    
+    This function is only intended to be called from BUILD.pom files.
     """
     return MavenArtifactDef(group_id=group_id,
                             artifact_id=artifact_id,
                             version=version,
                             pom_generation_mode=pom_generation_mode,
-                            pom_template_file=pom_template_file,
+                            # on purpose, the content starts out with only the
+                            # path to the content
+                            custom_pom_template_content=pom_template_file,
                             include_deps=include_deps,
                             change_detection=change_detection,
                             gen_dependency_management_pom=generate_dependency_management_pom,
@@ -272,6 +273,12 @@ def parse_maven_artifact_def(root_path, package):
     try:
         art_def = eval(maven_artifact_func)
         pom_generation_mode = pomgenmode.from_string(art_def.pom_generation_mode)
+        if art_def.custom_pom_template_content is not None:
+            # load the template right away
+            template_path = art_def.custom_pom_template_content
+            template_content, _ = mdfiles.read_file(root_path, package, template_path)
+            art_def.custom_pom_template_content = template_content
+
     except:
         print("[ERROR] Cannot parse [%s]: %s" % (path, sys.exc_info()))
         raise
@@ -342,7 +349,7 @@ def _augment_art_def_values(user_art_def, user_rel_art_def, bazel_package,
         artifact_id=user_art_def.artifact_id,
         version=user_art_def.version,
         pom_generation_mode=pom_generation_mode,
-        pom_template_file=user_art_def.pom_template_file,
+        custom_pom_template_content=user_art_def.custom_pom_template_content,
         include_deps=True if user_art_def.include_deps is None else user_art_def.include_deps,
         change_detection=True if user_art_def.change_detection is None else user_art_def.change_detection,
         gen_dependency_management_pom=False if user_art_def.gen_dependency_management_pom is None else user_art_def.gen_dependency_management_pom,
