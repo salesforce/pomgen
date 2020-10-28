@@ -203,7 +203,8 @@ class MonorepoDependency(AbstractDependency):
 
     @property
     def bazel_buildable(self):
-        return self._artifact_def.pom_generation_mode.bazel_produced_artifact
+        pom_template = self._artifact_def.custom_pom_template_content
+        return self._artifact_def.pom_generation_mode.bazel_produced_artifact(pom_template)
 
     @property
     def references_artifact(self):
