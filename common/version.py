@@ -13,6 +13,7 @@ import re
 
 version_re = re.compile("(^.*version *= *[\"'])(.*?)([\"'].*)$", re.S)
 
+
 def get_version_increment_strategy(build_pom_content, path):
     """
     Returns a version increment strategy instance based on the value of
@@ -52,11 +53,13 @@ def parse_build_pom_version(build_pom_content):
     else:
         return m.group(2).strip()
 
+
 def parse_build_pom_released_version(build_pom_released_content):
     """
     Returns the value of released_maven_artifact.version.
     """
     return parse_build_pom_version(build_pom_released_content)
+
 
 def get_release_version(version):
     """
@@ -68,6 +71,7 @@ def get_release_version(version):
     if version.endswith("-SNAPSHOT"):
         return version[0:-len("-SNAPSHOT")]
     return version
+
 
 def get_next_dev_version(version, version_increment_strategy):
     """
@@ -81,6 +85,7 @@ def get_next_dev_version(version, version_increment_strategy):
         next_version += "-SNAPSHOT"
     return next_version
 
+
 # only used internally for parsing
 MavenArtifactUpdate = namedtuple("MavenArtifactUpdate", "version_increment_strategy")
 
@@ -89,6 +94,7 @@ def maven_artifact_update(version_increment_strategy):
     This function is only intended to be called from BUILD.pom files.
     """
     return MavenArtifactUpdate(version_increment_strategy)
+
 
 def version_update_handler(version, version_update_strategy):
     """
@@ -113,6 +119,7 @@ def version_update_handler(version, version_update_strategy):
         next_version += version_qualifier
     return next_version
 
+
 def _parse_maven_artifact_update(build_pom_content, path):
     maven_art_up_func = code.get_function_block(build_pom_content,
                                                 "maven_artifact_update")
@@ -122,6 +129,7 @@ def _parse_maven_artifact_update(build_pom_content, path):
         print("[ERROR] Cannot parse [%s]: %s" % (path, sys.exc_info()))
         raise
 
+
 def _get_major_version_increment_strategy():
     def increment_major(version):
         i = version.index(".")
@@ -129,12 +137,14 @@ def _get_major_version_increment_strategy():
         return "%i.0.0" % (major_version + 1)
     return increment_major
 
+
 def _get_minor_version_increment_strategy():
     def increment_minor(version):
         pieces = version.split(".")
         minor_version = int(pieces[1])
         return "%s.%i.0" % (pieces[0], minor_version + 1)
     return increment_minor
+
 
 def _get_patch_version_increment_strategy():
     def increment_patch(version):
