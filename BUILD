@@ -15,14 +15,14 @@ py_binary(
 
 py_binary(
     name = "query",
-    main = "query_maven_metadata.py",
+    main = "query.py",
     srcs = [":pomgen_files"],
     python_version = python_version,
 )
 
 py_binary(
     name = "update",
-    main = "update_maven_metadata.py",
+    main = "update.py",
     srcs = [":pomgen_files"],
     python_version = python_version,
 )
