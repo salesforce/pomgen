@@ -10,21 +10,38 @@ from common import version
 
 class VersionTest(unittest.TestCase):
 
-    def test_get_release_version(self):
+    def test_get_release_version__semver_release(self):
         self.assertEqual("1.2.3", version.get_release_version("1.2.3-SNAPSHOT"))
         self.assertEqual("1.2.3", version.get_release_version("1.2.3"))
 
-    def test_get_next_dev_version(self):
+    def test_get_release_version__incremental_release(self):
+        self.assertEqual("1.2.3-rel-1", version.get_release_version("foo", last_released_version="1.2.3", incremental_release=True))
+        self.assertEqual("1.2.3-rel-2", version.get_release_version("foo", last_released_version="1.2.3-rel-1", incremental_release=True))
+        self.assertEqual("0.0.0-rel-1", version.get_release_version("foo", last_released_version=None, incremental_release=True))
+
+    def test_get_next_dev_version__semver_release(self):
         build_pom_content = self._get_build_pom("major")
         s = version.get_version_increment_strategy(build_pom_content, None)
         
         self.assertEqual("2.0.0-SNAPSHOT", version.get_next_dev_version("1.0.0", s))
-        
-    def test_get_next_dev_version__snap(self):
+
+    def test_get_next_dev_version__semver_release__snap(self):
         build_pom_content = self._get_build_pom("major")
         s = version.get_version_increment_strategy(build_pom_content, None)
         
         self.assertEqual("2.0.0-SNAPSHOT", version.get_next_dev_version("1.0.0-SNAPSHOT", s))
+
+    def test_get_next_dev_version__incremental_release(self):
+        build_pom_content = self._get_build_pom("major")
+        not_used = version.get_version_increment_strategy(build_pom_content, None)
+
+        self.assertEqual("1.0.0-SNAPSHOT", version.get_next_dev_version("1.0.0", not_used, incremental_release=True))
+
+    def test_get_next_dev_version__incremental_release__snap(self):
+        build_pom_content = self._get_build_pom("major")
+        not_used = version.get_version_increment_strategy(build_pom_content, None)
+
+        self.assertEqual("1.0.0-SNAPSHOT", version.get_next_dev_version("1.0.0-SNAPSHOT", not_used, incremental_release=True))
  
     def test_parse_build_pom_version(self):
         build_pom = """

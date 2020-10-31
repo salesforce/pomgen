@@ -14,6 +14,7 @@ from common import common
 from config import config
 from crawl import buildpom
 from crawl import pom
+from crawl import pomcontent
 from crawl import workspace
 import argparse
 import os
@@ -64,7 +65,8 @@ def main(args):
     ws = workspace.Workspace(repo_root, 
                              cfg.external_dependencies, 
                              cfg.excluded_dependency_paths,
-                             cfg.all_src_exclusions)
+                             cfg.all_src_exclusions,
+                             pomcontent.NOOP)
 
     group_id = "all_ext_deps_group" if args.group_id is None else args.group_id
     artifact_id = "all_ext_deps_art" if args.artifact_id is None else args.artifact_id

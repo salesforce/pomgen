@@ -32,6 +32,9 @@ excluded_filenames=.gitignore,
 
 # Ignored file extensions when determining whether an artifact has changed
 excluded_extensions=.md,
+
+# query versioning mode for proposed next versions
+versioning_mode=semver
 """
 
 try:
@@ -42,6 +45,7 @@ except ImportError:
 from . import exclusions
 import os
 from common import logger
+
 
 def load(repo_root, verbose=False):
     """
@@ -80,12 +84,15 @@ def load(repo_root, verbose=False):
         excluded_dependency_paths=crawl("excluded_dependency_paths", ()),
         excluded_src_relpaths=artifact("excluded_relative_paths", ("src/test",)),
         excluded_src_file_names=artifact("excluded_filenames", (".gitignore",)),
-        excluded_src_file_extensions=artifact("excluded_extensions", (".md",)))
+        excluded_src_file_extensions=artifact("excluded_extensions", (".md",)),
+        versioning_mode=artifact("versioning_mode", "semver"),
+    )
 
     if verbose:
         logger.raw("Running with configuration:\n%s\n" % str(cfg))
 
     return cfg
+
 
 def _get_value_with_default(parser, section, option, dflt):
     try:
@@ -95,14 +102,18 @@ def _get_value_with_default(parser, section, option, dflt):
     except configparser.NoSectionError:
         return dflt
 
+
 class Config:
+
     def __init__(self, 
                  pom_template_path_and_content=("",""),
                  external_deps_path_and_content=[],
                  excluded_dependency_paths=(),
                  excluded_src_relpaths=(),
                  excluded_src_file_names=(),
-                 excluded_src_file_extensions=()):
+                 excluded_src_file_extensions=(),
+                 versioning_mode="semver"):
+
         # general
         self.pom_template_path_and_content=pom_template_path_and_content
         self.external_deps_path_and_content = external_deps_path_and_content
@@ -114,6 +125,7 @@ class Config:
         self.excluded_src_relpaths = _add_pathsep(_to_tuple(excluded_src_relpaths))
         self.excluded_src_file_names = _to_tuple(excluded_src_file_names)
         self.excluded_src_file_extensions = _to_tuple(excluded_src_file_extensions)
+        self.versioning_mode = versioning_mode
 
     @property
     def pom_template(self):
@@ -148,12 +160,14 @@ excluded_dependency_paths=%s
 excluded_relative_paths=%s
 excluded_filenames=%s
 excluded_extensions=%s
+versioning_mode=%s
 """ % (self.pom_template_path_and_content[0],
        ",".join([t[0] for t in self.external_deps_path_and_content]),
        self.excluded_dependency_paths,
        self.excluded_src_relpaths,
        self.excluded_src_file_names,
-       self.excluded_src_file_extensions)
+       self.excluded_src_file_extensions,
+       self.versioning_mode)
 
 def _to_tuple(thing):
     if isinstance(thing, tuple):

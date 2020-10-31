@@ -10,6 +10,7 @@ from config import exclusions
 from crawl import crawler
 from crawl import git
 from crawl import pom as pomm
+from crawl import pomcontent
 from crawl import releasereason as rr
 from crawl import workspace
 import os
@@ -54,7 +55,8 @@ class CrawlerTest(unittest.TestCase):
         self.cwd = os.getcwd()
         os.chdir(self.repo_root_path)
         ws = workspace.Workspace(self.repo_root_path, "",
-                                 [], exclusions.src_exclusions())
+                                 [], exclusions.src_exclusions(),
+                                 pomcontent.NOOP)
         self.crawler = crawler.Crawler(ws, pom_template="")
 
     def test_setup(self):
