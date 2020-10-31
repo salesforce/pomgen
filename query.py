@@ -19,6 +19,7 @@ from crawl import bazel
 from crawl import buildpom
 from crawl import crawler
 from crawl import libaggregator
+from crawl import pomcontent
 from crawl import workspace
 import argparse
 import json
@@ -86,11 +87,12 @@ def _matches_filter(maven_artifact, all_filters):
 if __name__ == "__main__":
     args = _parse_arguments(sys.argv[1:])
     repo_root = common.get_repo_root(args.repo_root)
-    cfg = config.load(repo_root)
+    cfg = config.load(repo_root, args.verbose)
     ws = workspace.Workspace(repo_root,
                              cfg.excluded_dependency_paths, 
                              cfg.all_src_exclusions,
-                             cfg.maven_install_rule_names)
+                             cfg.maven_install_rule_names,
+                             pomcontent.NOOP)
 
     determine_packages_to_process = (args.list_libraries or 
                                      args.list_artifacts or
@@ -148,11 +150,11 @@ if __name__ == "__main__":
     if crawl_artifact_dependencies:
         crawler = crawler.Crawler(ws, cfg.pom_template, args.verbose)
         artifact_result = crawler.crawl(packages, force_release=args.force)
-        library_nodes = libaggregator.get_libraries_to_release(artifact_result.nodes)
+        root_library_nodes = libaggregator.get_libraries_to_release(artifact_result.nodes)
 
         if args.library_release_plan_tree:
             pretty_tree_output = ""
-            for library_node in library_nodes:
+            for library_node in root_library_nodes:
                 pretty_tree_output = "%s\n%s\n" % (pretty_tree_output,
                                                    library_node.pretty_print())
             print(pretty_tree_output)
@@ -160,14 +162,18 @@ if __name__ == "__main__":
         else:
             if args.library_release_plan_json:
                 all_libs_json = []
+                incremental_rel_enabled = cfg.versioning_mode != "semver"
                 for node in libaggregator.LibraryNode.ALL_LIBRARY_NODES:
+                    transitive = node not in root_library_nodes
+                    incremental_rel = incremental_rel_enabled and transitive
                     attrs = OrderedDict()
                     attrs["library_path"] = node.library_path
                     attrs["version"] = node.version
+                    attrs["released_version"] = node.released_version
                     attrs["requires_release"] = node.requires_release
                     attrs["release_reason"] = node.release_reason
-                    attrs["proposed_release_version"] = version.get_release_version(node.version)
-                    attrs["proposed_next_dev_version"] = version.get_next_dev_version(node.version, node.version_increment_strategy)
+                    attrs["proposed_release_version"] = version.get_release_version(node.version, node.released_version, incremental_release=incremental_rel)
+                    attrs["proposed_next_dev_version"] = version.get_next_dev_version(node.version, node.version_increment_strategy, incremental_release=incremental_rel)
                     all_libs_json.append(attrs)
                 print(_to_json(all_libs_json))
             

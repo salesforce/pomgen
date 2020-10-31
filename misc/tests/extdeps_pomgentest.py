@@ -119,7 +119,7 @@ maven_install(
         self._write_file("", "", "maven_install.json", content)
 
     def _add_pom_template(self):
-        content = "${dependencies}"
+        content = "#{dependencies}"
         self._write_file("config", "", "pom_template.xml", content)
 
     def _write_file(self, package_rel_path, rel_path, filename, content):

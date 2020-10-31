@@ -20,7 +20,7 @@ class PomContentType:
     """
     Available pom content types:
       
-      RELEASE - this is the default, standard pom.xml, based on  BUILD file or 
+      RELEASE - this is the default, standard pom.xml, based on BUILD file or
           pom.template content.
 
       GOLDFILE - this pom content is meant for comparing against another
@@ -468,16 +468,17 @@ class DynamicPomGen(AbstractPomGen):
     Generates a pom.xm file based on the specified singleton (shared) template.
 
     The following placesholders must exist in the specified template:
-       ${dependencies} - will be replaced with the <dependencies> section
+       #{dependencies} - will be replaced with the <dependencies> section
 
     The following placesholders may exist in the specified template:
 
-       ${artifact_id}
-       ${group_id}
-       ${version}
+       #{artifact_id}
+       #{group_id}
+       #{version}
     """
     def __init__(self, workspace, artifact_def, dependency, pom_template):
         super(DynamicPomGen, self).__init__(workspace, artifact_def, dependency)
+        self.pom_content = workspace.pom_content
         self.pom_template = pom_template
         self.dependencies = ()
 
@@ -485,21 +486,32 @@ class DynamicPomGen(AbstractPomGen):
         self.dependencies = dependencies
 
     def gen(self, pomcontenttype):
-        content = self.pom_template.replace("${group_id}", self._artifact_def.group_id)
-        content = content.replace("${artifact_id}", self._artifact_def.artifact_id)
+        content = self.pom_template.replace("#{group_id}", self._artifact_def.group_id)
+        content = content.replace("#{artifact_id}", self._artifact_def.artifact_id)
         version = self._artifact_def_version(pomcontenttype)
-        content = content.replace("${version}", version)
-        content = content.replace("${dependencies}", self._gen_dependencies(pomcontenttype))
+        content = content.replace("#{version}", version)
+        if self.pom_content.description is None:
+            content = self._remove_token(content, "#{description}")
+        else:
+            content = content.replace("#{description}", self._gen_description())
+        if len(self.dependencies) == 0:
+            content = self._remove_token(content, "#{dependencies}")
+        else:
+            content = content.replace("#{dependencies}", self._gen_dependencies(pomcontenttype))
         return content
 
     def _load_additional_dependencies_hook(self):
         return _query_dependencies(self._workspace, self._artifact_def,
                                    self._dependency)
+
+    def _gen_description(self):
+        content = ""
+        content, indent = self._xml(content, "description", indent=_INDENT)
+        content = "%s%s%s%s" % (content, ' '*indent, self.pom_content.description, os.linesep)
+        content, indent = self._xml(content, "description", indent=indent, close_element=True)
+        return content
         
     def _gen_dependencies(self, pomcontenttype):
-        if len(self.dependencies) == 0:
-            return ""
-
         deps = self.dependencies
         if pomcontenttype == PomContentType.GOLDFILE:
             deps = list(deps)
@@ -536,6 +548,17 @@ class DynamicPomGen(AbstractPomGen):
 
         return ()
 
+    def _remove_token(self, content, token_name):
+        # assumes token is on one line by itself
+        i = content.find(token_name)
+        if i == -1:
+            return content
+        else:
+            j = content.find(os.linesep, i)
+            if j == -1:
+                j = len(content) - 1
+            return content[:i] + content[j+len(os.linesep):]
+
 
 class DependencyManagementPomGen(AbstractPomGen):
     """
@@ -544,14 +567,14 @@ class DependencyManagementPomGen(AbstractPomGen):
     dependencies of the backing artifact.
 
     The following placesholders must exist in the specified template:
-       ${dependencies} - will be replaced with the <dependencyManagement> section
+       #{dependencies} - will be replaced with the <dependencyManagement>
+                         section
 
     The following placesholders may exist in the specified template:
 
-       ${artifact_id}
-       ${group_id}
-       ${version}
-
+       #{artifact_id}
+       #{group_id}
+       #{version}
     """
     def __init__(self, workspace, artifact_def, dependency, pom_template):
         super(DependencyManagementPomGen, self).__init__(workspace, artifact_def, dependency)
@@ -565,14 +588,14 @@ class DependencyManagementPomGen(AbstractPomGen):
 
     def gen(self, pomcontenttype):
         assert pomcontenttype == PomContentType.RELEASE
-        content = self.pom_template.replace("${group_id}", self._artifact_def.group_id)
+        content = self.pom_template.replace("#{group_id}", self._artifact_def.group_id)
         # by convention, we add the suffix ".depmanagement" to the artifactId
         # so com.blah is the real jar artifact and com.blah.depmanagement
         # is the dependency management pom for that artficat
-        content = content.replace("${artifact_id}", "%s.depmanagement" % self._artifact_def.artifact_id)
+        content = content.replace("#{artifact_id}", "%s.depmanagement" % self._artifact_def.artifact_id)
         version = self._artifact_def_version(pomcontenttype)
-        content = content.replace("${version}", version)
-        content = content.replace("${dependencies}", self._gen_dependency_management())
+        content = content.replace("#{version}", version)
+        content = content.replace("#{dependencies}", self._gen_dependency_management())
 
         # we assume the template specified <packaging>jar</packaging>
         # there room for improvement here for sure

@@ -38,8 +38,6 @@ filegroup(
 )
 
 
-# small tests
-
 py_test(
     name = "argsupporttest",
     srcs = ["common/argsupport.py",
@@ -219,6 +217,7 @@ py_test(
             "crawl/dependency.py",
             "crawl/git.py",
             "crawl/pom.py",
+            "crawl/pomcontent.py",
             "crawl/pomparser.py",
             "crawl/releasereason.py",
             "crawl/workspace.py",
@@ -253,6 +252,7 @@ py_test(
             "crawl/buildpom.py",
             "crawl/dependency.py",
             "crawl/git.py",
+            "crawl/pomcontent.py",
             "crawl/releasereason.py",
             "crawl/workspace.py",
             "tests/workspacetest.py"],

@@ -19,11 +19,14 @@ class Workspace:
     Maven concepts.
     """
 
-    def __init__(self, repo_root_path, 
-                 excluded_dependency_paths, source_exclusions, maven_install_rule_names=('maven',)):
+    def __init__(self, repo_root_path, excluded_dependency_paths, 
+                 source_exclusions, 
+                 maven_install_rule_names,
+                 pom_content):
         self.repo_root_path = repo_root_path
         self.excluded_dependency_paths = excluded_dependency_paths
         self.source_exclusions = source_exclusions
+        self.pom_content = pom_content
         self._name_to_ext_deps = self._parse_maven_install(maven_install_rule_names)
         self._package_to_artifact_def = {} # cache for artifact_def instances
 
@@ -31,7 +34,7 @@ class Workspace:
     def name_to_external_dependencies(self):
         """
         Returns a dict for all external dependencies declared for this 
-        WORKSPACE, ie all maven_jar instances.
+        WORKSPACE.
  
         The mapping is of the form: {maven_jar.name: Dependency instance}.
         """
@@ -49,6 +52,7 @@ class Workspace:
         art_def = buildpom.parse_maven_artifact_def(self.repo_root_path, package)
         if art_def is not None:
             art_def = artifactprocessor.augment_artifact_def(self.repo_root_path, art_def, self.source_exclusions)
+        # cache result, next time it is returned from cache
         self._package_to_artifact_def[package] = art_def
         return art_def
 
@@ -150,16 +154,17 @@ class Workspace:
     def _parse_maven_install(self, rule_names):
         """
         Parse the dependencies inside each maven_install in rule_names.
-        There should be a ${rule}_install.json file at the root of the repository for
-        each rule.
+        There should be a ${rule}_install.json file at the root of the
+        repository for each rule.
 
-        rule_names are processed in reverse order so that the first one wins. This is to handle
-        the legacy naming case. The full name used my maven_install should be used in
-        future versions. This is accomodate repositories to be able to migrate to
-        maven_install dependency names.
+        rule_names are processed in reverse order so that the first one wins.
+        This is to handle the legacy naming case. The full name used my
+        maven_install should be used in future versions. This is accomodate
+        repositories to be able to migrate to maven_install dependency names.
 
-        Returns a dictionary mapping the value of the coord santized for Bazel to a
-        Dependency instance. It also has keys for the fully qualified maven_install rule.
+        Returns a dictionary mapping the value of the coord santized for Bazel
+        to a Dependency instance. It also has keys for the fully qualified
+        maven_install rule.
         """
         result = {}
         for each_rule in rule_names[::-1]:
@@ -168,64 +173,8 @@ class Workspace:
                 dep = dependency.new_dep_from_maven_art_str(coord, fully_qualified_name)
                 if dep.classifier != 'sources':
                     result[fully_qualified_name] = dep
-                    # This should be factored out eventually and use fully qualified name
-                    # once maven_jar names are removed completely, so should this
+                    # This should be factored out eventually and use fully
+                    # qualified name once maven_jar names are removed
+                    # completely, so should this
                     result[name] = dependency.new_dep_from_maven_art_str(coord, name)
         return result
-
-    def _parse_maven_jars(self, external_deps):
-        """
-        Parses the given external_deps, specified as maven_jar definitions,
-        for example:
-
-            native.maven_jar(
-                name = "ch_qos_logback_logback_core",
-                artifact = "ch.qos.logback:logback-core:1.2.3",
-            )
-
-        Returns a dictionary mapping the value of maven_jar.name to a
-        Dependency instance.
-        """
-
-        maven_jar = "maven_jar"
-        name_to_dep = {}
-        
-        maven_jar_index = external_deps.find(maven_jar)
-        while maven_jar_index != -1:
-            name_index = external_deps.find("name", maven_jar_index)
-            if name_index == -1:
-                raise Exception("Didn't find maven_jar's name attribute")
-            art_name, end_quote_index = self._parse_value(name_index, external_deps)
-            artifact_index = external_deps.find("artifact", end_quote_index)
-            if artifact_index == -1:
-                raise Exception("Didn't find maven_jar's artifact attribute")
-            art_value, end_quote_index = self._parse_value(artifact_index, external_deps)
-            assert art_name not in name_to_dep, "duplicate ext dep name %s" % art_name
-            name_to_dep[art_name] = dependency.new_dep_from_maven_art_str(art_value, art_name)
-            maven_jar_index = external_deps.find(maven_jar, end_quote_index)
-        return name_to_dep
-
-    def _parse_value(self, start_index, s):
-        """
-        Returns the nearest portion of the string s surrounded by '"' or "'", 
-        starting at the position provided by start_index.
-       
-        Returns a tuple: (parsed value, index of terminating '"')
-        """
-        start_quote_index = self._get_nearest_quote_index(start_index, s)
-        end_quote_index = self._get_nearest_quote_index(start_quote_index+1, s)
-        value = s[start_quote_index + 1:end_quote_index]
-        return (value, end_quote_index)
-
-    def _get_nearest_quote_index(self, start_index, s):
-        single_quote_start_index = s.find("'", start_index)
-        double_quote_start_index = s.find('"', start_index)
-        if single_quote_start_index == -1 and double_quote_start_index == -1:
-            raise Exception("malformed string at index %s %s" % (str(start_index, s)))
-        if single_quote_start_index == -1:
-            return double_quote_start_index
-        if double_quote_start_index == -1:
-            return single_quote_start_index
-        return min(single_quote_start_index, double_quote_start_index)
-        
-        

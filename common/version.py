@@ -61,26 +61,49 @@ def parse_build_pom_released_version(build_pom_released_content):
     return parse_build_pom_version(build_pom_released_content)
 
 
-def get_release_version(version):
+REL_QUALIFIER_PREFIX = "-rel-"
+
+def get_release_version(current_version, last_released_version=None, incremental_release=False):
     """
-    If version ends with "-SNAPSHOT", removes that, otherwise returns the
-    version without modifications.
+    If incremental_release is False:
+        If current_version ends with "-SNAPSHOT", removes that, otherwise
+        returns current_version without modifications.
+
+    If incremental_release is True:
+        Adds or increments the "rel" qualifier to the last_released_version.
+        If last_released_version is None it is defaulted to 0.0.0.
     """
-    if version is None:
-        return None
-    if version.endswith("-SNAPSHOT"):
-        return version[0:-len("-SNAPSHOT")]
-    return version
+    if incremental_release:
+        if last_released_version is None:
+            last_released_version = "0.0.0"
+        return _incr_rel_qualifier(last_released_version)
+    else:
+        if current_version is None:
+            return None
+        elif current_version.endswith("-SNAPSHOT"):
+            return current_version[0:-len("-SNAPSHOT")]
+        else:
+            return current_version
 
 
-def get_next_dev_version(version, version_increment_strategy):
+def get_next_dev_version(current_version, version_increment_strategy, incremental_release=False):
     """
-    Returns the next development version to use, based on the specified
-    version_increment_strategy.
+    Returns the next development version to use. The development version
+    always ends with "-SNAPSHOT".
+
+    If incremental_release is False:
+        Increments and returns current_version using the specified
+        version_increment_strategy.
+
+    If incremental_release is True:
+        Returns the current version (because it hasn't been released yet)
     """
-    if version is None:
+    if current_version is None:
         return None
-    next_version = version_increment_strategy(version)
+    if incremental_release:
+        next_version = current_version
+    else:
+        next_version = version_increment_strategy(current_version)
     if not next_version.endswith("-SNAPSHOT"):
         next_version += "-SNAPSHOT"
     return next_version
@@ -118,6 +141,16 @@ def version_update_handler(version, version_update_strategy):
     if version_has_qualifier:
         next_version += version_qualifier
     return next_version
+
+
+def _incr_rel_qualifier(version):
+    i = version.rfind(REL_QUALIFIER_PREFIX)
+    if i == -1:
+        counter = 1
+    else:
+        counter = int(version[i+len(REL_QUALIFIER_PREFIX)]) + 1
+        version = version[:i]
+    return "%s%s%s" % (version, REL_QUALIFIER_PREFIX, counter)
 
 
 def _parse_maven_artifact_update(build_pom_content, path):
