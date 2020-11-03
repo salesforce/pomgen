@@ -17,7 +17,19 @@ class PomContent:
     """
     def __init__(self):
         # content for the pom <description> element.
-        self.description = None
+        self._description = None
+
+    @property
+    def description(self):
+        return self._description
+
+    @description.setter
+    def description(self, description):
+        if description is not None:
+            description = description.strip()
+            if len(description) != 0:
+                self._description = description
+
 
 
 # only the pomgen invocation needs a real instance because this content
