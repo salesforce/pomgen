@@ -208,8 +208,9 @@ do
         bazel run @pomgen//:pomgen -- \
                --package $target \
                --destdir $repo_root_path/bazel-bin \
-               --recursive $extra_args \
-               --pom.description "${POM_DESCRIPTION:-""}"
+               --recursive \
+               --pom.description "${POM_DESCRIPTION:-""}" $extra_args
+
 
     elif [ "$action" == "install" ]; then
         _for_each_pom "install_main_artifact" $repo_root_path $target

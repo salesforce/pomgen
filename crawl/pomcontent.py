@@ -30,6 +30,8 @@ class PomContent:
             if len(description) != 0:
                 self._description = description
 
+    def __str__(self):
+        return "<description>%s</description>" % self.description
 
 
 # only the pomgen invocation needs a real instance because this content

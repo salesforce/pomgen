@@ -70,6 +70,8 @@ def main(args):
     pom_content = pomcontentm.PomContent()
     if args.pom_description is not None:
         pom_content.description = args.pom_description
+    if args.verbose:
+        logger.debug("Global pom content: %s" % pom_content)
     ws = workspace.Workspace(repo_root,
                              cfg.excluded_dependency_paths,
                              cfg.all_src_exclusions,
