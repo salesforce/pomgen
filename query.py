@@ -161,7 +161,7 @@ if __name__ == "__main__":
         else:
             if args.library_release_plan_json:
                 all_libs_json = []
-                incremental_rel_enabled = cfg.versioning_mode != "semver"
+                incremental_rel_enabled = cfg.transitives_versioning_mode == "counter"
                 for node in libaggregator.LibraryNode.ALL_LIBRARY_NODES:
                     transitive = node not in root_library_nodes
                     incremental_rel = incremental_rel_enabled and transitive

@@ -34,7 +34,7 @@ excluded_filenames=.gitignore,
 excluded_extensions=.md,
 
 # query versioning mode for proposed next versions
-versioning_mode=semver
+transitives_versioning_mode=semver|counter
 """
 
 try:
@@ -58,17 +58,17 @@ def load(repo_root, verbose=False):
     """
     parser = configparser.RawConfigParser()
 
-    def gen(option, dflt):
+    def gen(option, dflt, valid_values=None):
         """Read from [general] section """
-        return _get_value_with_default(parser, "general", option, dflt)
+        return _get_value_from_config(parser, "general", option, dflt, valid_values)
 
-    def crawl(option, dflt):
+    def crawl(option, dflt, valid_values=None):
         """Read from [crawler] section """
-        return _get_value_with_default(parser, "crawler", option, dflt)
+        return _get_value_from_config(parser, "crawler", option, dflt, valid_values)
 
-    def artifact(option, dflt):
+    def artifact(option, dflt, valid_values=None):
         """Read from [artifact] section """
-        return _get_value_with_default(parser, "artifact", option, dflt)
+        return _get_value_from_config(parser, "artifact", option, dflt, valid_values)
 
     cfg_path = os.path.join(repo_root, ".pomgenrc")
     if os.path.exists(cfg_path):
@@ -85,7 +85,7 @@ def load(repo_root, verbose=False):
         excluded_src_relpaths=artifact("excluded_relative_paths", ("src/test",)),
         excluded_src_file_names=artifact("excluded_filenames", (".gitignore",)),
         excluded_src_file_extensions=artifact("excluded_extensions", (".md",)),
-        versioning_mode=artifact("versioning_mode", "semver"),
+        transitives_versioning_mode=artifact("transitives_versioning_mode", "semver", valid_values=("semver", "counter")),
     )
 
     if verbose:
@@ -94,9 +94,12 @@ def load(repo_root, verbose=False):
     return cfg
 
 
-def _get_value_with_default(parser, section, option, dflt):
+def _get_value_from_config(parser, section, option, dflt, valid_values):
     try:
-        return parser.get(section, option)
+        value = parser.get(section, option)
+        if valid_values is not None and value not in valid_values:
+            raise Exception("Invalid value for %s.%s [%s] - valid values are: %s" % (section, option, value, valid_values))
+        return value
     except configparser.NoOptionError:
         return dflt
     except configparser.NoSectionError:
@@ -112,7 +115,7 @@ class Config:
                  excluded_src_relpaths=(),
                  excluded_src_file_names=(),
                  excluded_src_file_extensions=(),
-                 versioning_mode="semver"):
+                 transitives_versioning_mode="semver"):
 
         # general
         self.pom_template_path_and_content=pom_template_path_and_content
@@ -125,7 +128,7 @@ class Config:
         self.excluded_src_relpaths = _add_pathsep(_to_tuple(excluded_src_relpaths))
         self.excluded_src_file_names = _to_tuple(excluded_src_file_names)
         self.excluded_src_file_extensions = _to_tuple(excluded_src_file_extensions)
-        self.versioning_mode = versioning_mode
+        self.transitives_versioning_mode = transitives_versioning_mode
 
     @property
     def pom_template(self):
@@ -160,14 +163,15 @@ excluded_dependency_paths=%s
 excluded_relative_paths=%s
 excluded_filenames=%s
 excluded_extensions=%s
-versioning_mode=%s
+transitives_versioning_mode=%s
 """ % (self.pom_template_path_and_content[0],
        ",".join([t[0] for t in self.external_deps_path_and_content]),
        self.excluded_dependency_paths,
        self.excluded_src_relpaths,
        self.excluded_src_file_names,
        self.excluded_src_file_extensions,
-       self.versioning_mode)
+       self.transitives_versioning_mode)
+
 
 def _to_tuple(thing):
     if isinstance(thing, tuple):
@@ -180,6 +184,7 @@ def _to_tuple(thing):
         return tuple(filtered_tokens)
     raise Exception("Cannot convert to tuple")
 
+
 def _read_files(repo_root, paths):
     """
     Returns a list of tuples: (<path>, <file content>).
@@ -190,6 +195,7 @@ def _read_files(repo_root, paths):
         with open(os.path.join(repo_root, path), "r") as f:
             path_and_content.append((path, f.read().strip()))
     return path_and_content
+
 
 def _add_pathsep(paths):
     return tuple([p if p.endswith(os.sep) else p+os.sep for p in paths])
