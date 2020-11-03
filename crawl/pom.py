@@ -246,6 +246,32 @@ class AbstractPomGen(object):
         content, indent = self._xml(content, "exclusions", indent, close_element=True)
         return content, indent
 
+    def _remove_token(self, content, token_name):
+        """
+        This method is only intended to be called by subclasses.
+        """
+        # assumes token is on one line by itself
+        i = content.find(token_name)
+        if i == -1:
+            return content
+        else:
+            j = content.find(os.linesep, i)
+            if j == -1:
+                j = len(content) - 1
+            return content[:i] + content[j+len(os.linesep):]
+
+    def _gen_description(self, description):
+        content = ""
+        content, indent = self._xml(content, "description", indent=_INDENT)
+        content = "%s%s%s%s" % (content, ' '*indent, description, os.linesep)
+        content, indent = self._xml(content, "description", indent=indent, close_element=True)
+        return content
+
+    def _handle_description(self, content, description):
+        if description is None:
+            return self._remove_token(content, "#{description}")
+        else:
+            return content.replace("#{description}", self._gen_description(description))
 
 class NoopPomGen(AbstractPomGen):
     """
@@ -490,10 +516,7 @@ class DynamicPomGen(AbstractPomGen):
         content = content.replace("#{artifact_id}", self._artifact_def.artifact_id)
         version = self._artifact_def_version(pomcontenttype)
         content = content.replace("#{version}", version)
-        if self.pom_content.description is None:
-            content = self._remove_token(content, "#{description}")
-        else:
-            content = content.replace("#{description}", self._gen_description())
+        content = self._handle_description(content, self.pom_content.description)
         if len(self.dependencies) == 0:
             content = self._remove_token(content, "#{dependencies}")
         else:
@@ -504,13 +527,6 @@ class DynamicPomGen(AbstractPomGen):
         return _query_dependencies(self._workspace, self._artifact_def,
                                    self._dependency)
 
-    def _gen_description(self):
-        content = ""
-        content, indent = self._xml(content, "description", indent=_INDENT)
-        content = "%s%s%s%s" % (content, ' '*indent, self.pom_content.description, os.linesep)
-        content, indent = self._xml(content, "description", indent=indent, close_element=True)
-        return content
-        
     def _gen_dependencies(self, pomcontenttype):
         deps = self.dependencies
         if pomcontenttype == PomContentType.GOLDFILE:
@@ -548,17 +564,6 @@ class DynamicPomGen(AbstractPomGen):
 
         return ()
 
-    def _remove_token(self, content, token_name):
-        # assumes token is on one line by itself
-        i = content.find(token_name)
-        if i == -1:
-            return content
-        else:
-            j = content.find(os.linesep, i)
-            if j == -1:
-                j = len(content) - 1
-            return content[:i] + content[j+len(os.linesep):]
-
 
 class DependencyManagementPomGen(AbstractPomGen):
     """
@@ -579,6 +584,7 @@ class DependencyManagementPomGen(AbstractPomGen):
     def __init__(self, workspace, artifact_def, dependency, pom_template):
         super(DependencyManagementPomGen, self).__init__(workspace, artifact_def, dependency)
         self.pom_template = pom_template
+        self.pom_content = workspace.pom_content
         self.transitive_closure_dependencies = ()
 
     def register_all_dependencies(self, crawled_bazel_packages,
@@ -595,7 +601,11 @@ class DependencyManagementPomGen(AbstractPomGen):
         content = content.replace("#{artifact_id}", "%s.depmanagement" % self._artifact_def.artifact_id)
         version = self._artifact_def_version(pomcontenttype)
         content = content.replace("#{version}", version)
-        content = content.replace("#{dependencies}", self._gen_dependency_management())
+        content = self._handle_description(content, self.pom_content.description)
+        if len(self.transitive_closure_dependencies) == 0:
+            content = self._remove_token(content, "#{dependencies}")
+        else:
+            content = content.replace("#{dependencies}", self._gen_dependency_management())
 
         # we assume the template specified <packaging>jar</packaging>
         # there room for improvement here for sure
@@ -607,9 +617,6 @@ class DependencyManagementPomGen(AbstractPomGen):
         return content
 
     def _gen_dependency_management(self):
-        if len(self.transitive_closure_dependencies) == 0:
-            return ""
-
         deps = self.transitive_closure_dependencies
         content = ""
         content, indent = self._xml(content, "dependencyManagement", indent=_INDENT)
