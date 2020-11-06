@@ -30,9 +30,9 @@ class PomTest(unittest.TestCase):
     def setUp(self):
         self.orig_bazel_query_maven_install = bazel.query_maven_install
         query_result = {
-            'com_google_guava_guava': 'com.google.guava:guava:23.0',
-            'ch_qos_logback_logback_classic': 'ch.qos.logback:logback-classic:1.2.3',
-            'aopalliance_aopalliance': 'aopalliance:aopalliance:1.0',
+            "com_google_guava_guava": "com.google.guava:guava:23.0",
+            "ch_qos_logback_logback_classic": "ch.qos.logback:logback-classic:1.2.3",
+            "aopalliance_aopalliance": "aopalliance:aopalliance:1.0",
         }
         bazel.query_maven_install = lambda rp, name: query_result
     
@@ -51,7 +51,7 @@ class PomTest(unittest.TestCase):
 
         org_function = bazel.query_java_library_deps_attributes
         try:
-            bazel.query_java_library_deps_attributes = lambda r, p: ("@com_google_guava_guava//jar", "@aopalliance_aopalliance//jar", )
+            bazel.query_java_library_deps_attributes = lambda r, p: ("@maven//:com_google_guava_guava", "@maven//:aopalliance_aopalliance", )
             _, _, deps = pomgen.process_dependencies()
             pomgen.register_dependencies(deps)
             generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
@@ -99,7 +99,7 @@ class PomTest(unittest.TestCase):
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         pomgen = pom.DynamicPomGen(ws, artifact_def, dep, pom_template)
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
-        self.assertEquals(exepcted_pom, generated_pom)
+        self.assertEqual(exepcted_pom, generated_pom)
 
     def test_dynamic_pom__remove_description_token_if_no_value(self):
         """
@@ -120,7 +120,7 @@ class PomTest(unittest.TestCase):
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         pomgen = pom.DynamicPomGen(ws, artifact_def, dep, pom_template)
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
-        self.assertEquals(exepcted_pom, generated_pom)
+        self.assertEqual(exepcted_pom, generated_pom)
 
     def test_dynamic_pom__do_not_include_deps(self):
         """
