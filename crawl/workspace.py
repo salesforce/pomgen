@@ -114,15 +114,12 @@ class Workspace:
     def _parse_dep_label(self, dep_label):
         if dep_label.startswith("@"):
             # external maven jar:
-            ext_dep_name = dep_label[1:].split("//jar", 1)[0].strip()
-            if self._is_special_case_excluded_ext_dep(ext_dep_name):
-                return None
+            ext_dep_name = dep_label[1:].strip()
+            dep_split = ext_dep_name.split(':')
+            if len(dep_split) == 1:
+                return self._name_to_ext_deps.get(ext_dep_name, None)
             else:
-                dep_split = ext_dep_name.split(':')
-                if len(dep_split) == 1:
-                    return self._name_to_ext_deps.get(ext_dep_name, None)
-                else:
-                    return self._name_to_ext_deps.get(dep_split[1], None)
+                return self._name_to_ext_deps.get(dep_split[1], None)
         elif dep_label.startswith("//"):
             # monorepo src ref:
             package_path = dep_label[2:] # remove leading "//"
@@ -142,14 +139,6 @@ class Workspace:
                 return dependency.new_dep_from_maven_artifact_def(maven_artifact_def, target_name)
         else:
             raise Exception("bad label [%s]" % dep_label)
-
-    def _is_special_case_excluded_ext_dep(self, dep_label):
-        return dep_label in (
-             # this dep is not declared as a maven_jar
-             # since we expect Maven artifact consumers to re-generate
-             # grpc stubs, it is probably ok to exclude this one
-             "com_google_api_grpc_proto_google_common_protos",
-            )
 
     def _parse_maven_install(self, rule_names):
         """

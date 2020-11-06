@@ -74,55 +74,7 @@ class WorkspaceTest(unittest.TestCase):
         """
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(), ("maven",), pom_content=pomcontent.NOOP)
 
-        deps = ws.parse_dep_labels(["@ch_qos_logback_logback_classic//jar"])
-
-        self.assertEqual(1, len(deps))
-        self.assertEqual("ch.qos.logback", deps[0].group_id)
-        self.assertEqual("logback-classic", deps[0].artifact_id)
-        self.assertEqual("1.2.3", deps[0].version)
-        self.assertTrue(deps[0].external)
-        self.assertIsNone(deps[0].bazel_package)
-
-    def test_parse_excluded_ext_dep(self):
-        """
-        Verifies that a label for an exluced external dependency is skipped
-        as expected
-        """
-        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(), ("maven",), pom_content=pomcontent.NOOP)
-
-        deps = ws.parse_dep_labels(["@ch_qos_logback_logback_classic//jar",
-                                    "@com_google_api_grpc_proto_google_common_protos//jar",])
-
-        self.assertEqual(1, len(deps))
-        self.assertEqual("ch.qos.logback", deps[0].group_id)
-        self.assertEqual("logback-classic", deps[0].artifact_id)
-        self.assertEqual("1.2.3", deps[0].version)
-        self.assertTrue(deps[0].external)
-        self.assertIsNone(deps[0].bazel_package)
-
-    def test_parse_ext_dep__single_quotes(self):
-        """
-        Verifies that an external dependency label is correctly parsed into a 
-        Dependency instance - test parsing with single-quote delimited strings.
-        """
-        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(), ("maven",), pom_content=pomcontent.NOOP)
-        deps = ws.parse_dep_labels(["@ch_qos_logback_logback_classic//jar"])
-
-        self.assertEqual(1, len(deps))
-        self.assertEqual("ch.qos.logback", deps[0].group_id)
-        self.assertEqual("logback-classic", deps[0].artifact_id)
-        self.assertEqual("1.2.3", deps[0].version)
-        self.assertTrue(deps[0].external)
-        self.assertIsNone(deps[0].bazel_package)
-
-    def test_parse_ext_dep__mixed_quotes(self):
-        """
-        Verifies that an external dependency label is correctly parsed into a 
-        Dependency instance - test parsing with single-quote delimited strings.
-        """
-        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(), ("maven",), pom_content=pomcontent.NOOP)
-
-        deps = ws.parse_dep_labels(["@ch_qos_logback_logback_classic//jar"])
+        deps = ws.parse_dep_labels(["@maven//:ch_qos_logback_logback_classic"])
 
         self.assertEqual(1, len(deps))
         self.assertEqual("ch.qos.logback", deps[0].group_id)
@@ -141,7 +93,7 @@ class WorkspaceTest(unittest.TestCase):
             maven_install_rule_names=("maven"),
             pom_content=pomcontent.NOOP)
 
-        deps = ws.parse_dep_labels(["@ch_qos_logback_logback_classic//jar", "//projects/protos/grail:java_protos"])
+        deps = ws.parse_dep_labels(["@maven//:ch_qos_logback_logback_classic", "//projects/protos/grail:java_protos"])
         self.assertEqual(1, len(deps))
         self.assertEqual("ch.qos.logback", deps[0].group_id)
         self.assertEqual("logback-classic", deps[0].artifact_id)
@@ -156,7 +108,7 @@ class WorkspaceTest(unittest.TestCase):
         """
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(), ("maven",), pom_content=pomcontent.NOOP)
 
-        deps = ws.parse_dep_labels(["@org_apache_maven_maven_artifact//jar"])
+        deps = ws.parse_dep_labels(["@maven//:org_apache_maven_maven_artifact"])
 
         self.assertEqual(1, len(deps))
         self.assertEqual("org.apache.maven", deps[0].group_id)
