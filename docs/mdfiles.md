@@ -3,7 +3,7 @@
 pomgen metadata files live at `<bazel-package>/MVN-INF`.
 
 
-### BUILD.pom
+### BUILD.pom (required)
 
 The BUILD.pom files defines how a pom.xml (for this bazel package) should be generated.
 
@@ -61,13 +61,13 @@ If set to `True`, a dependency management only pom is generated in addition to t
 Default value: `False`
 
 
-### LIBRARY.root
+### LIBRARY.root (required)
 
-The LIBRARY.root file groups together multiple artifacts, defined by BUILD.pom files, into a single "library". All artifacts that belong to a single library are processed (installed/uploaded) together. Change detection also operates at the library level. If a single artifact in a library has changed, then all artifacts in the library are marked as needing to be released.
+The LIBRARY.root file is a marker file that is currently empty.  It groups together multiple artifacts, defined by BUILD.pom files, into a single "library". All artifacts that belong to a single library are processed (installed/uploaded) together. Change detection also operates at the library level. If a single artifact in a library has changed, then all artifacts in the library are marked as needing to be released.
 
-Whether an artifact belongs to a library is determined by directory structure: an artifact belongs to the closest library found by walking up the file system from the artifact's BUILD.pom file.  Typically, the LIBRARY.root file lives in a parent directory, and multiple BUILD.pom files are defined below it, in subdirectories [example](../examples/hello-world/healthyfoods/MVN-INF/LIBRARY.root). If the library only consists of a single artifact, then the LIBRARY.root file should live next to the artifact's BUILD.pom file [example](../examples/hello-world/juicer/MVN-INF/LIBRARY.root).
+Whether an artifact belongs to a library is determined by directory structure: an artifact belongs to the LIBRARY.root found by walking up the file system from the artifact's BUILD.pom file.  For a multi-artifact library, the LIBRARY.root file lives in a parent directory, and multiple BUILD.pom files are defined below it, in subdirectories [example](../examples/hello-world/healthyfoods/MVN-INF/LIBRARY.root). If the library only consists of a single artifact, then the LIBRARY.root file should live next to the artifact's BUILD.pom file [example](../examples/hello-world/juicer/MVN-INF/LIBRARY.root).
 
-Note that the LIBRARY.root file is currently empty.
+:warning: LIBRARY.ROOT files cannot not be nested, ie libraries cannot be defined within other libraries.
 
 
 ### BUILD.pom.released (not user editable)

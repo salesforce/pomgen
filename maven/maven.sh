@@ -56,6 +56,9 @@ Usage: maven.sh -a action(s) [-t target -r repository root path]
       or ${REPOSITORY_URL}/releases/content, based on whether the artifact
       version ends in -SNAPTSHOT or not.
 
+    - POM_DESCRIPTION: if set, used as the value of the <description> element
+      in the generated pom(s).
+
 
   Examples (run from repository root):
 
@@ -205,7 +208,9 @@ do
         bazel run @pomgen//:pomgen -- \
                --package $target \
                --destdir $repo_root_path/bazel-bin \
-               --recursive $extra_args
+               --recursive \
+               --pom.description "${POM_DESCRIPTION:-""}" $extra_args
+
 
     elif [ "$action" == "install" ]; then
         _for_each_pom "install_main_artifact" $repo_root_path $target

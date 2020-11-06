@@ -14,6 +14,7 @@ from common import common
 from config import config
 from crawl import buildpom
 from crawl import pom
+from crawl import pomcontent
 from crawl import workspace
 import argparse
 import os
@@ -64,8 +65,8 @@ def main(args):
     ws = workspace.Workspace(repo_root, 
                              cfg.excluded_dependency_paths,
                              cfg.all_src_exclusions,
-                             cfg.maven_install_rule_names)
-
+                             cfg.maven_install_rule_names,
+                             pomcontent.NOOP)
     group_id = "all_ext_deps_group" if args.group_id is None else args.group_id
     artifact_id = "all_ext_deps_art" if args.artifact_id is None else args.artifact_id
     version = "0.0.1-SNAPSHOT" if args.version is None else args.version

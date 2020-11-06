@@ -56,9 +56,9 @@ class PomGenTest(unittest.TestCase):
     def _add_pom_template(self):
         content = """
 <project>
-    <groupId>${group_id}</groupId>
-    <artifactId>${artifact_id}</artifactId>
-    <version>${version}</version>
+    <groupId>#{group_id}</groupId>
+    <artifactId>#{artifact_id}</artifactId>
+    <version>#{version}</version>
 </project>
 """
         self._write_file("config", "", "pom_template.xml", content)

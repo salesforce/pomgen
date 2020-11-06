@@ -15,14 +15,14 @@ py_binary(
 
 py_binary(
     name = "query",
-    main = "query_maven_metadata.py",
+    main = "query.py",
     srcs = [":pomgen_files"],
     python_version = python_version,
 )
 
 py_binary(
     name = "update",
-    main = "update_maven_metadata.py",
+    main = "update.py",
     srcs = [":pomgen_files"],
     python_version = python_version,
 )
@@ -37,8 +37,6 @@ filegroup(
     visibility = ["//misc:__subpackages__",],
 )
 
-
-# small tests
 
 py_test(
     name = "argsupporttest",
@@ -219,6 +217,7 @@ py_test(
             "crawl/dependency.py",
             "crawl/git.py",
             "crawl/pom.py",
+            "crawl/pomcontent.py",
             "crawl/pomparser.py",
             "crawl/releasereason.py",
             "crawl/workspace.py",
@@ -253,6 +252,7 @@ py_test(
             "crawl/buildpom.py",
             "crawl/dependency.py",
             "crawl/git.py",
+            "crawl/pomcontent.py",
             "crawl/releasereason.py",
             "crawl/workspace.py",
             "tests/workspacetest.py"],

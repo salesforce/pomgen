@@ -40,6 +40,50 @@ class ConfigTest(unittest.TestCase):
 
         self.assertEqual(('eternal', 'world'), cfg.maven_install_rule_names)
 
+    def test_transitives_versioning_mode__semver(self):
+        repo_root = tempfile.mkdtemp("root")
+        os.mkdir(os.path.join(repo_root, "config"))
+        pom_template_path = self._write_file(repo_root, "WORKSPACE", "foo")
+        pom_template_path = self._write_file(repo_root, "config/pom_template.xml", "foo")
+        self._write_file(repo_root, ".pomgenrc", """
+[artifact]
+transitives_versioning_mode=semver
+""")
+
+        cfg = config.load(repo_root)
+
+        self.assertEqual("semver", cfg.transitives_versioning_mode)
+
+    def test_transitives_versioning_mode__counter(self):
+        repo_root = tempfile.mkdtemp("root")
+        os.mkdir(os.path.join(repo_root, "config"))
+        pom_template_path = self._write_file(repo_root, "WORKSPACE", "foo")
+        pom_template_path = self._write_file(repo_root, "config/pom_template.xml", "foo")
+        self._write_file(repo_root, ".pomgenrc", """
+[artifact]
+transitives_versioning_mode=counter
+""")
+
+        cfg = config.load(repo_root)
+
+        self.assertEqual("counter", cfg.transitives_versioning_mode)
+
+    def test_transitives_versioning_mode__invalid_value(self):
+        repo_root = tempfile.mkdtemp("root")
+        os.mkdir(os.path.join(repo_root, "config"))
+        pom_template_path = self._write_file(repo_root, "WORKSPACE", "foo")
+        pom_template_path = self._write_file(repo_root, "config/pom_template.xml", "foo")
+        self._write_file(repo_root, ".pomgenrc", """
+[artifact]
+transitives_versioning_mode=foo
+""")
+
+        with self.assertRaises(Exception) as ctx:
+            cfg = config.load(repo_root)
+
+        self.assertIn("Invalid value", str(ctx.exception))
+        self.assertIn("valid values are: ('semver', 'counter')", str(ctx.exception))
+
     def test_str(self):
         repo_root = tempfile.mkdtemp("root")
         pom_template_path = self._write_file(repo_root, "pom_template", "foo")
