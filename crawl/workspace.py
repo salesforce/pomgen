@@ -19,10 +19,12 @@ class Workspace:
     """
 
     def __init__(self, repo_root_path, external_deps, 
-                 excluded_dependency_paths, source_exclusions):
+                 excluded_dependency_paths, source_exclusions,
+                 pom_content):
         self.repo_root_path = repo_root_path
         self.excluded_dependency_paths = excluded_dependency_paths
         self.source_exclusions = source_exclusions
+        self.pom_content = pom_content
         self._name_to_ext_deps = self._parse_maven_jars(external_deps)
         self._package_to_artifact_def = {} # cache for artifact_def instances
 
@@ -30,7 +32,7 @@ class Workspace:
     def name_to_external_dependencies(self):
         """
         Returns a dict for all external dependencies declared for this 
-        WORKSPACE, ie all maven_jar instances.
+        WORKSPACE.
  
         The mapping is of the form: {maven_jar.name: Dependency instance}.
         """
@@ -48,6 +50,7 @@ class Workspace:
         art_def = buildpom.parse_maven_artifact_def(self.repo_root_path, package)
         if art_def is not None:
             art_def = artifactprocessor.augment_artifact_def(self.repo_root_path, art_def, self.source_exclusions)
+        # cache result, next time it is returned from cache
         self._package_to_artifact_def[package] = art_def
         return art_def
 

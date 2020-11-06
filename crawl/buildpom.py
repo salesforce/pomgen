@@ -60,10 +60,12 @@ class MavenArtifactDef(object):
 
     ==== Read out of the optional BUILD.pom.released file ====
 
-    version: the previously released version to Nexus
+    released_version: the previously released version to Nexus
 
-    artifact_hash: the hash of the artifact at the time it was previously 
-                   released to Nexus
+    released_incremental_version:
+
+    released_artifact_hash: the hash of the artifact at the time it was 
+        previously released to Nexus
 
 
     ===== Internal attributes (never specified by the user) ====
@@ -79,13 +81,12 @@ class MavenArtifactDef(object):
         monorepo package is part of
 
     requires_release: whether this monorepo package should be released (to Nexus
-                      or local Maven repository)
+        or local Maven repository)
 
     release_reason: the reason for releasing this artifact
 
     released_pom_content: if the file pom.xml.released exists next to the 
-                          BUILD.pom file, the content of the pom.xml.released 
-                          file
+        BUILD.pom file, the content of the pom.xml.released file
     =====
 
     Implementation notes:
@@ -106,6 +107,7 @@ class MavenArtifactDef(object):
                  deps=[],
                  version_increment_strategy=None,
                  released_version=None,
+                 released_incremental_version=None,
                  released_artifact_hash=None,
                  bazel_package=None,
                  library_path=None,
@@ -226,8 +228,10 @@ class MavenArtifactDef(object):
     def __repr__(self):
         return str(self)
 
+
 # only used internally for parsing
-ReleasedMavenArtifactDef = namedtuple("ReleasedMavenArtifactDef", "version artifact_hash")
+ReleasedMavenArtifactDef = namedtuple("ReleasedMavenArtifactDef", "version artifact_hash incremental_version")
+
 
 def maven_artifact(group_id=None,
                    artifact_id=None,
@@ -253,11 +257,13 @@ def maven_artifact(group_id=None,
                             gen_dependency_management_pom=generate_dependency_management_pom,
                             deps=deps)
 
-def released_maven_artifact(version, artifact_hash):
+
+def released_maven_artifact(version, artifact_hash, incremental_version=-1):
     """
     This function is only intended to be called from BUILD.pom.released files.
     """
-    return ReleasedMavenArtifactDef(version, artifact_hash)
+    return ReleasedMavenArtifactDef(version, artifact_hash, incremental_version)
+
 
 def parse_maven_artifact_def(root_path, package):
     """
@@ -295,15 +301,17 @@ def parse_maven_artifact_def(root_path, package):
                                        pom_generation_mode)
     else:
         return _augment_art_def_values(art_def, 
-                                       user_rel_art_def=None, 
+                                       rel_art_def=None,
                                        bazel_package=package,
                                        released_pom_content=None,
                                        version_increment_strategy=None,
                                        pom_generation_mode=pom_generation_mode)
 
+
 def _read_released_pom(root_path, package):
     content, _ = mdfiles.read_file(root_path, package, mdfiles.POM_XML_RELEASED_FILE_NAME)
     return content
+
 
 def _parse_released_maven_artifact_def(root_path, package):
     """
@@ -321,28 +329,12 @@ def _parse_released_maven_artifact_def(root_path, package):
         print("[ERROR] Cannot parse [%s]: %s" % (path, sys.exc_info()))
         raise
 
-def _augment_art_def_values(user_art_def, user_rel_art_def, bazel_package,
+
+def _augment_art_def_values(user_art_def, rel_art_def, bazel_package,
                             released_pom_content, version_increment_strategy,
                             pom_generation_mode):
     """
     Defaults values that have not been provided in the BUILD.pom file.
-
-    Args:
-        user_art_def: the MavenArtifactDef instance from the BUILD.pom file
-
-        user_rel_art_def: the ReleasedMavenArtifactDef instance from the 
-            BUILD.pom.released file, may be None
-
-        bazel_package: the bazel package the parsed BUILD.pom file lives in
-
-        released_pom_content: the content of the pom.xml.released file, may
-            be None
-
-        version_increment_strategy: the artifacts version increment strategy,
-            as specified in the BUILD.pom file, may be None
-
-        pom_generation_mode: the strongly typed pom_generation_mode 
-            (common.pomgenmode.PomGenMode)
     """
     return MavenArtifactDef(
         group_id=user_art_def.group_id,
@@ -354,8 +346,9 @@ def _augment_art_def_values(user_art_def, user_rel_art_def, bazel_package,
         change_detection=True if user_art_def.change_detection is None else user_art_def.change_detection,
         gen_dependency_management_pom=False if user_art_def.gen_dependency_management_pom is None else user_art_def.gen_dependency_management_pom,
         deps=user_art_def.deps,
-        released_version=user_rel_art_def.version if user_rel_art_def is not None else None,
-        released_artifact_hash=user_rel_art_def.artifact_hash if user_rel_art_def is not None else None,
+        released_version=rel_art_def.version if rel_art_def is not None else None,
+        released_incremental_version=rel_art_def.incremental_version if rel_art_def is not None else None,
+        released_artifact_hash=rel_art_def.artifact_hash if rel_art_def is not None else None,
         bazel_package=bazel_package,
         released_pom_content=released_pom_content,
         version_increment_strategy=version_increment_strategy)

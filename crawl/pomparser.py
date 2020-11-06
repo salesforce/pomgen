@@ -18,25 +18,35 @@ except ImportError as ex:
     print('$ pip install --user lxml')
     raise ex
 
+# https://lxml.de/tutorial.html#namespaces
+XML_NS = "{http://maven.apache.org/POM/4.0.0}"
+
 # this is the indentation used when writing out pom content, including content
 # for pom templates
 INDENT = 4 # spaces
 
-def pretty_print(pom_content):
+def format_for_comparison(pom_content):
     """
-    Returns a pretty printed xml string, without any comments or extra whitespaces
+    Returns the pom as a string without:
+        - comments
+        - superfluous whitespace
+        - the root <description> element
     """
     parser = etree.XMLParser(remove_blank_text=True)
     tree = etree.XML(pom_content.encode().strip(), parser=parser)
-    comments = tree.xpath('//comment()')
-    #removing the comments from the pom file
+
+    # remove <description>, if it exists
+    description_el = tree.find(XML_NS + "description")
+    if description_el is not None:
+        tree.remove(description_el)
+
+    # remove comments
+    comments = tree.xpath("//comment()")
     for c in comments:
         p = c.getparent()
-        if p is None:
-            # no parent for root-level comments
-            pass
-        else:
+        if p is not None:
             p.remove(c)
+
     return _pretty_str(tree)
 
 def indent_xml(xml_content, indent):

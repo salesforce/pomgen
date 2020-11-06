@@ -17,6 +17,7 @@ from common import mdfiles
 from config import config
 from crawl import crawler
 from crawl import pom
+from crawl import pomcontent as pomcontentm
 from crawl import workspace
 import argparse
 import os
@@ -45,6 +46,8 @@ def _parse_arguments(args):
         help="Generates a goldfile pom")
     parser.add_argument("--verbose", required=False, action='store_true',
         help="Verbose output")
+    parser.add_argument("--pom.description", type=str, required=False,
+        dest="pom_description", help="Written as the pom's <description/>")
     return parser.parse_args(args)
 
 
@@ -64,9 +67,14 @@ def main(args):
     args = _parse_arguments(args)
     repo_root = common.get_repo_root(args.repo_root)
     cfg = config.load(repo_root, args.verbose)
+    pom_content = pomcontentm.PomContent()
+    if args.pom_description is not None:
+        pom_content.description = args.pom_description
+    if args.verbose:
+        logger.debug("Global pom content: %s" % pom_content)
     ws = workspace.Workspace(repo_root, cfg.external_dependencies, 
                              cfg.excluded_dependency_paths,
-                             cfg.all_src_exclusions)
+                             cfg.all_src_exclusions, pom_content)
 
     packages = argsupport.get_all_packages(repo_root, args.package)
     packages = ws.filter_artifact_producing_packages(packages)

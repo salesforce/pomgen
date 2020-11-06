@@ -11,6 +11,7 @@ from config import exclusions
 from crawl import git
 from crawl import buildpom
 from crawl import dependency
+from crawl import pomcontent
 from crawl import workspace
 import os
 import tempfile
@@ -19,7 +20,7 @@ import unittest
 class WorkspaceTest(unittest.TestCase):
 
     def test_normalize_deps__default_removes_refs_to_same_package(self):
-        ws = workspace.Workspace("so/path", "", [], exclusions.src_exclusions())
+        ws = workspace.Workspace("so/path", "", [], exclusions.src_exclusions(), pomcontent.NOOP)
         package = "a/b/c"
         art1 = buildpom.MavenArtifactDef("g1", "a1", "1", bazel_package=package,
                                          pom_generation_mode=pomgenmode.DYNAMIC)
@@ -36,7 +37,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertEqual([dep3, dep4], deps)
 
     def test_normalize_deps__skip_pomgen_mode_allows_refs_to_same_package(self):
-        ws = workspace.Workspace("so/path", "", [], exclusions.src_exclusions())
+        ws = workspace.Workspace("so/path", "", [], exclusions.src_exclusions(), pomcontent.NOOP)
         package = "a/b/c"
         art1 = buildpom.MavenArtifactDef("g1", "a1", "1", bazel_package=package,
                                          pom_generation_mode=pomgenmode.SKIP)
@@ -61,7 +62,7 @@ class WorkspaceTest(unittest.TestCase):
             native.maven_jar(
                 name = "ch_qos_logback_logback_classic",
                 artifact = "ch.qos.logback:logback-classic:1.4.4",
-            )""", [], exclusions.src_exclusions())
+            )""", [], exclusions.src_exclusions(), pomcontent.NOOP)
 
         deps = ws.parse_dep_labels(["@ch_qos_logback_logback_classic//jar"])
 
@@ -81,7 +82,7 @@ class WorkspaceTest(unittest.TestCase):
             native.maven_jar(
                 name = "ch_qos_logback_logback_classic",
                 artifact = "ch.qos.logback:logback-classic:1.4.4",
-            )""", [], exclusions.src_exclusions())
+            )""", [], exclusions.src_exclusions(), pomcontent.NOOP)
 
         deps = ws.parse_dep_labels(["@ch_qos_logback_logback_classic//jar",
                                     "@com_google_api_grpc_proto_google_common_protos//jar",])
@@ -102,7 +103,7 @@ class WorkspaceTest(unittest.TestCase):
             native.maven_jar(
                 name = 'ch_qos_logback_logback_classic',
                 artifact = 'ch.qos.logback:logback-classic:1.4.4',
-            )""", [], exclusions.src_exclusions())
+            )""", [], exclusions.src_exclusions(), pomcontent.NOOP)
 
         deps = ws.parse_dep_labels(["@ch_qos_logback_logback_classic//jar"])
 
@@ -122,7 +123,7 @@ class WorkspaceTest(unittest.TestCase):
             native.maven_jar(
                 name = 'ch_qos_logback_logback_classic",
                 artifact = "ch.qos.logback:logback-classic:1.4.4',
-            )""", [], exclusions.src_exclusions())
+            )""", [], exclusions.src_exclusions(), pomcontent.NOOP)
 
         deps = ws.parse_dep_labels(["@ch_qos_logback_logback_classic//jar"])
 
@@ -143,7 +144,7 @@ class WorkspaceTest(unittest.TestCase):
                 artifact = "ch.qos.logback:logback-classic:1.4.4',
             )""", 
             excluded_dependency_paths=["projects/protos/",], 
-            source_exclusions=exclusions.src_exclusions())
+            source_exclusions=exclusions.src_exclusions(), pom_content=pomcontent.NOOP)
 
         deps = ws.parse_dep_labels(["@ch_qos_logback_logback_classic//jar", "//projects/protos/grail:java_protos"])
         self.assertEqual(1, len(deps))
@@ -162,7 +163,7 @@ class WorkspaceTest(unittest.TestCase):
             native.maven_jar(
                 name = "org_apache_maven_maven_artifact",
                 artifact = "org.apache.maven:maven-artifact:3.3.9",
-            )""", [], exclusions.src_exclusions())
+            )""", [], exclusions.src_exclusions(), pomcontent.NOOP)
 
         deps = ws.parse_dep_labels(["@org_apache_maven_maven_artifact//jar"])
 
@@ -183,7 +184,7 @@ class WorkspaceTest(unittest.TestCase):
         repo_root = tempfile.mkdtemp("monorepo")
         self._touch_file_at_path(repo_root, "", "MVN-INF", "LIBRARY.root")
         self._write_build_pom(repo_root, package_name, artifact_id, group_id, artifact_version)
-        ws = workspace.Workspace(repo_root, "", [], exclusions.src_exclusions())
+        ws = workspace.Workspace(repo_root, "", [], exclusions.src_exclusions(), pomcontent.NOOP)
 
         deps = ws.parse_dep_labels(["//%s" % package_name])
 
@@ -206,7 +207,7 @@ class WorkspaceTest(unittest.TestCase):
         repo_root = tempfile.mkdtemp("monorepo")
         self._touch_file_at_path(repo_root, "", "MVN-INF", "LIBRARY.root")
         self._write_build_pom(repo_root, package_name, artifact_id, group_id, artifact_version)
-        ws = workspace.Workspace(repo_root, "", [], exclusions.src_exclusions())
+        ws = workspace.Workspace(repo_root, "", [], exclusions.src_exclusions(), pomcontent.NOOP)
 
         deps = ws.parse_dep_labels(["//%s:my_cool_target" % package_name])
 
@@ -233,7 +234,7 @@ class WorkspaceTest(unittest.TestCase):
         bad_package_name = "bad_package"
         os.mkdir(os.path.join(repo_root, bad_package_name)) # no BUILD.pom
 
-        ws = workspace.Workspace(repo_root, "", [], exclusions.src_exclusions())
+        ws = workspace.Workspace(repo_root, "", [], exclusions.src_exclusions(), pomcontent.NOOP)
 
         with self.assertRaises(Exception) as ctx:
             deps = ws.parse_dep_labels(["//%s" % package_name,
@@ -246,7 +247,7 @@ class WorkspaceTest(unittest.TestCase):
         """
         Verifies that parsing of an invalid label behaves as expected.
         """
-        ws = workspace.Workspace("some/path", "", [], exclusions.src_exclusions())
+        ws = workspace.Workspace("some/path", "", [], exclusions.src_exclusions(), pomcontent.NOOP)
 
         with self.assertRaises(Exception) as ctx:
             deps = ws.parse_dep_labels(["this is a label"])
@@ -275,7 +276,7 @@ class WorkspaceTest(unittest.TestCase):
         self._setup_repo(repo_root)
         package_hash = git.get_dir_hash(repo_root, package_name, exclusions.src_exclusions())
         self._write_build_pom_released(repo_root, package_name, released_version, package_hash)
-        ws = workspace.Workspace(repo_root, "", [], exclusions.src_exclusions())
+        ws = workspace.Workspace(repo_root, "", [], exclusions.src_exclusions(), pomcontent.NOOP)
 
         deps = ws.parse_dep_labels(["//%s" % package_name])
 
@@ -308,7 +309,7 @@ class WorkspaceTest(unittest.TestCase):
         self._write_build_pom_released(repo_root, package_name, released_version, package_hash)
         self._touch_file_at_path(repo_root, package_name, "", "myfile")
         self._commit(repo_root)
-        ws = workspace.Workspace(repo_root, "", [], exclusions.src_exclusions())
+        ws = workspace.Workspace(repo_root, "", [], exclusions.src_exclusions(), pomcontent.NOOP)
 
         deps = ws.parse_dep_labels(["//%s" % package_name])
 
