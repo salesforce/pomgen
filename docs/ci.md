@@ -74,3 +74,79 @@ bazel run @pomgen//:update -- --package <bazel package> --add_version_qualifier 
 
 ### Commit metadata changes back to the repository
 
+Commit and send PR.
+
+
+## About propsed versions
+
+`pomgen query` can be used to determine release and development versions to use. This information is part of the json response when asking or `--library_release_plan_json`.
+
+For example:
+
+```
+bazel run @//:query -- --package examples/hello-world/juicer --library_release_plan_json
+```
+
+The cmd above asks for release information about the *juicer* library. Because that library references the *healthyfoods* and *wintervegetables* libraries, information for those 2 libraries is returned also.
+
+The relevant versioning information in the returned payload is:
+
+```
+[
+  {
+    "library_path": "examples/hello-world/juicer",
+    "proposed_release_version": "3.0.0",
+    "proposed_next_dev_version": "3.1.0-SNAPSHOT"
+  },
+  {
+    "library_path": "examples/hello-world/healthyfoods",
+    "proposed_release_version": "1.0.0",
+    "proposed_next_dev_version": "1.1.0-SNAPSHOT"
+  },
+  {
+    "library_path": "examples/hello-world/wintervegetables",
+    "proposed_release_version": "2.0.0",
+    "proposed_next_dev_version": "2.1.0-SNAPSHOT"
+  }
+]
+```
+
+The "proposed" versions above are based on the [version increment strategies](mdfiles.md#maven_artifact_updateversion_increment_strategy) specified by each library.
+
+In this example, pomgen does not distinguish between the main library being queried, *juicer*, and the 2 transitive libraries.
+
+### Using a different version increment mode for transitives
+
+If library owners want to tightly control when their [semver](https://semver.org) version components are incremented, then transitive library releases cannot change semver version, since library owners have no control over transitive releases. pomgen supports another transitives versioning scheme for this use case - it can be enabled by setting `transitives_versioning_mode=counter` in the [pomgenrc file](../README.md#configuration). This versioning mode works as follows:
+
+1. IMPORTANT this versioning scheme only affects libraries released **transitively**. So in the example above, this versioning logic would be used for *healthyfoods* and *wintervegetables* only, NOT for *juicer*
+1. Start with the last released version, for example 1.2.3. If the library has never been released, the last released version defaults to 0.0.0
+1. If the last released version is not followed by the qualifier "-rel-", add it, for example 1.2.3-rel-
+1. Increment the number following the "-rel-" qualifier.  If there is no number, start with 1. For example 1.2.3-rel-1.
+1. The next development version does not change.
+
+Example with this versioning mode enabled:
+
+```
+bazel run @//:query -- --package examples/hello-world/juicer --library_release_plan_json
+```
+
+```
+[
+  {
+    "library_path": "examples/hello-world/juicer",
+    "proposed_release_version": "3.0.0",
+    "proposed_next_dev_version": "3.1.0-SNAPSHOT"
+  },
+  {
+    "library_path": "examples/hello-world/healthyfoods",
+    "proposed_release_version": "0.0.0-rel-1",
+    "proposed_next_dev_version": "1.0.0-SNAPSHOT"
+  },
+  {
+    "library_path": "examples/hello-world/wintervegetables",
+    "proposed_release_version": "0.0.0-rel-1",
+    "proposed_next_dev_version": "2.0.0-SNAPSHOT"
+  }
+]
+```
