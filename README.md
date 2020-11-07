@@ -93,7 +93,14 @@ excluded_filenames=
 # Ignored file extensions when determining whether an artifact has changed
 # Default value: .md,
 excluded_extensions=
+
+# Specifies how to increment the versions of libraries released transitively
+# Default value: semver
+# Possible values: semver|counter
+transitives_versioning_mode=
 ```
+
+(See [more information about transitives versioning](docs/ci.md#using-a-different-version-increment-mode-for-transitives))
 
 Running pomgen with `--verbose` causes the current config to be echoed.
 

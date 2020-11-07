@@ -44,7 +44,7 @@ The `<version>` for the generated pom.xml.
 
 ##### maven_artifact_update.version_increment_strategy
 
-Controls how the version attribute is incremented, [see CI setup](ci.md).
+Controls how the version attribute is incremented, possible values are `major|minor|patch` [see CI setup](ci.md).
 
 #### Optional Attributes
 
