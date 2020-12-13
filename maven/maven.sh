@@ -10,45 +10,51 @@ set -e
 print_usage() {
 cat << EOF
 
-Usage: maven.sh -a action(s) [-t target -r repository root path]
+Usage: maven.sh -a action(s) [-t bazel package]
 
-  - a is required, and specifies which action(s) to run, see below.
+  Required arguments:
+
+  -a specifies which action(s) to run, see below.
     Make sure you run 'pomgen' before trying other actions.
     The actions to run may be comma-separated if there is more than one,
     for example: -a pomgen,install
 
-  - t optionally specifies a bazel target pattern to run the action for.
-    If not specified, defaults to //...
+  Optional arguments:
 
-  - d enables debug logging
+  -t specifies a bazel target pattern to run the action for.
+    If not specified, it defaults to //...
+
+  -d enables debug logging
+
+  -f  
 
 
   Mandatory action:
-    - pomgen: generates pom files for Maven artifacts.  IMPORTANT: this action
+    pomgen: generates pom files for Maven artifacts.  IMPORTANT: this action
       is required to run at least once before any of the other actions.
     
-  Additional supported actions (note, you must run pomgen before these will work):
-    - install: installs the main binary artifacts (and poms) into the local
+  Additional supported actions:
+    install: installs the main binary artifacts (and poms) into the local
       Maven repository.
-    - install_all: installs binary, sources, javadoc and pom artifacts into the
+    install_all: installs binary, sources, javadoc and pom artifacts into the
       local Maven repository.
 
-    - deploy_all: deploys binary, sources, javadoc and pom artifacts to Nexus.
+    deploy_all: deploys binary, sources, javadoc and pom artifacts to Nexus.
       Uses credentials from ~/.m2/settings.xml's "default" server entry.
-    - deploy_only: re-attempts upload of all artifacts to Nexus.  Assumes
+    deploy_only: re-attempts upload of all artifacts to Nexus.  Assumes
       "deploy_all" has run once.  This is useful for debugging upload issues.
       Uses credentials from ~/.m2/settings.xml's "default" server entry.
 
-    - clean: removes generated pom files and Maven build "target" directories 
+    clean: removes generated pom files and Maven build "target" directories 
       from the src tree.
 
 
   Supported environment variables:
-    - MVN_ARGS: may be used to pass additional arguments to Maven.
+    MVN_ARGS: may be used to pass additional arguments to Maven.
       For example to point to settings.xml in a non-standard location:
       export MVN_ARGS="--settings /my/path/to/settings.xml"
 
-    - REPOSITORY_URL: for the 2 deploy actions, the environment variable 
+    REPOSITORY_URL: for the 2 deploy actions, the environment variable 
       REPOSITORY_URL must be set to the remote artifact repository to upload to.
       For example, when using Nexus:
           export REPOSITORY_URL=https://nexus.host/nexus/service/local/repositories"
@@ -56,7 +62,7 @@ Usage: maven.sh -a action(s) [-t target -r repository root path]
       or ${REPOSITORY_URL}/releases/content, based on whether the artifact
       version ends in -SNAPTSHOT or not.
 
-    - POM_DESCRIPTION: if set, used as the value of the <description> element
+    POM_DESCRIPTION: if set, used as the value of the <description> element
       in the generated pom(s).
 
 
@@ -90,14 +96,17 @@ if [ "$#" -eq 0 ]; then
 fi
 
 debug=false
+force_pomgen=false
 
-while getopts "a:t:d" option; do
+while getopts "a:t:df" option; do
   case $option in
     a ) actions=$OPTARG
     ;;
     t ) target=$OPTARG
     ;;
     d ) debug=true
+    ;;
+    f ) force_pomgen=true
     ;;
   esac
 done
@@ -109,7 +118,7 @@ fi
 if [ -z "$actions" ] ; then
     echo "ERROR: The action(s) to run must be specified using -a, for example:"
     echo "       $ maven/maven.sh -a install"
-    echo "       Run maven.sh without arguments for (long) usage information."
+    echo "       Run maven.sh without arguments for usage information."
     exit 1
 fi
 
@@ -182,7 +191,7 @@ else
         repo_root_path=$BUILD_WORKING_DIRECTORY
         cd $repo_root_path
     else
-        echo "ERROR: please run this script from the monorepo root"
+        echo "ERROR: please run this script from the repository root"
         exit 1
     fi
 fi
@@ -204,6 +213,12 @@ do
         extra_args=""
         if [ "$debug" = true ]; then
             extra_args="--verbose"
+        fi
+        if [ "$force_pomgen" = true ]; then
+            extra_args="${extra_args} --force"
+        fi
+        if [ "$debug" = true ]; then
+            echo "DEBUG: running with pomgen extra args ${extra_args}"
         fi
         bazel run @pomgen//:pomgen -- \
                --package $target \

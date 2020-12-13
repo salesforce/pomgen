@@ -19,9 +19,11 @@ See [this doc](docs/mdfiles.md) for more information on pomgen files.
 
 The BUILD file of a Maven Artifact producing Bazel Package may obviously reference other Bazel Packages in the repository. pomgen will follow these references and generate pom.xmls for all referenced Bazel Packages. 
 
-## Change tracking
+## Change Detection
 
-pomgen can track whether the content of a Bazel Package has changed since it was last released. Generated poms reference the previously released Maven Artifact if no change is detected.
+pomgen tracks whether the content of a Bazel Package has changed since it was last released. Generated poms reference the previously released Maven Artifact if no change is detected.
+
+See [this doc](docs/change_detection.md) for more information on change detection.
 
 ## Example
 
