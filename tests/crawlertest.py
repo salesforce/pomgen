@@ -6,6 +6,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 """
 
 from common.os_util import run_cmd
+from common import maveninstallinfo
 from config import exclusions
 from crawl import crawler
 from crawl import git
@@ -56,7 +57,7 @@ class CrawlerTest(unittest.TestCase):
         os.chdir(self.repo_root_path)
         ws = workspace.Workspace(self.repo_root_path,
                                  [], exclusions.src_exclusions(),
-                                 maven_install_rule_names=("maven",),
+                                 maven_install_info=maveninstallinfo.NOOP,
                                  pom_content=pomcontent.NOOP)
         self.crawler = crawler.Crawler(ws, pom_template="")
 

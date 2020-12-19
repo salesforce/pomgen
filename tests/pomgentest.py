@@ -41,7 +41,7 @@ class PomGenTest(unittest.TestCase):
         self.repo_root_path = tempfile.mkdtemp("monorepo")
         self._add_WORKSPACE_file()
         self._add_pom_template()
-        self._write_file("","",".bazelversion", "1.2.1")
+        self._write_file("","",".bazelversion", "3.7.1")
 
     def _add_WORKSPACE_file(self):
         content = """

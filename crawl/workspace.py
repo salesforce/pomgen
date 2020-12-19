@@ -21,13 +21,13 @@ class Workspace:
 
     def __init__(self, repo_root_path, excluded_dependency_paths, 
                  source_exclusions, 
-                 maven_install_rule_names,
+                 maven_install_info,
                  pom_content):
         self.repo_root_path = repo_root_path
         self.excluded_dependency_paths = excluded_dependency_paths
         self.source_exclusions = source_exclusions
         self.pom_content = pom_content
-        self._name_to_ext_deps = self._parse_maven_install(maven_install_rule_names)
+        self._name_to_ext_deps = self._parse_maven_install(maven_install_info, repo_root_path)
         self._package_to_artifact_def = {} # cache for artifact_def instances
 
     @property
@@ -61,9 +61,8 @@ class Workspace:
         Given a list of Bazel labels, returns a list of Dependency instances.
      
         Example input:
-
-            ["@com_google_guava_guava//jar",
-             "@com_github_ben_manes_caffeine_caffeine//jar",
+            ["@maven//:com_google_guava_guava//jar",
+             "@maven//:com_github_ben_manes_caffeine_caffeine//jar",
              "//projects/libs/servicelibs/srpc/srpc-api:srpc-api"]
 
         See dependency.Dependency
@@ -113,13 +112,10 @@ class Workspace:
 
     def _parse_dep_label(self, dep_label):
         if dep_label.startswith("@"):
-            # external maven jar:
-            ext_dep_name = dep_label[1:].strip()
-            dep_split = ext_dep_name.split(':')
-            if len(dep_split) == 1:
-                return self._name_to_ext_deps.get(ext_dep_name, None)
-            else:
-                return self._name_to_ext_deps.get(dep_split[1], None)
+            if dep_label not in self._name_to_ext_deps:
+                print(self._name_to_ext_deps.values())
+                raise Exception("Unknown external dependency - please make sure all maven install json files have been registered with pomgen (by setting maven_install_paths in the pomgen config file): [%s]" % dep_label)
+            return self._name_to_ext_deps[dep_label]
         elif dep_label.startswith("//"):
             # monorepo src ref:
             package_path = dep_label[2:] # remove leading "//"
@@ -140,30 +136,19 @@ class Workspace:
         else:
             raise Exception("bad label [%s]" % dep_label)
 
-    def _parse_maven_install(self, rule_names):
+    def _parse_maven_install(self, maven_install_info, repo_root_path):
         """
-        Parse the dependencies inside each maven_install in rule_names.
-        There should be a ${rule}_install.json file at the root of the
-        repository for each rule.
+        Parses all pinned json files for the specified maven_install rules.
 
-        rule_names are processed in reverse order so that the first one wins.
-        This is to handle the legacy naming case. The full name used my
-        maven_install should be used in future versions. This is accomodate
-        repositories to be able to migrate to maven_install dependency names.
-
-        Returns a dictionary mapping the value of the coord santized for Bazel
-        to a Dependency instance. It also has keys for the fully qualified
-        maven_install rule.
+        Returns a dictionary mapping of the dependency fq name (used in BUILD 
+        files) -> the corresponding dependency.Dependency instance.
         """
         result = {}
-        for each_rule in rule_names[::-1]:
-            for name, coord in bazel.query_maven_install(self.repo_root_path, each_rule).items():
-                fully_qualified_name = '@%s//:%s' % (each_rule, name)
-                dep = dependency.new_dep_from_maven_art_str(coord, fully_qualified_name)
-                if dep.classifier != 'sources':
-                    result[fully_qualified_name] = dep
-                    # This should be factored out eventually and use fully
-                    # qualified name once maven_jar names are removed
-                    # completely, so should this
-                    result[name] = dependency.new_dep_from_maven_art_str(coord, name)
+        for name_and_path in maven_install_info.get_maven_install_names_and_paths(repo_root_path):
+            mvn_install_name, json_file_path = name_and_path
+            mvn_coords = bazel.query_maven_install(json_file_path)
+            for coord in mvn_coords:
+                dep = dependency.new_dep_from_maven_art_str(coord, mvn_install_name)
+                if dep.classifier != "sources":
+                    result[dep.bazel_label_name] = dep
         return result

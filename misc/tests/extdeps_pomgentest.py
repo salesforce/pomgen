@@ -12,7 +12,7 @@ import unittest
 
 class ExtDepsPomgenTest(unittest.TestCase):
 
-    def test1(self):
+    def test_extdeps_pomgens(self):
         self._setup_workspace()
         args = ("--repo_root", self.repo_root_path,)
 
@@ -22,45 +22,26 @@ class ExtDepsPomgenTest(unittest.TestCase):
         self.assertIn("<artifactId>guava</artifactId>", pom)
         self.assertIn("<version>23.0</version", pom)
 
+        self.assertIn("<groupId>org.apache.commons</groupId>", pom)
+        self.assertIn("<artifactId>commons-lang3</artifactId>", pom)
+        self.assertIn("<version>3.9</version", pom)
+
+        self.assertIn("<groupId>org.apache.commons</groupId>", pom)
+        self.assertIn("<artifactId>commons-lang3</artifactId>", pom)
+        self.assertIn("<version>3.9</version", pom)
+
+        self.assertIn("<groupId>org.apache.commons</groupId>", pom)
+        self.assertIn("<artifactId>commons-math3</artifactId>", pom)
+        self.assertIn("<version>3.6.1</version", pom)
+
     def _setup_workspace(self):
         self.repo_root_path = tempfile.mkdtemp("monorepo")
         self._add_WORKSPACE_file()
         self._add_maven_install_json_file()
         self._add_pom_template()
-        self._write_file("","",".bazelversion", "1.2.1")
 
     def _add_WORKSPACE_file(self):
-        content = """
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
-RULES_JVM_EXTERNAL_TAG = "3.3"
-RULES_JVM_EXTERNAL_SHA = "d85951a92c0908c80bd8551002d66cb23c3434409c814179c0ff026b53544dab"
-
-http_archive(
-    name = "rules_jvm_external",
-    strip_prefix = "rules_jvm_external-%s" % RULES_JVM_EXTERNAL_TAG,
-    sha256 = RULES_JVM_EXTERNAL_SHA,
-    url = "https://github.com/bazelbuild/rules_jvm_external/archive/%s.zip" % RULES_JVM_EXTERNAL_TAG,
-)
-
-load("@rules_jvm_external//:defs.bzl", "maven_install")
-load("@rules_jvm_external//:specs.bzl", "maven")
-
-maven_install(
-    name = 'maven',
-    artifacts = [
-        maven.artifact(group = 'com.google.guava', artifact = 'guava', version = '23.0', exclusions = ['*:*']),
-    ],
-    repositories = [
-        'https://repo1.maven.org/maven2',
-    ],
-    version_conflict_policy = 'pinned',
-    strict_visibility = True,
-    generate_compat_repositories = True,
-    resolve_timeout = 1800,
-)
-"""
-        self._write_file("", "", "WORKSPACE", content)
+        self._write_file("", "", "WORKSPACE", "needs to exist")
 
     def _add_maven_install_json_file(self):
         content = """
@@ -123,7 +104,6 @@ maven_install(
         self._write_file("config", "", "pom_template.xml", content)
 
     def _write_file(self, package_rel_path, rel_path, filename, content):
-        print(content)
         path = os.path.join(self.repo_root_path, package_rel_path, rel_path, 
                             filename)
         parent_dir = os.path.dirname(path)

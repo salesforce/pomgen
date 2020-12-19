@@ -13,6 +13,7 @@ Command line utility that shows information about Maven artifacts.
 from collections import OrderedDict
 from common import argsupport
 from common import common
+from common import maveninstallinfo
 from common import version
 from config import config
 from crawl import bazel
@@ -88,10 +89,11 @@ if __name__ == "__main__":
     args = _parse_arguments(sys.argv[1:])
     repo_root = common.get_repo_root(args.repo_root)
     cfg = config.load(repo_root, args.verbose)
+    mvn_install_info = maveninstallinfo.MavenInstallInfo(cfg.maven_install_paths)
     ws = workspace.Workspace(repo_root,
                              cfg.excluded_dependency_paths, 
                              cfg.all_src_exclusions,
-                             cfg.maven_install_rule_names,
+                             mvn_install_info,
                              pomcontent.NOOP)
 
     determine_packages_to_process = (args.list_libraries or 

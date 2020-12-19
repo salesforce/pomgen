@@ -13,6 +13,7 @@ The pomgen cmdline entry-point.
 from common import argsupport
 from common import common
 from common import logger
+from common import maveninstallinfo
 from common import mdfiles
 from config import config
 from crawl import crawler
@@ -72,10 +73,12 @@ def main(args):
         pom_content.description = args.pom_description
     if args.verbose:
         logger.debug("Global pom content: %s" % pom_content)
+
+    mvn_install_info = maveninstallinfo.MavenInstallInfo(cfg.maven_install_paths)
     ws = workspace.Workspace(repo_root,
                              cfg.excluded_dependency_paths,
                              cfg.all_src_exclusions,
-                             cfg.maven_install_rule_names,
+                             mvn_install_info,
                              pom_content)
     packages = argsupport.get_all_packages(repo_root, args.package)
     packages = ws.filter_artifact_producing_packages(packages)

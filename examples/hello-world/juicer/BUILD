@@ -4,7 +4,7 @@ java_library(
     deps = ["//examples/hello-world/healthyfoods/fruit-api", 
             "//examples/hello-world/healthyfoods/vegetable-api",
             "//examples/hello-world/wintervegetables",
-            "@com_google_guava_guava//jar", # test for alias - should be changed to @maven//:com_google_guava_guava
+            "@maven//:com_google_guava_guava",
     ]
 )
 

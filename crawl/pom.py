@@ -365,11 +365,13 @@ class TemplatePomGen(AbstractPomGen):
         # using the syntax: #{<groupId>:<artifactId>:[<classifier>:]version}.
         #
         # Additionally, versions of external dependencies may be referenced
-        # using the dependency's "maven_jar" name, for example:
-        # #{com_google_guava_guava.version}
+        # using the dependency's "maven install" name, for example:
+        # #{@maven//:com_google_guava_guava.version}
         # 
-        # the latter form is being phased out to avoid having to change pom
-        # templates when dependencies move in (and out?) of the monorepo.
+        # For convenience, we also support the unqualified maven install name,
+        # without the leading repository name. This is useful when there are
+        # many maven install rules, but they all reference the same maven 
+        # artifact versions.
 
         #{<groupId>:<artifactId>:[<classifier>:]version} -> version value
         #{com_google_guava_guava.version} -> version value
@@ -406,6 +408,16 @@ class TemplatePomGen(AbstractPomGen):
                     raise Exception("%s version: %s is already in versions, previous: %s" % (key, self._dep_version(pomcontenttype, dep), key_to_version[key]))
                 key_to_version[key] = dep.version
                 key_to_dep[key] = dep
+
+                # we'll also allow usage of the unqualified label as a key
+                # so "com_google_guava_guava" instead of
+                # "@maven//:com_google_guava_guava"
+                # this works well if the repository is setup in such a way
+                # that all Maven artifacts have the same version, regardless
+                # of which maven install rule they are managed by
+                # if the versions differ, then the fully qualified label name
+                # has to be used
+                key_to_version["%s.version" % dep.unqualified_bazel_label_name] = dep.version
 
         # the maven coordinates of this artifact can be referenced directly:
         key_to_version["artifact_id"] = self._artifact_def.artifact_id

@@ -21,24 +21,23 @@ class ConfigTest(unittest.TestCase):
 
         self.assertEqual("pom", cfg.pom_template)
 
-    def test_maven_install_rule_names_default(self):
+    def test_maven_install_paths_default(self):
         repo_root = tempfile.mkdtemp("root")
         pom_template_path = self._write_file(repo_root, "pom_template", "foo")
-        self._write_pomgenrc(repo_root, pom_template_path, "")
+        self._write_pomgenrc(repo_root, pom_template_path, None)
 
         cfg = config.load(repo_root)
 
-        self.assertEqual(("maven",), cfg.maven_install_rule_names)
+        self.assertEqual(("maven_install.json",), cfg.maven_install_paths)
 
-    def test_maven_install_rule_names(self):
+    def test_maven_install_paths(self):
         repo_root = tempfile.mkdtemp("root")
         pom_template_path = self._write_file(repo_root, "pom_template", "foo")
-        self._write_pomgenrc(repo_root, pom_template_path, 
-                             "eternal,world")
+        self._write_pomgenrc(repo_root, pom_template_path, "eternal,world")
 
         cfg = config.load(repo_root)
 
-        self.assertEqual(('eternal', 'world'), cfg.maven_install_rule_names)
+        self.assertEqual(("eternal", "world"), cfg.maven_install_paths)
 
     def test_transitives_versioning_mode__semver(self):
         repo_root = tempfile.mkdtemp("root")
@@ -92,13 +91,19 @@ transitives_versioning_mode=foo
         cfg = config.load(repo_root)
 
         self.assertIn("pom_template_path=%s" % pom_template_path, str(cfg))
-        self.assertIn("maven_install_rule_names=maven,misc" , str(cfg))
+        self.assertIn("maven_install_paths=('maven', 'misc')" , str(cfg))
 
-    def _write_pomgenrc(self, repo_root, pom_template_path, maven_install_rule_names):
-        self._write_file(repo_root, ".pomgenrc", """[general]
-maven_install_rule_names=%s
+    def _write_pomgenrc(self, repo_root, pom_template_path, maven_install_paths):
+        content = """[general]
 pom_template_path=%s
-""" % (maven_install_rule_names, pom_template_path))
+""" % pom_template_path
+
+        if maven_install_paths is not None:
+            content = content + """
+maven_install_paths=%s
+""" % maven_install_paths
+
+        self._write_file(repo_root, ".pomgenrc", content)
 
     def _write_file(self, repo_root, relative_path, content):
         path = os.path.join(repo_root, relative_path)
