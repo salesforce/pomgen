@@ -5,12 +5,14 @@ import unittest
 
 class MavenInstallTest(unittest.TestCase):
 
-    def test_nothing_to_see(self):
+    def test_json_file_not_found(self):
         m = maveninstallinfo.MavenInstallInfo(("a/b/c", "d/e/f"))
         
-        files = m.get_maven_install_names_and_paths("/foo")
+        with self.assertRaises(Exception) as ctx:
+            m.get_maven_install_names_and_paths("/repo_root")
 
-        self.assertEquals(0, len(files))
+        self.assertIn("not found", str(ctx.exception))
+        self.assertIn("/repo_root/a/b/c", str(ctx.exception))
 
     def test_explicit_paths(self):
         repo_root = tempfile.mkdtemp("monorepo")
