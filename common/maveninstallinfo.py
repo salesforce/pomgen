@@ -30,6 +30,8 @@ class MavenInstallInfo:
                             globbed_names_and_paths.append(name_and_path)
                     # sort for predictable traversal order for tests
                     names_and_paths += sorted(globbed_names_and_paths)
+                else:
+                    raise Exception("maven_install json file path not found [%s]" % path)
             else:
                 names_and_paths.append(name_and_path)
         return names_and_paths
