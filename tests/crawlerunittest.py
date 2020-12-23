@@ -16,6 +16,9 @@ GROUP_ID = "group"
 POM_TEMPLATE_FILE = "foo.template"
 
 class CrawlerUnitTest(unittest.TestCase):
+    """
+    crawler tests that do not require any file-system setup.
+    """
 
     def test_dependencies_with_skip_mode(self):
         """
