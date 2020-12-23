@@ -1,9 +1,8 @@
 maven_artifact(
     group_id = "com.pomgen.example.skip-art-gen",
-    artifact_id = "lib2",
+    artifact_id = "lib",
     version = "1.0.0-SNAPSHOT",
-    pom_generation_mode = "template",
-    pom_template_file = "pom.template",
+    pom_generation_mode = "dynamic",
 )
 
 maven_artifact_update(

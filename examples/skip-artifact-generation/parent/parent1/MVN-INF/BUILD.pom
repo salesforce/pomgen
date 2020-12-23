@@ -1,6 +1,6 @@
 maven_artifact(
     group_id = "com.pomgen.example.skip-art-gen",
-    artifact_id = "lib1",
+    artifact_id = "parent1",
     version = "1.0.0-SNAPSHOT",
     pom_generation_mode = "dynamic",
 )

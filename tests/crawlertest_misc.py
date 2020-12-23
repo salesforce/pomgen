@@ -20,7 +20,7 @@ POM_TEMPLATE_FILE = "foo.template"
 
 class CrawlerTest(unittest.TestCase):
     """
-    Various one-off crawler related test cases.
+    Various one-off crawler related test cases that require file-system setup.
     """
 
     def setUp(self):

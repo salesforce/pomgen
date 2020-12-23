@@ -20,7 +20,18 @@ maven_jar(
     sha256_src = "e2ff85a3c360d56c51a7021614a194f3fbaf224054642ac535016f118322934d",
 )
 
+maven_jar(
+    name = "org_antlr_stringtemplate",
+    artifact = "org.antlr:stringtemplate:3.2.1",
+    sha256 = "f66ce72e965e5301cb0f020e54d2ba6ad76feb91b3cbfc30dbbf00c06a6df6d7",
+    sha256_src = "e89759cae39bbad890c3afc94895c335556a973fea8577351d8e2da28dcfbd03",
+)
 
-
+maven_jar(
+    name = "org_antlr_ST4",
+    artifact = "org.antlr:ST4:4.0.7",
+    sha256 = "29bfb0d6a4531644378b68d2c11a51450949bd640fd40e15f169efbeb8afa425",
+    sha256_src = "5cb9151c403ef9e212d88e16d8761ac415dd6716581f8c669f2abdbea56dbecd",
+)
 
 
