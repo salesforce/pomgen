@@ -187,6 +187,14 @@ py_test(
 )
 
 py_test(
+    name = "maveninstallinfotest",
+    srcs = ["common/maveninstallinfo.py", "tests/maveninstallinfotest.py",],
+    imports = ["."],
+    size = "small",
+    python_version = python_version,
+)
+
+py_test(
     name = "mdfilestest",
     srcs = ["common/mdfiles.py", "tests/mdfilestest.py",],
     imports = ["."],
@@ -206,6 +214,7 @@ py_test(
     name = "pomtest",
     srcs = ["common/code.py",
             "common/logger.py",
+            "common/maveninstallinfo.py",
             "common/mdfiles.py",
             "common/os_util.py",
             "common/pomgenmode.py",
@@ -242,6 +251,7 @@ py_test(
     name = "workspacetest",
     srcs = ["common/code.py",
             "common/logger.py",
+            "common/maveninstallinfo.py",
             "common/mdfiles.py",
             "common/os_util.py",
             "common/pomgenmode.py",

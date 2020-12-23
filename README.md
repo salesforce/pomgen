@@ -30,8 +30,8 @@ Please see the [hello-world example](examples/hello-world/README.md) to see how 
 ## External Dependencies
 
 - Bazel, ideally through [bazelisk](https://github.com/bazelbuild/bazelisk)
-    - This branch has been testing with Bazel 1.2.1.  Other Bazel versions may work.
-- Python 3 is required and must be in your PATH
+    - This branch has been tested with Bazel 3.7.1
+- Python 3 is required and must be configured as a toolchain or available in your $PATH
 - You need to install [lxml](https://lxml.de): pip install --user lxml
 
 
@@ -67,10 +67,11 @@ The file format is:
 # Default value: config/pom_template.xml
 pom_template_path=
 
-# The list of every maven_install rule name defined in WORKSPACE where dependencies are defined, comma-separated
-# Default value: maven
-# Example value: maven,deprecated
-maven_install_rule_names=
+# The list of all maven install json files with pinned dependencies, comma-separated. All dependencies that pomgen encounters in BUILD files must be backed by
+# a *_install.json file listed here.
+# Default value: maven_install.json
+# Example value: tools/maven_install/*.json,another/path/to/mvn_install.json,
+maven_install_paths=
 
 [crawler]
 # A list of path prefixes that are not crawled by pomgen.  Any dependency

@@ -5,6 +5,7 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
+from common import maveninstallinfo
 from config import exclusions
 from crawl import crawler as crawlerm
 from crawl import pom
@@ -41,7 +42,7 @@ class CrawlerTest(unittest.TestCase):
 
         ws = workspace.Workspace(repo_root_path, [],
                                  exclusions.src_exclusions(),
-                                 ("maven",),
+                                 maveninstallinfo.NOOP,
                                  pomcontent.NOOP)
         crawler = crawlerm.Crawler(ws, pom_template="")
 
@@ -63,7 +64,7 @@ class CrawlerTest(unittest.TestCase):
 
         ws = workspace.Workspace(repo_root_path, [],
                                  exclusions.src_exclusions(),
-                                 ("maven",),
+                                 maveninstallinfo.NOOP,
                                  pomcontent.NOOP)
         crawler = crawlerm.Crawler(ws, pom_template="")
 
@@ -86,7 +87,7 @@ class CrawlerTest(unittest.TestCase):
 
         ws = workspace.Workspace(repo_root_path, [],
                                  exclusions.src_exclusions(),
-                                 ("maven",),
+                                 maveninstallinfo.NOOP,
                                  pomcontent.NOOP)
         crawler = crawlerm.Crawler(ws, pom_template="")
 
@@ -108,7 +109,7 @@ class CrawlerTest(unittest.TestCase):
 
         ws = workspace.Workspace(repo_root_path, [],
                                  exclusions.src_exclusions(),
-                                 ("maven",),
+                                 maveninstallinfo.NOOP,
                                  pomcontent.NOOP)
         crawler = crawlerm.Crawler(ws, pom_template="")
 

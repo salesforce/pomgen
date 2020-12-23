@@ -12,7 +12,7 @@ import unittest
 import sys
 
 class DependencyTest(unittest.TestCase):
-    
+
     def test_external_dependency__three_coordinates(self):
         """
         Ensures we can create Dependency instances from maven coordinates, as 
@@ -25,6 +25,8 @@ class DependencyTest(unittest.TestCase):
         self.assertEqual("guava", dep.artifact_id)
         self.assertEqual("20.0", dep.version)
         self.assertIsNone(dep.classifier)
+        self.assertIsNone(dep.packaging)
+        self.assertIsNone(dep.scope)
 
     def test_external_dependency__four_coordinates(self):
         """
@@ -38,6 +40,8 @@ class DependencyTest(unittest.TestCase):
         self.assertEqual("core-log-tokenizer-api", dep.artifact_id)
         self.assertEqual("0.0.21", dep.version)
         self.assertIsNone(dep.classifier)
+        self.assertEqual("jar", dep.packaging)
+        self.assertIsNone(dep.scope)
 
     def test_external_dependency__five_coordinates(self):
         """
@@ -51,6 +55,8 @@ class DependencyTest(unittest.TestCase):
         self.assertEqual("dynamic-keystore-impl", dep.artifact_id)
         self.assertEqual("2.0.39", dep.version)
         self.assertEqual("tests", dep.classifier)
+        self.assertEqual("jar", dep.packaging)
+        self.assertIsNone(dep.scope)
 
     def test_external_dependency__marked_as_external(self):
         """
@@ -61,16 +67,6 @@ class DependencyTest(unittest.TestCase):
         dep = dependency.new_dep_from_maven_art_str(artifact, "name")
         self.assertTrue(dep.external)
 
-    def test_external_dependency__name(self):
-        """
-        Ensures the Dependency instance for an external dependency has expected
-        names.
-        """
-        artifact = "group:art:ver"
-        dep = dependency.new_dep_from_maven_art_str(artifact, "bazel-name")
-        self.assertEqual("group:art", dep.maven_coordinates_name)
-        self.assertEqual("bazel-name", dep.bazel_label_name)
-
     def test_external_dependency__references_artifact(self):
         """
         Ensures the Dependency instance for an external dependency has expected
@@ -80,15 +76,87 @@ class DependencyTest(unittest.TestCase):
         dep = dependency.new_dep_from_maven_art_str(artifact, "bazel-name")
         self.assertTrue(dep.references_artifact)
 
-    def test_external_dependency__with_classifier(self):
+    def test_external_dependency__names(self):
         """
         Ensures the Dependency instance for an external dependency has expected
-        classifier.
+        names.
         """
-        artifact = "group:art:packaging:classifier:version"
-        dep = dependency.new_dep_from_maven_art_str(artifact, "bazel-name")
-        self.assertEqual("group:art:classifier", dep.maven_coordinates_name)
-        self.assertEqual("bazel-name", dep.bazel_label_name)
+        artifact = "group:art:ver"
+        dep = dependency.new_dep_from_maven_art_str(artifact, "maven")
+        self.assertEqual("group:art", dep.maven_coordinates_name)
+        self.assertEqual("@maven//:group_art", dep.bazel_label_name)
+        self.assertEqual("group_art", dep.unqualified_bazel_label_name)
+
+    def test_external_dependency__names__none_name(self):
+        """
+        Ensures the Dependency instance for an external dependency has expected
+        names.
+        """
+        artifact = "group:art:ver"
+        dep = dependency.new_dep_from_maven_art_str(artifact, name=None)
+        self.assertEqual("group:art", dep.maven_coordinates_name)
+        self.assertEqual("group_art", dep.bazel_label_name)
+        self.assertEqual("group_art", dep.unqualified_bazel_label_name)
+
+    def test_external_dependency__names__maven_install_name_with_leading_at(self):
+        """
+        Ensures we handle a maven_install_name with  leading "@".
+        """
+        artifact = "group:art:ver"
+        dep = dependency.new_dep_from_maven_art_str(artifact, "@maven")
+        self.assertEqual("group:art", dep.maven_coordinates_name)
+        self.assertEqual("@maven//:group_art", dep.bazel_label_name)
+        self.assertEqual("group_art", dep.unqualified_bazel_label_name)
+
+    def test_external_dependency__names__default_packaging(self):
+        """
+        Ensures the Dependency instance for an external dependency has expected
+        names when packaging has a default value.
+        """
+        dep = dependency.ThirdPartyDependency(maven_install_name="name",
+                                              group_id="group",
+                                              artifact_id="art",
+                                              version="1.0.0",
+                                              packaging="jar")
+        self.assertEqual("group:art", dep.maven_coordinates_name)
+        self.assertEqual("@name//:group_art", dep.bazel_label_name)
+        self.assertEqual("group_art", dep.unqualified_bazel_label_name)
+
+    def test_external_dependency__names__with_packaging(self):
+        """
+        Ensures the Dependency instance for an external dependency has expected
+        names when packaging is specified.
+        """
+        artifact = "group:art:packaging:version"
+        dep = dependency.new_dep_from_maven_art_str(artifact, "maven")
+        self.assertEqual("group:art:packaging", dep.maven_coordinates_name)
+        self.assertEqual("@maven//:group_art_packaging", dep.bazel_label_name)
+        self.assertEqual("group_art_packaging", dep.unqualified_bazel_label_name)
+
+    def test_external_dependency__names__with_packaging_and_classifier(self):
+        """
+        Ensures the Dependency instance for an external dependency has expected
+        names when packaging and classifier are set.
+        """
+        artifact = "group:art:pack:class:version"
+        dep = dependency.new_dep_from_maven_art_str(artifact, "mvn")
+        self.assertEqual("group:art:pack:class", dep.maven_coordinates_name)
+        self.assertEqual("@mvn//:group_art_pack_class", dep.bazel_label_name)
+        self.assertEqual("group_art_pack_class", dep.unqualified_bazel_label_name)
+
+    def test_external_dependency__names__with_classifier_and_default_packaging(self):
+        """
+        Ensures the Dependency instance for an external dependency has expected
+        names when packaging and classifier are set.
+        """
+        dep = dependency.ThirdPartyDependency(maven_install_name="name",
+                                              group_id="group",
+                                              artifact_id="art",
+                                              version="1.0.0",
+                                              classifier="class")
+        self.assertEqual("group:art:jar:class", dep.maven_coordinates_name)
+        self.assertEqual("@name//:group_art_class", dep.bazel_label_name)
+        self.assertEqual("group_art_class", dep.unqualified_bazel_label_name)
 
     def test_external_dependency__unparsable_artifact(self):
         """
@@ -344,6 +412,36 @@ class DependencyTest(unittest.TestCase):
         self.assertIs(dep1, l[1])
         self.assertIs(dep2, l[2])
 
+    def test_sort_order_includes_packaging__all_deps_with_packaging(self):
+        """
+        Ensures that the optional packaging of an external dependency is
+        included when sorting dependencies.
+        """
+        dep1 = dependency.new_dep_from_maven_art_str("com.grail.services:arthur-common-thrift-api:jar2:classifier:2.2.17", "name1")
+        dep2 = dependency.new_dep_from_maven_art_str("com.grail.services:arthur-common-thrift-api:jar3:classifier:2.2.17", "name2")
+        dep3 = dependency.new_dep_from_maven_art_str("com.grail.services:arthur-common-thrift-api:jar1:classifier:2.2.17", "name3")
+
+        l = [dep1, dep2, dep3,]
+        l.sort()
+        self.assertIs(dep3, l[0])
+        self.assertIs(dep1, l[1])
+        self.assertIs(dep2, l[2])
+
+    def test_sort_order_includes_packaging__one_dep_without_packaging(self):
+        """
+        Ensures that the optional packaging of an external dependency is
+        included when sorting dependencies.
+        """
+        dep1 = dependency.new_dep_from_maven_art_str("com.grail.services:arthur-common-thrift-api:jar2:2.2.17", "name1")
+        dep2 = dependency.new_dep_from_maven_art_str("com.grail.services:arthur-common-thrift-api:2.2.17", "name2")
+        dep3 = dependency.new_dep_from_maven_art_str("com.grail.services:arthur-common-thrift-api:jar1:2.2.17", "name3")
+
+        l = [dep1, dep2, dep3,]
+        l.sort()
+        self.assertIs(dep2, l[0])
+        self.assertIs(dep3, l[1])
+        self.assertIs(dep1, l[2])
+
     def test_sort_order_includes_scope__all_deps_with_scope(self):
         """
         Ensures that the optional scope of an external dependency is
@@ -404,18 +502,18 @@ class DependencyTest(unittest.TestCase):
 
     def test_copy(self):
         import copy
-        dep = dependency.ThirdPartyDependency("name", "group", "artifact", "version", "classifier", "scope") 
+        dep = dependency.ThirdPartyDependency("name", "group", "artifact", "version", "classifier", "packaging", "scope") 
 
         dep_copy = copy.copy(dep)
         
         self.assertTrue(dep is dep)
         self.assertFalse(dep is dep_copy)
         self.assertEqual(dep, dep_copy)
-        self.assertEqual("name", dep_copy.bazel_label_name)
         self.assertEqual("group", dep_copy.group_id)
         self.assertEqual("artifact", dep_copy.artifact_id)
         self.assertEqual("version", dep_copy.version)
         self.assertEqual("classifier", dep_copy.classifier)
+        self.assertEqual("packaging", dep_copy.packaging)
         self.assertEqual("scope", dep_copy.scope)
 
     def test_bazel_buildable__external_dep(self):

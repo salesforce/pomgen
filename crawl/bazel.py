@@ -15,8 +15,8 @@ from common import mdfiles
 from common.os_util import run_cmd
 from common import logger
 import os
-import re
 import json
+
 
 def query_java_library_deps_attributes(repository_root_path, target_pattern):
     """
@@ -51,6 +51,7 @@ def query_java_library_deps_attributes(repository_root_path, target_pattern):
     deps = _ensure_unique_deps(deps)
     return reversed(deps)
 
+
 def query_all_artifact_packages(repository_root_path, target_pattern):
     """
     Returns all packages in the specified target pattern, as a list of strings,
@@ -63,6 +64,7 @@ def query_all_artifact_packages(repository_root_path, target_pattern):
         if mdfiles.is_artifact_package(rootdir):
             maven_artifact_packages.append(os.path.relpath(rootdir, repository_root_path))
     return maven_artifact_packages
+
 
 def query_all_libraries(repository_root_path, packages):
     """
@@ -86,28 +88,22 @@ def query_all_libraries(repository_root_path, packages):
 
     return lib_roots
 
-def query_maven_install(repository_root_path, rule_name):
+
+def query_maven_install(json_file_path):
     """
-    Return a dict of all dependencies defined for rule_name in ${rule_name}_install.json
-    The results are keyed by sanitized maven coord and value is maven coord.
+    Return a list of strings each a Maven "coord"* from the specified "pinned" 
+    dependencies json file.
+
+    * group_id:artifact_id:[packaging]:[classifier]:version
     """
-    result = {}
-    install_json_file = os.path.join(repository_root_path, '%s_install.json' % rule_name)
-    if not os.path.isfile(install_json_file):
-        logger.warning('Skipping maven_install rule: %s - %s does not exist' % (rule_name, install_json_file))
-        return {}
-    with open(install_json_file, 'r') as install_input:
+    all_coords = []
+    logger.info("Processing pinned dependencies [%s]" % json_file_path)
+    with open(json_file_path, "r") as install_input:
         install_json = json.load(install_input)
-        deps = install_json['dependency_tree']['dependencies']
-        for each_dep in deps:
-            coord = each_dep['coord']
-            coord_parts = coord.split(':')
-            if len(coord_parts) == 5 or len(coord_parts) == 4:
-                del coord_parts[2] # remove artifact type from coordinates
-            dropped_version = '_'.join(coord_parts[:-1])
-            name = re.sub(r'[.-]', '_', dropped_version)
-            result[name] = coord
-    return result
+        json_deps = install_json["dependency_tree"]["dependencies"]
+        for json_dep in json_deps:
+            all_coords.append(json_dep["coord"])
+    return all_coords
 
 
 def target_pattern_to_path(target_pattern):
@@ -128,6 +124,7 @@ def target_pattern_to_path(target_pattern):
         target_pattern = target_pattern[0:-4]
     return target_pattern
 
+
 def _sanitize_deps(deps):
     updated_deps = []
     for dep in deps:
@@ -135,6 +132,7 @@ def _sanitize_deps(deps):
         if sanitized is not None:
             updated_deps.append(dep)
     return updated_deps
+
 
 def _sanitize_dep(dep):
     if dep.startswith('@'):
@@ -147,6 +145,7 @@ def _sanitize_dep(dep):
         return dep
     # dep is not something we want, ignore (e.g. log lines from tools/bazel can fall into here)
     return None
+
 
 def _ensure_unique_deps(deps):
     updated_deps = []

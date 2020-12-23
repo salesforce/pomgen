@@ -10,9 +10,9 @@ Responsible for loading a config file of the following format:
 [general]
 # Path to the pom template, used when generating pom.xml files for jar artifacts
 pom_template_path=
-# Path to the file(s) that lists external dependencies - multiple files are 
-# supported, comma-separated.
-external_dependencies_path=
+# A list of paths to pinned maven_install json files.
+# Globs are supported, for example: tools/maven_install/*.json
+maven_install_paths=maven_install.json,
 
 [crawler]
 # A list of path prefixes that are not crawled by pomgen.  Any dependency
@@ -79,7 +79,7 @@ def load(repo_root, verbose=False):
 
     cfg = Config(
         pom_template_path_and_content=_read_files(repo_root, pom_template_p)[0],
-        maven_install_rule_names=gen("maven_install_rule_names", ("maven",)),
+        maven_install_paths=gen("maven_install_paths", ("maven_install.json",)),
         excluded_dependency_paths=crawl("excluded_dependency_paths", ()),
         excluded_src_relpaths=artifact("excluded_relative_paths", ("src/test",)),
         excluded_src_file_names=artifact("excluded_filenames", (".gitignore",)),
@@ -109,7 +109,7 @@ class Config:
 
     def __init__(self, 
                  pom_template_path_and_content=("",""),
-                 maven_install_rule_names=(),
+                 maven_install_paths=(),
                  excluded_dependency_paths=(),
                  excluded_src_relpaths=(),
                  excluded_src_file_names=(),
@@ -118,9 +118,7 @@ class Config:
 
         # general
         self.pom_template_path_and_content=pom_template_path_and_content
-        if len(maven_install_rule_names) == 0:
-            maven_install_rule_names = ('maven',)
-        self.maven_install_rule_names = _to_tuple(maven_install_rule_names)
+        self.maven_install_paths = _to_tuple(maven_install_paths)
 
         # crawler
         self.excluded_dependency_paths = _add_pathsep(_to_tuple(excluded_dependency_paths))
@@ -147,7 +145,7 @@ class Config:
     def __str__(self):
         return """[general]
 pom_template_path=%s
-maven_install_rule_names=%s
+maven_install_paths=%s
 
 [crawler]
 excluded_dependency_paths=%s
@@ -158,7 +156,7 @@ excluded_filenames=%s
 excluded_extensions=%s
 transitives_versioning_mode=%s
 """ % (self.pom_template_path_and_content[0],
-       ','.join(self.maven_install_rule_names),
+       self.maven_install_paths,
        self.excluded_dependency_paths,
        self.excluded_src_relpaths,
        self.excluded_src_file_names,

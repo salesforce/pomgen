@@ -37,7 +37,7 @@ class AbstractDependency(object):
     Optional/may be None:
 
     classifier: the maven artifact classifier
-
+    packaging: the maven artifact packaging
     scope: the maven scope of the dependency
     
     bazel_package: The bazel package this dependency lives in, None for 
@@ -47,30 +47,57 @@ class AbstractDependency(object):
         dependency.
 
     """
-    def __init__(self, group_id, artifact_id, classifier=None, scope=None):
+    def __init__(self, group_id, artifact_id,
+                 classifier=None, packaging=None, scope=None):
         self.group_id = group_id
         self.artifact_id = artifact_id
         self.classifier = classifier
+        self.packaging = packaging
         self.scope = scope
 
     @property
     def maven_coordinates_name(self):
         """
-        Returns a name for this dependency based on its Maven Coordinates.
+        The Maven "coords" representation for this dependency, EXCLUDING the
+        version.
         """
-        if self.classifier is None and self.scope is None:
-            return "%s:%s" % (self.group_id, self.artifact_id)
-        elif self.scope is None:
-            return "%s:%s:%s" % (self.group_id, self.artifact_id, self.classifier)
+        c = "%s:%s" % (self.group_id, self.artifact_id)
+        if self.classifier is None:
+            if self.packaging not in (None, "jar"):
+                c = "%s:%s" % (c, self.packaging)
         else:
-            return "%s:%s:%s:%s" % (self.group_id, self.artifact_id, self.classifier, self.scope)
+            pack = "jar" if self.packaging is None else self.packaging
+            c = "%s:%s:%s" % (c, pack, self.classifier)
+        return c
 
     @property
     def bazel_label_name(self):
         """
-        Returns a name for this dependency based on its Bazel Label.
+        The bazel label used to reference this dependency.
+        TODO this isn't implemented consistently in subclasses - it is only
+        implemented/used by clients of ThirdPartyDependency
         """
         return None
+
+    @property    
+    def unqualified_bazel_label_name(self):
+        """
+        If the bazel_label_name starts with a repository name (== maven install
+        rule name), using the syntax "@<repo name>", returns the label without
+        the repository name.
+        
+        Note that this method is implemented in terms of bazel_label_name,
+        and therefore it is not implemented in subclasses.
+        """
+        label = self.bazel_label_name
+        if label is None:
+            return None
+        if label.startswith("@"):
+            i = label.index("//")
+            label = label[i+2:]
+            if label.startswith(":"):
+                label = label[1:]
+        return label
 
     @property
     def version(self):
@@ -97,12 +124,13 @@ class AbstractDependency(object):
         raise Exception("must be implemented in subclass")
 
     def __hash__(self):
-        return hash((self.group_id, self.artifact_id, self.classifier))
+        return hash((self.group_id, self.artifact_id, self.classifier, self.packaging))
 
     def __eq__(self, other):
         return (self.group_id == other.group_id and
                 self.artifact_id == other.artifact_id and
-                self.classifier == other.classifier)
+                self.classifier == other.classifier and
+                self.packaging == other.packaging)
 
     def __ne__(self, other):
         return not self == other
@@ -112,12 +140,22 @@ class AbstractDependency(object):
             # self is a 3rd party dep
             if other.bazel_package is None:
                 # other is also a 3rd party dep, compare attributes:
-                # group_id, artifact_id, classifier, scope
+                # group_id, artifact_id, classifier, packaging, scope
                 my_classifier = "" if self.classifier is None else self.classifier
                 other_classifier = "" if other.classifier is None else other.classifier
+                my_packaging = "" if self.packaging is None else self.packaging
+                other_packaging = "" if other.packaging is None else other.packaging
                 my_scope = "" if self.scope is None else self.scope
                 other_scope = "" if other.scope is None else other.scope
-                return (self.group_id, self.artifact_id, my_classifier, my_scope) < (other.group_id, other.artifact_id, other_classifier, other_scope)
+                return (self.group_id,
+                        self.artifact_id,
+                        my_classifier,
+                        my_packaging,
+                        my_scope) < (other.group_id,
+                                     other.artifact_id,
+                                     other_classifier,
+                                     other_packaging,
+                                     other_scope)
             else:
                 # other is a monorepo dep, 3rd party goes last
                 return False
@@ -141,10 +179,14 @@ class AbstractDependency(object):
 
 
 class ThirdPartyDependency(AbstractDependency):
-    def __init__(self, bazel_label_name, group_id, artifact_id, version, classifier=None, scope=None):
-        super(ThirdPartyDependency, self).__init__(group_id, artifact_id, classifier, scope)
+    def __init__(self, maven_install_name, group_id, artifact_id, version,
+                 classifier=None, packaging=None, scope=None):
+        super(ThirdPartyDependency, self).__init__(group_id, artifact_id,
+                                                   classifier, packaging, scope)
         self._version = version
-        self._bazel_label_name = bazel_label_name
+        if maven_install_name is not None and maven_install_name.startswith("@"):
+            maven_install_name = maven_install_name[1:]
+        self._maven_install_name = maven_install_name
 
     @property
     def external(self):
@@ -168,12 +210,29 @@ class ThirdPartyDependency(AbstractDependency):
 
     @property
     def bazel_label_name(self):
-        return self._bazel_label_name
+        name = self._bzl_artifact_name()
+        if self._maven_install_name is not None:
+            name = "@%s//:%s" % (self._maven_install_name, name)
+        return name
 
     @property
     def bazel_buildable(self):
         return False
 
+    def _bzl_artifact_name(self):
+        """
+        The Maven artifact name without its repo prefix.
+        """
+        return self._normalize("%s_%s%s%s" %
+          (self.group_id,
+           self.artifact_id,
+           "" if self.packaging in (None, "jar") else "_" + self.packaging,
+           "" if self.classifier is None else "_" + self.classifier))
+
+    def _normalize(self, n):
+        n = n.replace('-', '_')
+        n = n.replace('.', '_')
+        return n
 
 class MonorepoDependency(AbstractDependency):
 
@@ -229,16 +288,17 @@ class MonorepoDependency(AbstractDependency):
 def new_dep_from_maven_art_str(maven_artifact_str, name):
     num_coordinates = maven_artifact_str.count(':') + 1
     classifier = None
+    packaging = None
     try:
         if num_coordinates == 3:
             # com.google.guava:guava:20.0
             group_id, artifact_id, version = maven_artifact_str.split(':')
         elif num_coordinates == 4:
             # com.squareup:javapoet:jar:1.11.1
-            group_id, artifact_id, _, version = maven_artifact_str.split(':')            
+            group_id, artifact_id, packaging, version = maven_artifact_str.split(':')            
         else:
             # com.grail.servicelibs:dynamic-keystore-impl:jar:tests:2.0.39
-            group_id, artifact_id, _, classifier, version = maven_artifact_str.split(':')
+            group_id, artifact_id, packaging, classifier, version = maven_artifact_str.split(':')
     except:
         logger.error("Cannot parse [%s]" % maven_artifact_str)
         raise
@@ -248,7 +308,8 @@ def new_dep_from_maven_art_str(maven_artifact_str, name):
         # version should always be specified for external dependencies
         raise Exception("invalid version in artifact [%s]" % maven_artifact_str)
 
-    return ThirdPartyDependency(name, group_id, artifact_id, version, classifier)
+    return ThirdPartyDependency(name, group_id, artifact_id, version,
+                                classifier, packaging)
 
 def new_dep_from_maven_artifact_def(artifact_def, bazel_target=None):
     if bazel_target is not None:

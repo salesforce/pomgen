@@ -11,6 +11,7 @@ declared 3rd party dependency.
 """
 
 from common import common
+from common import maveninstallinfo
 from config import config
 from crawl import buildpom
 from crawl import pom
@@ -62,10 +63,11 @@ def main(args):
     args = _parse_arguments(args)
     repo_root = common.get_repo_root(args.repo_root)    
     cfg = config.load(repo_root)
+    mvn_install_info = maveninstallinfo.MavenInstallInfo(cfg.maven_install_paths)    
     ws = workspace.Workspace(repo_root, 
                              cfg.excluded_dependency_paths,
                              cfg.all_src_exclusions,
-                             cfg.maven_install_rule_names,
+                             mvn_install_info,
                              pomcontent.NOOP)
     group_id = "all_ext_deps_group" if args.group_id is None else args.group_id
     artifact_id = "all_ext_deps_art" if args.artifact_id is None else args.artifact_id
