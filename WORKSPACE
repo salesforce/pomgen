@@ -21,6 +21,8 @@ maven_install(
         maven.artifact(group = 'com.google.guava', artifact = 'guava', version = '23.0', exclusions = ['*:*']),
         maven.artifact(group = 'org.apache.commons', artifact = 'commons-lang3', version = '3.9', exclusions = ['*:*']),
         maven.artifact(group = 'org.apache.commons', artifact = 'commons-math3', version = '3.6.1', exclusions = ['*:*']),
+        maven.artifact(group = 'org.antlr', artifact = 'stringtemplate', version = '3.2.1', exclusions = ['*:*']),
+        maven.artifact(group = 'org.antlr', artifact = 'ST4', version = '4.0.7', exclusions = ['*:*']),
     ],
     repositories = [
         'https://repo1.maven.org/maven2',
