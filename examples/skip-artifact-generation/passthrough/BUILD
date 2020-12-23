@@ -10,7 +10,7 @@ java_library(
 java_library(
     name = "set2",
     runtime_deps = [
-        "//examples/skip-artifact-generation/lib2",
+        "//examples/skip-artifact-generation/lib",
         "@com_google_guava_guava//jar",
         ":set3",
     ],

@@ -343,7 +343,10 @@ class Crawler:
                 processed_nodes.add(node)
                 collected_dep_lists.append(deps)
         for parent in node.parents:
-            self._push_transitives_and_walk(parent, collected_dep_lists,
+            # important: for each recursive call, we create a copy of
+            # collected_dep_lists, because otherwise updates to this list
+            # from recursive calls are visible here
+            self._push_transitives_and_walk(parent, list(collected_dep_lists),
                                             processed_nodes)
 
     def _process_collected_dep_lists(self, collected_dep_lists):

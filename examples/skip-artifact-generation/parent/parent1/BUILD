@@ -1,13 +1,14 @@
 java_library(
-    name = "lib1",
+    name = "parent1",
     srcs = glob(["src/main/java/**/*.java"]),
     # these deps get pulled into the pom generated for *this* package
-    deps = ["//examples/skip-artifact-generation/lib1_transitives:set1"],
+    deps = ["//examples/skip-artifact-generation/passthrough:set1"],
+    runtime_deps = ["@org_antlr_stringtemplate//jar"],
 )
 
 java_binary(
     name = "Main",
     srcs = glob(["src/**/*.java"]),
-    deps = [":lib1"],
+    deps = [":parent1"],
 )
     
