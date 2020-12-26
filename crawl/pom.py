@@ -75,6 +75,10 @@ class AbstractPomGen(object):
         self._dependency = dependency
         self._workspace = workspace
 
+        self.dependencies = set()
+        self.dependencies_artifact_transitive_closure = set()
+        self.dependencies_library_transitive_closure = set()
+
     @property
     def artifact_def(self):
         return self._artifact_def
@@ -121,36 +125,24 @@ class AbstractPomGen(object):
 
     def register_dependencies(self, dependencies):
         """
-        Sets the dependencies to use for pom generation.
+        Registers the dependencies the backing artifact references explicitly.
 
-        This method is called after bazel packages have been processed, with
-        the final list of dependencies to include in the generated pom.
-
-        This method *must* be called before requesting this instance to generate
-        a pom.
-
-        Subclasses may implement.
         """
-        pass
+        self.dependencies = dependencies
 
-    def register_all_dependencies(self, crawled_bazel_packages,
-                                  crawled_external_dependencies,
-                                  transitive_closure_dependencies):
+    def register_dependencies_transitive_closure__artifact(self, dependencies):
         """
-        This method is called after all bazel packages have been crawled and
-        processed, with the following sets of Dependency instances:
-
-            - crawled_bazel_packages: 
-                  the set of ALL crawled bazel packages
-            - crawled_external_dependencies: 
-                  the set of ALL crawled (discovered) external dependencies
-            - transitive_closure_dependencies
-                  for this pom, all its dependencies AND all the dependencies
-                  of its dependencies, all the way down.
-
-        Subclasses may implement.
+        Registers the transitive closure of dependencies for the artifact
+        (target) backing this pom generator.
         """
-        pass
+        self.dependencies_artifact_transitive_closure = dependencies
+
+    def register_dependencies_transitive_closure__library(self, dependencies):
+        """
+        Registers the transitive closure of dependencies for the library
+        that the artifact backing this pom generator belongs to.
+        """
+        self.dependencies_library_transitive_closure = dependencies
 
     def gen(self, pomcontenttype):
         """
@@ -288,16 +280,14 @@ class NoopPomGen(AbstractPomGen):
 
 class TemplatePomGen(AbstractPomGen):
 
-    BAZEL_PGK_DEPS_PROP_NAME = "pomgen.crawled_bazel_packages"
-    EXT_DEPS_PROP_NAME = "pomgen.crawled_external_dependencies"
+    TRANSITIVE_DEPS_PROP_NAME = "pomgen.transitive_closure_of_library_dependencies"
     UNUSED_CONFIGURED_DEPS_PROP_NAME = "pomgen.unencountered_dependencies"
     DEPS_CONFIG_SECTION_START = "__pomgen.start_dependency_customization__"
     DEPS_CONFIG_SECTION_END = "__pomgen.end_dependency_customization__"
 
     # these properties need to be replaced first in pom templates
     # because their values may reference other properties
-    INITAL_PROPERTY_SUBSTITUTIONS = (EXT_DEPS_PROP_NAME, 
-                                     BAZEL_PGK_DEPS_PROP_NAME, 
+    INITAL_PROPERTY_SUBSTITUTIONS = (TRANSITIVE_DEPS_PROP_NAME,
                                      UNUSED_CONFIGURED_DEPS_PROP_NAME,)
 
     """
@@ -305,18 +295,9 @@ class TemplatePomGen(AbstractPomGen):
     """
     def __init__(self, workspace, artifact_def, dependency):
         super(TemplatePomGen, self).__init__(workspace, artifact_def, dependency)
-        self.crawled_bazel_packages = set()
-        self.crawled_external_dependencies = set()
-
-    def register_all_dependencies(self,
-                                  crawled_bazel_packages,
-                                  crawled_external_dependencies,
-                                  transitive_closure_dependencies):
-        self.crawled_bazel_packages = crawled_bazel_packages
-        self.crawled_external_dependencies = crawled_external_dependencies
-
     def gen(self, pomcontenttype):
-        pom_content, parsed_dependencies = self._process_pom_template_content(self.artifact_def.custom_pom_template_content)
+        pom_content = self.artifact_def.custom_pom_template_content
+        pom_content, parsed_dependencies = self._process_pom_template_content(pom_content)
 
         properties = self._get_properties(pomcontenttype, parsed_dependencies)
 
@@ -357,7 +338,7 @@ class TemplatePomGen(AbstractPomGen):
 
     def _get_properties(self, pomcontenttype, pom_template_parsed_deps):
         properties = self._get_version_properties(pomcontenttype)
-        properties.update(self._get_crawled_dependencies_properties(pomcontenttype, pom_template_parsed_deps))            
+        properties.update(self._get_crawled_dependencies_properties(pomcontenttype, pom_template_parsed_deps))
         return properties
 
     def _get_version_properties(self, pomcontenttype):
@@ -380,9 +361,13 @@ class TemplatePomGen(AbstractPomGen):
         # internal bookeeping for this method
         key_to_dep = {}
 
+        # the version of these dependencies may be referenced in the pom
+        # template:
+        # all external deps + deps built out of the monorepo that are
+        # transitives of this library
         all_deps = \
             list(self._workspace.name_to_external_dependencies.values()) + \
-            list(self.crawled_bazel_packages)
+            [d for d in self.dependencies_library_transitive_closure if d.bazel_package is not None]
 
         for dep in all_deps:
             key = "%s:version" % dep.maven_coordinates_name
@@ -434,17 +419,13 @@ class TemplatePomGen(AbstractPomGen):
 
         properties = {}
 
-        content = self._build_deps_property_content(self.crawled_bazel_packages,
-                                                    pom_template_parsed_deps, 
-                                                    pomcontenttype, indent)
-        properties[TemplatePomGen.BAZEL_PGK_DEPS_PROP_NAME] = content
+        content = self._build_deps_property_content(
+            self.dependencies_library_transitive_closure,
+            pom_template_parsed_deps,
+            pomcontenttype, indent)
+        properties[TemplatePomGen.TRANSITIVE_DEPS_PROP_NAME] = content
 
-        content = self._build_deps_property_content(self.crawled_external_dependencies,
-                                                    pom_template_parsed_deps, 
-                                                    pomcontenttype, indent)
-        properties[TemplatePomGen.EXT_DEPS_PROP_NAME] = content
-
-        pom_template_only_deps = pom_template_parsed_deps.get_parsed_deps_set_missing_from(self.crawled_bazel_packages, self.crawled_external_dependencies)
+        pom_template_only_deps = pom_template_parsed_deps.get_parsed_deps_set_missing_from(self.dependencies_library_transitive_closure)
         content = self._build_template_only_deps_property_content(\
             _sort(pom_template_only_deps),
             pom_template_parsed_deps,
@@ -518,10 +499,6 @@ class DynamicPomGen(AbstractPomGen):
         super(DynamicPomGen, self).__init__(workspace, artifact_def, dependency)
         self.pom_content = workspace.pom_content
         self.pom_template = pom_template
-        self.dependencies = ()
-
-    def register_dependencies(self, dependencies):
-        self.dependencies = dependencies
 
     def gen(self, pomcontenttype):
         content = self.pom_template.replace("#{group_id}", self._artifact_def.group_id)
@@ -597,12 +574,6 @@ class DependencyManagementPomGen(AbstractPomGen):
         super(DependencyManagementPomGen, self).__init__(workspace, artifact_def, dependency)
         self.pom_template = pom_template
         self.pom_content = workspace.pom_content
-        self.transitive_closure_dependencies = ()
-
-    def register_all_dependencies(self, crawled_bazel_packages,
-                                  crawled_external_dependencies,
-                                  transitive_closure_dependencies):
-        self.transitive_closure_dependencies = transitive_closure_dependencies
 
     def gen(self, pomcontenttype):
         assert pomcontenttype == PomContentType.RELEASE
@@ -614,13 +585,14 @@ class DependencyManagementPomGen(AbstractPomGen):
         version = self._artifact_def_version(pomcontenttype)
         content = content.replace("#{version}", version)
         content = self._handle_description(content, self.pom_content.description)
-        if len(self.transitive_closure_dependencies) == 0:
+        if len(self.dependencies_artifact_transitive_closure) == 0:
             content = self._remove_token(content, "#{dependencies}")
         else:
-            content = content.replace("#{dependencies}", self._gen_dependency_management())
+            dep_man_content = self._gen_dependency_management(self.dependencies_artifact_transitive_closure)
+            content = content.replace("#{dependencies}", dep_man_content)
 
         # we assume the template specified <packaging>jar</packaging>
-        # there room for improvement here for sure
+        # there's room for improvement here for sure
         expected_packaging = "<packaging>jar</packaging>"
         if not expected_packaging in content:
             raise Exception("The pom template must have %s" % expected_packaging)
@@ -628,8 +600,7 @@ class DependencyManagementPomGen(AbstractPomGen):
         
         return content
 
-    def _gen_dependency_management(self):
-        deps = self.transitive_closure_dependencies
+    def _gen_dependency_management(self, deps):
         content = ""
         content, indent = self._xml(content, "dependencyManagement", indent=_INDENT)
         content, indent = self._xml(content, "dependencies", indent)
@@ -654,15 +625,13 @@ class PomWithCompanionDependencyManagementPomGen(AbstractPomGen):
         self.pomgen.register_dependencies(dependencies)
         self.depmanpomgen.register_dependencies(dependencies)
 
-    def register_all_dependencies(self, crawled_bazel_packages,
-                                  crawled_external_dependencies,
-                                  transitive_closure_dependencies):
-        self.pomgen.register_all_dependencies(crawled_bazel_packages,
-                                              crawled_external_dependencies,
-                                              transitive_closure_dependencies)
-        self.depmanpomgen.register_all_dependencies(crawled_bazel_packages,
-                                                    crawled_external_dependencies,
-                                                    transitive_closure_dependencies)
+    def register_dependencies_transitive_closure__artifact(self, d):
+        self.pomgen.register_dependencies_transitive_closure__artifact(d)
+        self.depmanpomgen.register_dependencies_transitive_closure__artifact(d)
+
+    def register_dependencies_transitive_closure__library(self, d):
+        self.pomgen.register_dependencies_transitive_closure__library(d)
+        self.depmanpomgen.register_dependencies_transitive_closure__library(d)
 
     def gen(self, pomcontenttype):
         return self.pomgen.gen(pomcontenttype)
