@@ -81,8 +81,6 @@ class Crawler:
         self.pomgens = [] # all pomgen instances
         self.leafnodes = [] # all leafnodes discovered while crawling
 
-        self.crawled_external_dependencies = set() # all external dependencies discovered while crawling around
-
     def crawl(self, packages, follow_monorepo_references=True, force_release=False):
         """
         Crawls monorepo dependencies, starting at the specified packages.
@@ -139,11 +137,9 @@ class Crawler:
         self._push_transitives_to_parent()
 
 
-        # computing the right set of dependencies for each Node is done
+        # computing the set of dependencies for each Node is done
+
         # now compute the transitive closure of deps for each node
-        # we could do this only for the notes that care about this (those that
-        # need to generate a dependency management companion pom), but it is
-        # easier to run the same code for all of them
         target_to_transitive_closure_deps = self._compute_transitive_closures_of_deps()
 
 
@@ -175,30 +171,50 @@ class Crawler:
 
     def _register_dependencies_with_pomgen_instances(self, target_to_transitive_closure_deps):
         """
-        This method sets deps on pomgen instances. These are the deps that the
-        pomgen instances will actually end up using when generating pom.xml
-        files.
-        """
-        # there are 2 types of dep registrations: 
-        #   -> private/local, only the deps belonging to each pomgen instance
-        #      (the deps that will end up in the generated pom file)
-        #   -> global/all, all deps discovered during crawling
-        #      (can be used for a global dependencyManagement section)
+        This method sets various dependency lists on all pomgen instances:
 
-        # 1) local
+        - the direct dependencies that typically go into the generated pom
+        - the transitive closure of the direct dependenices
+        - the transitive closure of the library's dependencies
+        """
+        # register the direct dependencies
         for p in self.pomgens:
             target_key = self._get_target_key(p.bazel_package, p.dependency)
             dependencies = self.target_to_dependencies[target_key]
             p.register_dependencies(dependencies)
 
-        # 2) all
+        # register the transitive closure of dependencies belonging to the
+        # artifact
         deps = self._get_crawled_packages_as_deps()
         for p in self.pomgens:
+
             target_key = self._get_target_key(p.artifact_def.bazel_package, p.dependency)
-            transitive_closure_deps = target_to_transitive_closure_deps[target_key]
-            p.register_all_dependencies(deps, 
-                                        self.crawled_external_dependencies,
-                                        transitive_closure_deps)
+            art_deps = target_to_transitive_closure_deps[target_key]
+            p.register_dependencies_transitive_closure__artifact(art_deps)
+
+        # register the transitive closure of dependencies belonging to the
+        # library
+        for p in self.pomgens:
+            lib_deps = self._get_deps_transitive_closure_for_library(p.artifact_def.library_path, target_to_transitive_closure_deps)
+            p.register_dependencies_transitive_closure__library(lib_deps)
+
+    def _get_deps_transitive_closure_for_library(self, library_path,
+                                                 target_to_transitive_closure_deps):
+        all_deps = set()
+
+        nodes = self.library_to_nodes[library_path]
+        for n in nodes:
+            target_key = self._get_target_key(n.artifact_def.bazel_package, n.dependency)
+            all_deps.update(target_to_transitive_closure_deps[target_key])
+
+        # also include every artifact that is part of this library
+        # (we have already collected them above if they all reference each
+        # other, but these references are not guaranteed)
+        artifacts = self.library_to_artifact[library_path]
+        for art_def in artifacts:
+            all_deps.add(dependency.new_dep_from_maven_artifact_def(art_def, bazel_target=None))
+
+        return all_deps
 
     def _get_crawled_packages_as_deps(self):
         deps = [dependency.new_dep_from_maven_artifact_def(art_def, bazel_target=None) for art_def in self.package_to_artifact.values()]
@@ -239,7 +255,7 @@ class Crawler:
                 previous_pom = pomparser.format_for_comparison(art_def.released_pom_content)
                 pom_changed = current_pom != previous_pom
                 if pom_changed:
-                    logger.debug("pom change for %s %s" % (art_def, art_def.bazel_package))
+                    logger.debug("pom diff %s %s" % (art_def, art_def.bazel_package))
                     art_def.requires_release = True
                     art_def.release_reason = ReleaseReason.POM
 
@@ -489,7 +505,6 @@ class Crawler:
                 logger.debug("Source deps: %s" % "\n".join([str(d) for d in source_deps]))
                 logger.debug("Ext deps: %s" % "\n".join([str(d) for d in ext_deps]))
                 logger.debug("All deps: %s" % "\n".join([str(d) for d in all_deps]))
-            self.crawled_external_dependencies.update(ext_deps)
             node = Node(parent_node, artifact_def, pomgen.dependency)
             if follow_monorepo_references:
                 # crawl monorepo dependencies

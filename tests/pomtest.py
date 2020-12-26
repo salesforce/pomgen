@@ -96,7 +96,7 @@ class PomTest(unittest.TestCase):
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         pomgen = pom.DynamicPomGen(ws, artifact_def, dep, pom_template)
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
-        self.assertEquals(exepcted_pom, generated_pom)
+        self.assertEqual(exepcted_pom, generated_pom)
 
     def test_dynamic_pom__remove_description_token_if_no_value(self):
         """
@@ -117,7 +117,7 @@ class PomTest(unittest.TestCase):
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         pomgen = pom.DynamicPomGen(ws, artifact_def, dep, pom_template)
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
-        self.assertEquals(exepcted_pom, generated_pom)
+        self.assertEqual(exepcted_pom, generated_pom)
 
     def test_dynamic_pom__do_not_include_deps(self):
         """
@@ -217,12 +217,13 @@ monorepo artifact version #{version}
         """
         ws = workspace.Workspace("some/path", "", [], exclusions.src_exclusions(), pomcontent.NOOP)
         artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
-        srpc_artifact_def = buildpom.MavenArtifactDef("com.grail.srpc",
-                                                      "srpc-api", "5.6.7")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = "srpc #{com.grail.srpc:srpc-api:version}"
+        srpc_artifact_def = buildpom.MavenArtifactDef(
+            "com.grail.srpc", "srpc-api", "5.6.7", bazel_package="a/b/c")
+        srpc_dep = dependency.MonorepoDependency(srpc_artifact_def, bazel_target=None)
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
-        pomgen.register_all_dependencies(set([dependency.MonorepoDependency(srpc_artifact_def, bazel_target=None)]), set(), ())
+        pomgen.register_dependencies_transitive_closure__library(set([srpc_dep]))
 
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
         
@@ -244,7 +245,7 @@ monorepo artifact version #{version}
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
         art = buildpom.MavenArtifactDef("g","a","1", bazel_package="a/b/c")
         d = dependency.MonorepoDependency(art, bazel_target=None)
-        pomgen.register_all_dependencies(set([d]), set(), ())
+        pomgen.register_dependencies_transitive_closure__library(set([d]))
 
         with self.assertRaises(Exception) as ctx:
             pomgen.gen(pom.PomContentType.RELEASE)
@@ -316,18 +317,18 @@ monorepo artifact version #{version}
                 artifact = "ch.qos.logback:logback-classic:1.4.4",
             )""", [], exclusions.src_exclusions(), pomcontent.NOOP)
         artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.2.3")
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         srpc_artifact_def = buildpom.maven_artifact("com.grail.srpc",
                                                     "srpc-api", "5.6.7")
         srpc_artifact_def = buildpom._augment_art_def_values(srpc_artifact_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
-        dep = dependency.new_dep_from_maven_artifact_def(srpc_artifact_def)
+        srpc_dep = dependency.MonorepoDependency(srpc_artifact_def, bazel_target=None)
         artifact_def.custom_pom_template_content = """
 this artifact version #{version}
 logback #{ch.qos.logback:logback-classic:version}
 srpc #{com.grail.srpc:srpc-api:version}
 """
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
-        pomgen.register_all_dependencies(set([dependency.MonorepoDependency(srpc_artifact_def, bazel_target=None)]), set(), ())
-
+        pomgen.register_dependencies_transitive_closure__library(set([srpc_dep]))
         generated_pom = pomgen.gen(pomcontenttype=pom.PomContentType.GOLDFILE)
 
         self.assertIn("this artifact version ***", generated_pom)
@@ -425,16 +426,16 @@ __pomgen.end_dependency_customization__
 
         self.assertEqual(expected_pom, generated_pom)
 
-    def test_template__crawled_bazel_packages(self):
+    def test_template__library_transitives(self):
         """
-        Verifies that crawled bazel packages can be referenced using the 
-        property pomgen.crawled_bazel_packages.
+        Verifies that transitive dependencies can be referenced using the
+        property pomgen.transitive_closure_of_library_dependencies.
         """
         pom_template = """
 <project>
     <dependencyManagement>
         <dependencies>
-#{pomgen.crawled_bazel_packages}
+#{pomgen.transitive_closure_of_library_dependencies}
         </dependencies>
     </dependencyManagement>
 </project>
@@ -445,45 +446,10 @@ __pomgen.end_dependency_customization__
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>c.s.sconems</groupId>
-                <artifactId>abstractions</artifactId>
-                <version>0.0.1</version>
+                <groupId>com.grail.srpc</groupId>
+                <artifactId>srpc-api</artifactId>
+                <version>5.6.7</version>
             </dependency>
-        </dependencies>
-    </dependencyManagement>
-</project>
-"""
-        ws = workspace.Workspace("some/path", "", [], exclusions.src_exclusions(), pomcontent.NOOP)
-        artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.2.3")
-        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
-        artifact_def.custom_pom_template_content = pom_template
-        pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
-        crawled_package = dependency.ThirdPartyDependency("name", "c.s.sconems", "abstractions", "0.0.1")
-        pomgen.register_all_dependencies(set([crawled_package]), set(), ())
-
-        generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
-
-        self.assertEqual(expected_pom, generated_pom)
-
-    def test_template__crawled_external_deps(self):
-        """
-        Verifies that crawled external deps can be referenced using the 
-        property pomgen.crawled_external_dependencies.
-        """
-        pom_template = """
-<project>
-    <dependencyManagement>
-        <dependencies>
-#{pomgen.crawled_external_dependencies}
-        </dependencies>
-    </dependencyManagement>
-</project>
-"""
-
-        expected_pom = """
-<project>
-    <dependencyManagement>
-        <dependencies>
             <dependency>
                 <groupId>cg</groupId>
                 <artifactId>ca</artifactId>
@@ -498,8 +464,12 @@ __pomgen.end_dependency_customization__
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = pom_template
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
-        crawled_dep = dependency.ThirdPartyDependency("name", "cg", "ca", "0.0.1")
-        pomgen.register_all_dependencies(set(), set([crawled_dep]), ())
+        srpc_artifact_def = buildpom.MavenArtifactDef(
+            "com.grail.srpc", "srpc-api", "5.6.7", bazel_package="a/b/c")
+        internal_dep = dependency.MonorepoDependency(srpc_artifact_def, bazel_target=None)
+
+        external_dep = dependency.ThirdPartyDependency("name", "cg", "ca", "0.0.1")
+        pomgen.register_dependencies_transitive_closure__library(set([external_dep, internal_dep]))
 
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
 
@@ -532,7 +502,7 @@ __pomgen.start_dependency_customization__
                 </exclusions>
             </dependency>
 __pomgen.end_dependency_customization__
-#{pomgen.crawled_external_dependencies}
+#{pomgen.transitive_closure_of_library_dependencies}
         </dependencies>
     </dependencyManagement>
 </project>
@@ -568,7 +538,7 @@ __pomgen.end_dependency_customization__
         artifact_def.custom_pom_template_content = pom_template
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
         crawled_dep = dependency.ThirdPartyDependency("name", "cg", "ca", "0.0.1")
-        pomgen.register_all_dependencies(set(), set([crawled_dep]), ())
+        pomgen.register_dependencies_transitive_closure__library(set([crawled_dep]))
 
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
 
@@ -592,7 +562,7 @@ __pomgen.start_dependency_customization__
                 <classifier>sources</classifier>
             </dependency>
 __pomgen.end_dependency_customization__
-#{pomgen.crawled_external_dependencies}
+#{pomgen.transitive_closure_of_library_dependencies}
         </dependencies>
     </dependencyManagement>
 </project>
@@ -619,7 +589,7 @@ __pomgen.end_dependency_customization__
         artifact_def.custom_pom_template_content = pom_template
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
         crawled_dep = dependency.ThirdPartyDependency("name", "cg", "ca", "0.0.1")
-        pomgen.register_all_dependencies(set(), set([crawled_dep]), ())
+        pomgen.register_dependencies_transitive_closure__library(set([crawled_dep]))
 
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
 
@@ -655,7 +625,7 @@ __pomgen.end_dependency_customization__
         guava = dependency.new_dep_from_maven_art_str("google:guava:1", "guav")
         force = dependency.new_dep_from_maven_art_str("force:commons:1", "forc")
 
-        pomgen.register_all_dependencies(set(), set(), (guava, force,))
+        pomgen.register_dependencies_transitive_closure__artifact((guava, force,))
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
         
         self.assertIn("<packaging>pom</packaging>", generated_pom)

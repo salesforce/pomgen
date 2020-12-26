@@ -14,7 +14,7 @@
     <properties>
         <healthyfoods.version>#{com.pomgen.example:fruit-api:version}</healthyfoods.version>
     </properties>
-
+#{pomgen.crawled_bazel_packages}
     <dependencyManagement>
         <dependencies>
             <dependency>
