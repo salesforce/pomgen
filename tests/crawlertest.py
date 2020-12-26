@@ -16,6 +16,7 @@ from crawl import workspace
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 
 GROUP_ID = "group"
 POM_TEMPLATE_FILE = "foo.template"
@@ -193,24 +194,34 @@ class CrawlerTest(unittest.TestCase):
 
     def test_register_dependencies(self):
         """
-        Verifies that register_dependencies is called by the crawler.
+        Verifies that the register_dependencies* methods are called by the
+        crawler.
         """
         self._update_files(self.repo_root_path, ["libs/a/a1",])
         self._commit(self.repo_root_path)
 
         registered_deps = []
+        registered_artifact_deps = []
+        registered_library_deps = []
         import crawl.pom as pom
-        org_method = pom.TemplatePomGen.register_dependencies
+        register_deps_org_method = pom.TemplatePomGen.register_dependencies
+        register_deps_artifact_org_method = pom.TemplatePomGen.register_dependencies_transitive_closure__artifact
+        register_deps_library_org_method = pom.TemplatePomGen.register_dependencies_transitive_closure__library
         try:
-            def f(s, deps):
-                registered_deps.append(list(deps))
-            pom.TemplatePomGen.register_dependencies = f
+            pom.TemplatePomGen.register_dependencies = lambda s, deps: registered_deps.append(list(deps))
+            pom.TemplatePomGen.register_dependencies_transitive_closure__artifact = lambda s, deps: registered_artifact_deps.append(list(deps))
+            pom.TemplatePomGen.register_dependencies_transitive_closure__library = lambda s, deps: registered_library_deps.append(list(deps))
 
-            result = self.crawler.crawl(["libs/a/a1"],)
+            self.crawler.crawl(["libs/a/a1"],)
 
-            self.assertTrue(len(registered_deps) > 0)
+            self.assertTrue(len(registered_deps) > 0, "register_dependencies was not called")
+            self.assertTrue(len(registered_artifact_deps) > 0, "register_dependencies_transitive_closure__artifact was not called")
+            self.assertTrue(len(registered_library_deps) > 0, "register_dependencies_transitive_closure__library was not called")
+
         finally:
-            pom.TemplatePomGen.register_dependencies = org_method            
+            pom.TemplatePomGen.register_dependencies = register_deps_org_method
+            pom.TemplatePomGen.register_dependencies_transitive_closure__artifact = register_deps_artifact_org_method
+            pom.TemplatePomGen.register_dependencies_transitive_closure__library = register_deps_library_org_method
 
     def test_version_references_in_pom_template(self):
         """
@@ -463,8 +474,178 @@ class CrawlerTest(unittest.TestCase):
         self.assertEqual("libs/b/a1", node_b_a1.artifact_def.bazel_package)
         self.assertIs(node_b_a1.artifact_def.release_reason, rr.ReleaseReason.POM)
 
+    def test_pomgen_dependencies_state(self):
+        """
+        Verifies the dependencies set on pomgen instances.
+        """
+        # add one more library, D, so that C references D.
+        self._add_library("D", "3.0.0", self.repo_root_path, "libs/d", deps=None)
+        self._update_build_pom_deps(self.repo_root_path, "libs/c/a1", deps=["//libs/d/a1"])
+        self._update_files(self.repo_root_path, ["libs/a/a2", "libs/b/a2", "libs/c/a1"])
+        self._commit(self.repo_root_path)
+
+        result = self.crawler.crawl(["libs/a/a1"])
+
+        # LIB A A1
+        pomgen = [p for p in result.pomgens if p.artifact_def.bazel_package == "libs/a/a1"][0]
+
+        # direct dependencies
+        dependency_paths = [d.bazel_package for d in pomgen.dependencies]
+        self.assertEqual(2, len(dependency_paths))
+        self.assertIn("libs/b/a1", dependency_paths)
+        self.assertIn("libs/c/a1", dependency_paths)
+
+        # transitive closure of artifact dependencies
+        dependency_paths = [d.bazel_package for d in pomgen.dependencies_artifact_transitive_closure]
+        self.assertEqual(3, len(dependency_paths))
+        self.assertIn("libs/b/a1", dependency_paths)
+        self.assertIn("libs/c/a1", dependency_paths)
+        self.assertIn("libs/d/a1", dependency_paths)
+
+        # transitive closure of library dependencies
+        dependency_paths = [d.bazel_package for d in pomgen.dependencies_library_transitive_closure]
+        self.assertEqual(5, len(dependency_paths))
+        self.assertIn("libs/a/a1", dependency_paths) # own artifact included
+        self.assertIn("libs/a/a2", dependency_paths) # own artifact included
+        self.assertIn("libs/b/a1", dependency_paths)
+        self.assertIn("libs/c/a1", dependency_paths)
+        self.assertIn("libs/d/a1", dependency_paths)
+
+        # LIB A A2
+        pomgen = [p for p in result.pomgens if p.artifact_def.bazel_package == "libs/a/a2"][0]
+
+        # direct dependencies
+        dependency_paths = [d.bazel_package for d in pomgen.dependencies]
+        self.assertEqual(0, len(dependency_paths))
+
+        # transitive closure of artifact dependencies
+        dependency_paths = [d.bazel_package for d in pomgen.dependencies_artifact_transitive_closure]
+        self.assertEqual(0, len(dependency_paths))
+
+        # transitive closure of library dependencies
+        dependency_paths = [d.bazel_package for d in pomgen.dependencies_library_transitive_closure]
+        self.assertEqual(5, len(dependency_paths))
+        self.assertIn("libs/a/a1", dependency_paths) # own artifact included
+        self.assertIn("libs/a/a2", dependency_paths) # own artifact included
+        self.assertIn("libs/b/a1", dependency_paths)
+        self.assertIn("libs/c/a1", dependency_paths)
+        self.assertIn("libs/d/a1", dependency_paths)
+
+        # LIB B A1
+        pomgen = [p for p in result.pomgens if p.artifact_def.bazel_package == "libs/b/a1"][0]
+
+        # direct dependencies
+        dependency_paths = [d.bazel_package for d in pomgen.dependencies]
+        self.assertEqual(1, len(dependency_paths))
+        self.assertIn("libs/c/a1", dependency_paths)
+
+        # transitive closure of artifact dependencies
+        dependency_paths = [d.bazel_package for d in pomgen.dependencies_artifact_transitive_closure]
+        self.assertEqual(2, len(dependency_paths))
+        self.assertIn("libs/c/a1", dependency_paths)
+        self.assertIn("libs/d/a1", dependency_paths)
+
+        # transitive closure of library dependencies
+        dependency_paths = [d.bazel_package for d in pomgen.dependencies_library_transitive_closure]
+        self.assertEqual(4, len(dependency_paths))
+        self.assertIn("libs/b/a1", dependency_paths) # own artifact included
+        self.assertIn("libs/b/a2", dependency_paths) # own artifact included
+        self.assertIn("libs/c/a1", dependency_paths)
+        self.assertIn("libs/d/a1", dependency_paths)
+
+        # LIB B A2
+        pomgen = [p for p in result.pomgens if p.artifact_def.bazel_package == "libs/b/a2"][0]
+
+        # direct dependencies
+        dependency_paths = [d.bazel_package for d in pomgen.dependencies]
+        self.assertEqual(0, len(dependency_paths))
+
+        # transitive closure of artifact dependencies
+        dependency_paths = [d.bazel_package for d in pomgen.dependencies_artifact_transitive_closure]
+        self.assertEqual(0, len(dependency_paths))
+
+        # transitive closure of library dependencies
+        dependency_paths = [d.bazel_package for d in pomgen.dependencies_library_transitive_closure]
+        self.assertEqual(4, len(dependency_paths))
+        self.assertIn("libs/b/a1", dependency_paths) # own artifact included
+        self.assertIn("libs/b/a2", dependency_paths) # own artifact included
+        self.assertIn("libs/c/a1", dependency_paths)
+        self.assertIn("libs/d/a1", dependency_paths)
+
+        # LIB C A1
+        pomgen = [p for p in result.pomgens if p.artifact_def.bazel_package == "libs/c/a1"][0]
+
+        # direct dependencies
+        dependency_paths = [d.bazel_package for d in pomgen.dependencies]
+        self.assertEqual(1, len(dependency_paths))
+        self.assertIn("libs/d/a1", dependency_paths)
+
+        # transitive closure of artifact dependencies
+        dependency_paths = [d.bazel_package for d in pomgen.dependencies_artifact_transitive_closure]
+        self.assertEqual(1, len(dependency_paths))
+        self.assertIn("libs/d/a1", dependency_paths)
+
+        # transitive closure of library dependencies
+        dependency_paths = [d.bazel_package for d in pomgen.dependencies_library_transitive_closure]
+        self.assertEqual(3, len(dependency_paths))
+        self.assertIn("libs/c/a1", dependency_paths) # own artifact included
+        self.assertIn("libs/c/a2", dependency_paths) # own artifact included
+        self.assertIn("libs/d/a1", dependency_paths)
+
+        # LIB C A2
+        pomgen = [p for p in result.pomgens if p.artifact_def.bazel_package == "libs/c/a2"][0]
+
+        # direct dependencies
+        dependency_paths = [d.bazel_package for d in pomgen.dependencies]
+        self.assertEqual(0, len(dependency_paths))
+
+        # transitive closure of artifact dependencies
+        dependency_paths = [d.bazel_package for d in pomgen.dependencies_artifact_transitive_closure]
+        self.assertEqual(0, len(dependency_paths))
+
+        # transitive closure of library dependencies
+        dependency_paths = [d.bazel_package for d in pomgen.dependencies_library_transitive_closure]
+        self.assertEqual(3, len(dependency_paths))
+        self.assertIn("libs/c/a1", dependency_paths) # own artifact included
+        self.assertIn("libs/c/a2", dependency_paths) # own artifact included
+        self.assertIn("libs/d/a1", dependency_paths)
+
+        # LIB D A1
+        pomgen = [p for p in result.pomgens if p.artifact_def.bazel_package == "libs/d/a1"][0]
+
+        # direct dependencies
+        dependency_paths = [d.bazel_package for d in pomgen.dependencies]
+        self.assertEqual(0, len(dependency_paths))
+
+        # transitive closure of artifact dependencies
+        dependency_paths = [d.bazel_package for d in pomgen.dependencies_artifact_transitive_closure]
+        self.assertEqual(0, len(dependency_paths))
+
+        # transitive closure of library dependencies
+        dependency_paths = [d.bazel_package for d in pomgen.dependencies_library_transitive_closure]
+        self.assertEqual(2, len(dependency_paths))
+        self.assertIn("libs/d/a1", dependency_paths) # own artifact included
+        self.assertIn("libs/d/a2", dependency_paths) # own artifact included
+
+        # LIB D A2
+        _pomgen = [p for p in result.pomgens if p.artifact_def.bazel_package == "libs/d/a2"][0]
+
+        # direct dependencies
+        dependency_paths = [d.bazel_package for d in pomgen.dependencies]
+        self.assertEqual(0, len(dependency_paths))
+
+        # transitive closure of artifact dependencies
+        dependency_paths = [d.bazel_package for d in pomgen.dependencies_artifact_transitive_closure]
+        self.assertEqual(0, len(dependency_paths))
+
+        # transitive closure of library dependencies
+        dependency_paths = [d.bazel_package for d in pomgen.dependencies_library_transitive_closure]
+        self.assertEqual(2, len(dependency_paths))
+        self.assertIn("libs/d/a1", dependency_paths) # own artifact included
+        self.assertIn("libs/d/a2", dependency_paths) # own artifact included
+
     def _add_libraries(self, repo_root_path):
-        self._add_library("C", "3.0.0", repo_root_path, "libs/c", deps=[])
+        self._add_library("C", "3.0.0", repo_root_path, "libs/c", deps=None)
         self._add_library("B", "2.0.0", repo_root_path, "libs/b", deps=["//libs/c/a1"])
         self._add_library("A", "1.0.0", repo_root_path, "libs/a",
                           deps=["//libs/b/a1", "//libs/c/a1"])
@@ -567,6 +748,22 @@ maven_artifact_update(
         with open(os.path.join(path, "BUILD.pom"), "w") as f:
             f.write(content)
 
+    def _update_build_pom_deps(self, repo_root_path, package_rel_path, deps):
+
+        path = os.path.join(repo_root_path, package_rel_path, "MVN-INF", "BUILD.pom")
+        with open(path, "r") as f:
+            content = f.read()
+
+        if "deps" in content:
+            raise AssertionError("Implement me!")
+
+        i = content.index("pom_template_file")
+        j = content.index(",", i)
+        content = content[:j+1] + "\ndeps=[%s]," % ",".join(['"%s"' % d for d in deps]) + content[j+1:]
+
+        with open(path, "w") as f:
+            f.write(content)
+
     def _write_build_pom_released(self, repo_root_path, package_rel_path, released_version, released_artifact_hash):
         build_pom_released = """
 released_maven_artifact(
@@ -587,13 +784,13 @@ released_maven_artifact(
         with open(os.path.join(path, "LIBRARY.root"), "w") as f:
            f.write("foo")
 
-
     def _get_node_by_bazel_package(self, nodes, bazel_package):
         for n in nodes:
             if n.artifact_def.bazel_package == bazel_package:
                 return n
         else:
             self.fail("Did not find node for bazel package %s", bazel_package)
+
 
 if __name__ == '__main__':
     unittest.main()
