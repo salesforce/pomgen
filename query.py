@@ -94,7 +94,8 @@ if __name__ == "__main__":
                              cfg.excluded_dependency_paths, 
                              cfg.all_src_exclusions,
                              mvn_install_info,
-                             pomcontent.NOOP)
+                             pomcontent.NOOP, 
+                             args.verbose)
 
     determine_packages_to_process = (args.list_libraries or 
                                      args.list_artifacts or
@@ -132,8 +133,7 @@ if __name__ == "__main__":
         print(_to_json(all_artifacts))
 
     if args.list_all_external_dependencies:
-        external_dependencies = list(set(each for each in ws.name_to_external_dependencies.values() if each.bazel_label_name.startswith('@')))
-        external_dependencies.sort()
+        external_dependencies = sorted(ws.name_to_external_dependencies.values(), key=lambda dep: dep.bazel_label_name)
         all_ext_deps = []
         for external_dependency in external_dependencies:
             attrs = OrderedDict()
