@@ -8,6 +8,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 This module manages Bazel workspace-level entities.
 """
 
+from common import logger
 from crawl import artifactprocessor
 from crawl import buildpom
 from crawl import dependency
@@ -22,11 +23,13 @@ class Workspace:
     def __init__(self, repo_root_path, excluded_dependency_paths, 
                  source_exclusions, 
                  maven_install_info,
-                 pom_content):
+                 pom_content,
+                 verbose=False):
         self.repo_root_path = repo_root_path
         self.excluded_dependency_paths = excluded_dependency_paths
         self.source_exclusions = source_exclusions
         self.pom_content = pom_content
+        self.verbose = verbose
         self._name_to_ext_deps = self._parse_maven_install(maven_install_info, repo_root_path)
         self._package_to_artifact_def = {} # cache for artifact_def instances
 
@@ -150,5 +153,8 @@ class Workspace:
             for coord in mvn_coords:
                 dep = dependency.new_dep_from_maven_art_str(coord, mvn_install_name)
                 if dep.classifier != "sources":
-                    result[dep.bazel_label_name] = dep
+                    key = dep.bazel_label_name
+                    if self.verbose:
+                        logger.debug("Registered dep %s" % key)
+                    result[key] = dep
         return result
