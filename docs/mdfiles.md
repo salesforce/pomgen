@@ -31,6 +31,7 @@ The `<groupId>` for the generated pom.xml.
 ##### maven_artifact.artifact_id
 
 The `<artifactId>` for the generated pom.xml.
+This **must** match the name of the Bazel *java_library* or *java_binary* target name.
 
 ##### maven_artifact.version
 
