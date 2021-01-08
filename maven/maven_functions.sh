@@ -86,7 +86,7 @@ _for_each_pom() {
             # the filename of the jar built by Bazel uses this pattern:
             jar_artifact_path="$build_dir_package_path/lib${package_name}.jar"
             if [ ! -f "${jar_artifact_path}" ]; then
-                echo "WARN: lib${package_name}.jar not found, looking for alternatives"
+                echo "WARN: lib${package_name}.jar not found at path ${jar_artifact_path}, looking for alternatives..."
                 # we also support executable jars - this is an edge case but
                 # there are use-cases where it is convenient to be able to
                 # upload a "uber jar" to Nexus instead of building a docker
