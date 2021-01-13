@@ -93,8 +93,10 @@ class LibraryNode:
             return "++"
         elif release_reason == ReleaseReason.ALWAYS:
             return "!"
+        elif release_reason == ReleaseReason.UNCOMMITTED_CHANGES:
+            return "<>"
         else:
-            raise Exception("Unhandled release reason: %s" % self.release_reason)
+            raise Exception("Unhandled release reason: %s - this is a bug" % self.release_reason)
 
     def __str__(self):
         return self.library_path
@@ -146,20 +148,27 @@ def _get_lib_release_reason(current_release_reason, proposed_release_reason):
     if current_release_reason == ReleaseReason.FIRST:
         if proposed_release_reason in (ReleaseReason.ALWAYS,):
             return proposed_release_reason
-    if current_release_reason == ReleaseReason.ARTIFACT:
+    if current_release_reason == ReleaseReason.UNCOMMITTED_CHANGES:
         if proposed_release_reason in (ReleaseReason.FIRST,
                                        ReleaseReason.ALWAYS,):
+            return proposed_release_reason
+    if current_release_reason == ReleaseReason.ARTIFACT:
+        if proposed_release_reason in (ReleaseReason.FIRST,
+                                       ReleaseReason.ALWAYS,
+                                       ReleaseReason.UNCOMMITTED_CHANGES,):
             return proposed_release_reason
     if current_release_reason == ReleaseReason.POM:
         if proposed_release_reason in (ReleaseReason.FIRST,
                                        ReleaseReason.ALWAYS,
-                                       ReleaseReason.ARTIFACT,):
+                                       ReleaseReason.ARTIFACT,
+                                       ReleaseReason.UNCOMMITTED_CHANGES,):
             return proposed_release_reason
     if current_release_reason == ReleaseReason.TRANSITIVE:
         if proposed_release_reason in (ReleaseReason.FIRST,
                                        ReleaseReason.ALWAYS,
                                        ReleaseReason.ARTIFACT,
-                                       ReleaseReason.POM,):
+                                       ReleaseReason.POM,
+                                       ReleaseReason.UNCOMMITTED_CHANGES):
             return proposed_release_reason
 
     return current_release_reason

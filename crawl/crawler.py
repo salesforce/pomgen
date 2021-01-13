@@ -387,7 +387,7 @@ class Crawler:
     def _calculate_artifact_release_flag(self, force_release):
         """
         Given libraries A->B->C->D, if only C changed, we need to also mark
-        the reverse trasitive deps as having changed, so that we end up
+        the reverse transitive deps as having changed, so that we end up
         releasing A, B and C.
 
         If force_release is set, all artifacts are marked as requiring 
@@ -423,6 +423,8 @@ class Crawler:
                             artifact_def.release_reason = sibling_release_reason
                         elif transitive_dep_requires_release:
                             artifact_def.release_reason = ReleaseReason.TRANSITIVE
+                        else:
+                            raise Exception("release_reason not set on artifact - this is a bug")
 
         # process all artifact nodes belonging to the current library, 
         # otherwise we may miss some references to other libraries
@@ -556,15 +558,10 @@ class Crawler:
 
     def _any_artifact_requires_releasing(self, artifact_defs):
         """
-        Returns whether at least one artifact requires releasing, and the
-        release_reason, as a tuple.
+        Returns whether at least one of the specified artifacts requires
+        releasing, and its release_reason, as a tuple.
         """
-        requires_release = False
         for art_def in artifact_defs:
             if art_def.requires_release:
-                requires_release = True
-                if art_def.release_reason in (ReleaseReason.ARTIFACT, ReleaseReason.FIRST):
-                    return (True, art_def.release_reason)
-        if requires_release:
-            return (True, ReleaseReason.POM)
+                return (True, art_def.release_reason)
         return (False, None)

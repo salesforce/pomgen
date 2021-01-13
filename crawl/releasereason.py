@@ -11,4 +11,5 @@ class ReleaseReason(object):
     ALWAYS = "always released"
     TRANSITIVE = "transitive dependency changed"
     POM = "pom changed"
+    UNCOMMITTED_CHANGES = "artifact has uncommitted changes (dev)"
 
