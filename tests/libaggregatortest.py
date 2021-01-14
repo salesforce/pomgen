@@ -104,42 +104,55 @@ class LibAggregatorTest(unittest.TestCase):
         self.assertEqual("2.0.0-SNAPSHOT", lib.version)
         self.assertEqual(lib.library_path, "mylib2")
         self.assertTrue(lib.requires_release)
-        self.assertEqual(ReleaseReason.ARTIFACT, lib.release_reason)        
+        self.assertEqual(ReleaseReason.ARTIFACT, lib.release_reason)
+
+    def test_release_reason_precedence__always(self):
+        self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ALWAYS, ReleaseReason.ALWAYS))
+        self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ALWAYS, ReleaseReason.FIRST))
+        self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ALWAYS, ReleaseReason.ARTIFACT))
+        self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ALWAYS, ReleaseReason.POM))
+        self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ALWAYS, ReleaseReason.TRANSITIVE))
+        self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ALWAYS, ReleaseReason.UNCOMMITTED_CHANGES))
 
     def test_release_reason_precedence__first(self):
-        self.assertEqual(ReleaseReason.FIRST, crawl.libaggregator._get_lib_release_reason(ReleaseReason.FIRST, ReleaseReason.ARTIFACT))
-        self.assertEqual(ReleaseReason.FIRST, crawl.libaggregator._get_lib_release_reason(ReleaseReason.FIRST, ReleaseReason.FIRST))
-        self.assertEqual(ReleaseReason.FIRST, crawl.libaggregator._get_lib_release_reason(ReleaseReason.FIRST, ReleaseReason.TRANSITIVE))
-        self.assertEqual(ReleaseReason.FIRST, crawl.libaggregator._get_lib_release_reason(ReleaseReason.FIRST, ReleaseReason.POM))
         self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.FIRST, ReleaseReason.ALWAYS))
+        self.assertEqual(ReleaseReason.FIRST, crawl.libaggregator._get_lib_release_reason(ReleaseReason.FIRST, ReleaseReason.FIRST))
+        self.assertEqual(ReleaseReason.FIRST, crawl.libaggregator._get_lib_release_reason(ReleaseReason.FIRST, ReleaseReason.ARTIFACT))
+        self.assertEqual(ReleaseReason.FIRST, crawl.libaggregator._get_lib_release_reason(ReleaseReason.FIRST, ReleaseReason.POM))
+        self.assertEqual(ReleaseReason.FIRST, crawl.libaggregator._get_lib_release_reason(ReleaseReason.FIRST, ReleaseReason.TRANSITIVE))
+        self.assertEqual(ReleaseReason.FIRST, crawl.libaggregator._get_lib_release_reason(ReleaseReason.FIRST, ReleaseReason.UNCOMMITTED_CHANGES))
 
     def test_release_reason_precedence__artifact(self):
-        self.assertEqual(ReleaseReason.ARTIFACT, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ARTIFACT, ReleaseReason.ARTIFACT))
-        self.assertEqual(ReleaseReason.FIRST, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ARTIFACT, ReleaseReason.FIRST))
-        self.assertEqual(ReleaseReason.ARTIFACT, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ARTIFACT, ReleaseReason.TRANSITIVE))
-        self.assertEqual(ReleaseReason.ARTIFACT, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ARTIFACT, ReleaseReason.POM))
         self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ARTIFACT, ReleaseReason.ALWAYS))
-
-    def test_release_reason_precedence__transitive(self):
-        self.assertEqual(ReleaseReason.ARTIFACT, crawl.libaggregator._get_lib_release_reason(ReleaseReason.TRANSITIVE, ReleaseReason.ARTIFACT))
-        self.assertEqual(ReleaseReason.FIRST, crawl.libaggregator._get_lib_release_reason(ReleaseReason.TRANSITIVE, ReleaseReason.FIRST))
-        self.assertEqual(ReleaseReason.TRANSITIVE, crawl.libaggregator._get_lib_release_reason(ReleaseReason.TRANSITIVE, ReleaseReason.TRANSITIVE))
-        self.assertEqual(ReleaseReason.POM, crawl.libaggregator._get_lib_release_reason(ReleaseReason.TRANSITIVE, ReleaseReason.POM))
-        self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.TRANSITIVE, ReleaseReason.ALWAYS))
+        self.assertEqual(ReleaseReason.FIRST, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ARTIFACT, ReleaseReason.FIRST))
+        self.assertEqual(ReleaseReason.UNCOMMITTED_CHANGES, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ARTIFACT, ReleaseReason.UNCOMMITTED_CHANGES))
+        self.assertEqual(ReleaseReason.ARTIFACT, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ARTIFACT, ReleaseReason.ARTIFACT))
+        self.assertEqual(ReleaseReason.ARTIFACT, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ARTIFACT, ReleaseReason.POM))
+        self.assertEqual(ReleaseReason.ARTIFACT, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ARTIFACT, ReleaseReason.TRANSITIVE))
 
     def test_release_reason_precedence__pom(self):
-        self.assertEqual(ReleaseReason.ARTIFACT, crawl.libaggregator._get_lib_release_reason(ReleaseReason.POM, ReleaseReason.ARTIFACT))
-        self.assertEqual(ReleaseReason.FIRST, crawl.libaggregator._get_lib_release_reason(ReleaseReason.POM, ReleaseReason.FIRST))
-        self.assertEqual(ReleaseReason.POM, crawl.libaggregator._get_lib_release_reason(ReleaseReason.POM, ReleaseReason.TRANSITIVE))
-        self.assertEqual(ReleaseReason.POM, crawl.libaggregator._get_lib_release_reason(ReleaseReason.POM, ReleaseReason.POM))
         self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.POM, ReleaseReason.ALWAYS))
-        
-    def test_release_reason_precedence__force(self):
-        self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ALWAYS, ReleaseReason.ARTIFACT))
-        self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ALWAYS, ReleaseReason.FIRST))
-        self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ALWAYS, ReleaseReason.TRANSITIVE))
-        self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ALWAYS, ReleaseReason.POM))
-        self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.ALWAYS, ReleaseReason.ALWAYS))
+        self.assertEqual(ReleaseReason.FIRST, crawl.libaggregator._get_lib_release_reason(ReleaseReason.POM, ReleaseReason.FIRST))
+        self.assertEqual(ReleaseReason.UNCOMMITTED_CHANGES, crawl.libaggregator._get_lib_release_reason(ReleaseReason.POM, ReleaseReason.UNCOMMITTED_CHANGES))
+        self.assertEqual(ReleaseReason.ARTIFACT, crawl.libaggregator._get_lib_release_reason(ReleaseReason.POM, ReleaseReason.ARTIFACT))
+        self.assertEqual(ReleaseReason.POM, crawl.libaggregator._get_lib_release_reason(ReleaseReason.POM, ReleaseReason.POM))
+        self.assertEqual(ReleaseReason.POM, crawl.libaggregator._get_lib_release_reason(ReleaseReason.POM, ReleaseReason.TRANSITIVE))
+
+    def test_release_reason_precedence__transitive(self):
+        self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.TRANSITIVE, ReleaseReason.ALWAYS))
+        self.assertEqual(ReleaseReason.FIRST, crawl.libaggregator._get_lib_release_reason(ReleaseReason.TRANSITIVE, ReleaseReason.FIRST))
+        self.assertEqual(ReleaseReason.UNCOMMITTED_CHANGES, crawl.libaggregator._get_lib_release_reason(ReleaseReason.TRANSITIVE, ReleaseReason.UNCOMMITTED_CHANGES))
+        self.assertEqual(ReleaseReason.ARTIFACT, crawl.libaggregator._get_lib_release_reason(ReleaseReason.TRANSITIVE, ReleaseReason.ARTIFACT))
+        self.assertEqual(ReleaseReason.POM, crawl.libaggregator._get_lib_release_reason(ReleaseReason.TRANSITIVE, ReleaseReason.POM))
+        self.assertEqual(ReleaseReason.TRANSITIVE, crawl.libaggregator._get_lib_release_reason(ReleaseReason.TRANSITIVE, ReleaseReason.TRANSITIVE))
+
+    def test_release_reason_precedence__uncommitted(self):
+        self.assertEqual(ReleaseReason.ALWAYS, crawl.libaggregator._get_lib_release_reason(ReleaseReason.UNCOMMITTED_CHANGES, ReleaseReason.ALWAYS))
+        self.assertEqual(ReleaseReason.FIRST, crawl.libaggregator._get_lib_release_reason(ReleaseReason.UNCOMMITTED_CHANGES, ReleaseReason.FIRST))
+        self.assertEqual(ReleaseReason.UNCOMMITTED_CHANGES, crawl.libaggregator._get_lib_release_reason(ReleaseReason.UNCOMMITTED_CHANGES, ReleaseReason.ARTIFACT))
+        self.assertEqual(ReleaseReason.UNCOMMITTED_CHANGES, crawl.libaggregator._get_lib_release_reason(ReleaseReason.UNCOMMITTED_CHANGES, ReleaseReason.POM))
+        self.assertEqual(ReleaseReason.UNCOMMITTED_CHANGES, crawl.libaggregator._get_lib_release_reason(ReleaseReason.UNCOMMITTED_CHANGES, ReleaseReason.TRANSITIVE))
+        self.assertEqual(ReleaseReason.UNCOMMITTED_CHANGES, crawl.libaggregator._get_lib_release_reason(ReleaseReason.UNCOMMITTED_CHANGES, ReleaseReason.UNCOMMITTED_CHANGES))
 
     def _create_library_artifact_node(self, group_id, artifact_id, version,
                                       library_path, requires_release,
