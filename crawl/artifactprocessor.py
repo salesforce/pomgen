@@ -18,6 +18,7 @@ from crawl import git
 from crawl import releasereason
 import os
 
+
 def augment_artifact_def(repo_root_path, art_def, source_exclusions):
     art_def.library_path = _get_library_path(repo_root_path, art_def)
 
@@ -32,11 +33,19 @@ def augment_artifact_def(repo_root_path, art_def, source_exclusions):
                 art_def.requires_release = True
                 art_def.release_reason = releasereason.ReleaseReason.ARTIFACT
             else:
-                art_def.requires_release = False
+                # check for local edits - if found, set requires_release -
+                # this is to support a better local dev experience
+                local_edits = git.has_uncommitted_changes(repo_root_path, art_def.bazel_package, source_exclusions)
+                if local_edits:
+                    art_def.requires_release = True
+                    art_def.release_reason = releasereason.ReleaseReason.UNCOMMITTED_CHANGES
+                else:
+                    art_def.requires_release = False
         else:
             art_def.requires_release = True
             art_def.release_reason = releasereason.ReleaseReason.ALWAYS
     return art_def
+
 
 def _get_library_path(repo_root_path, art_def):
     """
@@ -55,6 +64,7 @@ def _get_library_path(repo_root_path, art_def):
         path = os.path.dirname(path)
         assert emergency_break < 50 # just in case
         emergency_break += 1
+
 
 def _has_changed_since_last_release(repo_root_path, art_def, source_exclusions):
     current_artifact_hash = git.get_dir_hash(repo_root_path, art_def.bazel_package, source_exclusions)
