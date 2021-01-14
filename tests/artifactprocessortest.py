@@ -15,6 +15,7 @@ import os
 import tempfile
 import unittest
 
+
 class ArtifactProcessorTest(unittest.TestCase):
 
     def test_artifact_def_without_relased_artifact_hash(self):        
@@ -112,6 +113,26 @@ class ArtifactProcessorTest(unittest.TestCase):
         self.assertNotEqual(None, art_def.requires_release)
         self.assertTrue(art_def.requires_release, "Expected artifact to require release")
         self.assertIs(releasereason.ReleaseReason.ARTIFACT, art_def.release_reason)
+
+    def test_artifact_with_changes_since_last_release__local_edits(self):
+        """
+        We added uncommitted change detection to improve the local developer
+        experience: any artifact that has uncommitted changes should get marked
+        as needing to be released.
+        """
+        package = "pack1/pack2"
+        repo_root_path = self._setup_repo_with_package(package)
+        current_artifact_hash = git.get_dir_hash(repo_root_path, package, exclusions.src_exclusions())
+        art_def = buildpom.MavenArtifactDef("g1", "a1", "1.1.0", released_version="1.2.0", bazel_package=package, released_artifact_hash=current_artifact_hash)
+        # add a new file ...
+        self._touch_file_at_path(repo_root_path, package, "", "Foo.java")
+        # ... but DON't commit
+        
+        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions())
+
+        self.assertNotEqual(None, art_def.requires_release)
+        self.assertTrue(art_def.requires_release, "Expected artifact to require release")
+        self.assertIs(releasereason.ReleaseReason.UNCOMMITTED_CHANGES, art_def.release_reason)
 
     def test_build_pom_changes_are_ignored(self):
         package = "a/b/c"
@@ -259,7 +280,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         self._touch_file_at_path(repo_root_path, "", "MVN-INF", "LIBRARY.root")
         repo_package = os.path.join(repo_root_path, package_rel_path)
         os.makedirs(repo_package)
-        self._touch_file_at_path(repo_root_path, package_rel_path, "MVN-INF", "BUILD")
+        self._touch_file_at_path(repo_root_path, package_rel_path, "MVN-INF", "BUILD.pom")
         run_cmd("git init .", cwd=repo_root_path)
         run_cmd("git config user.email 'test@example.com'", cwd=repo_root_path)
         run_cmd("git config user.name 'test example'", cwd=repo_root_path)
@@ -287,6 +308,7 @@ class ArtifactProcessorTest(unittest.TestCase):
     def _commit(self, repo_root_path):
         run_cmd("git add .", repo_root_path)
         run_cmd("git commit -m 'message'", repo_root_path)
+
 
 if __name__ == '__main__':
     unittest.main()
