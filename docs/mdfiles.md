@@ -48,18 +48,23 @@ Controls how the version attribute is incremented, possible values are `major|mi
 
 #### Optional Attributes
 
-#####  maven_artifact.change_detection
+##### maven_artifact.change_detection
 
 Controls whether change detection should be enabled for this artifact. If set to `False`, this artifact will always be marked as needing to be released (and a new pom will always be generated).
 
 Default value: `True`
 
-#####  maven_artifact.generate_dependency_management_pom
+##### maven_artifact.generate_dependency_management_pom
 
 If set to `True`, a dependency management only pom is generated in addition to the usual pom [example](../examples/dependency-management).
 
 Default value: `False`
 
+##### maven_artifact.include_deps:
+
+Whether pomgen should include dependencies in the generated pom. Setting this to False disables crawling source dependencies referenced by this bazel package. This is useful for some edge cases when uploading self-contained ("uber") jars.
+
+Default value: `True`
 
 ### LIBRARY.root (required)
 
