@@ -41,7 +41,7 @@ class MavenArtifactDef(object):
         pom. This defaults to True, because figuring out dependencies and 
         including them in the generated pom is kinda the main purpose of 
         pomgen.  However, there are some edge cases where we just want a dummy 
-        pom to facilitate upload to Nexus only (ie Beacon).
+        pom to facilitate upload to Nexus only.
         Setting this to False also disables crawling source dependencies 
         referenced by this bazel package.
 
