@@ -5,10 +5,12 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
+from common import maveninstallinfo
 from common import pomgenmode
 from crawl import buildpom
 from crawl import crawler as crawlerm
 from crawl import dependency
+from crawl import workspace
 import os
 import unittest
 
@@ -33,7 +35,9 @@ class CrawlerUnitTest(unittest.TestCase):
                                 pom_generation_mode=pomgenmode.SKIP,
                                 parent_node=parent_node)
         parent_node.children = (node,)
-        crawler = crawlerm.Crawler(workspace=None, pom_template=None)
+
+        crawler = crawlerm.Crawler(workspace=self._get_workspace(),
+                                   pom_template=None)
         # setup some other deps
         guava = self._get_3rdparty_dep("com.google:guava:20.0", "guava")
         self._associate_dep(crawler, parent_node, guava)
@@ -70,7 +74,8 @@ class CrawlerUnitTest(unittest.TestCase):
         a1_node.children = (a2_node,)
         a3_node = self._build_node("a3", "g/h/i", parent_node=a2_node)
         a2_node.children = (a3_node,)
-        crawler = crawlerm.Crawler(workspace=None, pom_template=None)
+        crawler = crawlerm.Crawler(workspace=self._get_workspace(),
+                                   pom_template=None)
         # setup 3rd party deps
         d1 = self._get_3rdparty_dep("com:d1:1.0.0", "d1")
         d2 = self._get_3rdparty_dep("com:d2:1.0.0", "d2")
@@ -120,7 +125,8 @@ class CrawlerUnitTest(unittest.TestCase):
         a1_node.children = (a2_node,)
         a3_node = self._build_node("a3", "g/h/i", parent_node=a2_node)
         a2_node.children = (a3_node,)
-        crawler = crawlerm.Crawler(workspace=None, pom_template=None)
+        crawler = crawlerm.Crawler(workspace=self._get_workspace(),
+                                   pom_template=None)
         # setup 3rd party deps
         d1 = self._get_3rdparty_dep("com:d1:1.0.0", "d1")
         d2 = self._get_3rdparty_dep("com:d2:1.0.0", "d2")
@@ -167,7 +173,8 @@ class CrawlerUnitTest(unittest.TestCase):
         a2_node = self._build_node("a2", "d/e/f", parent_node=a1_node)
         a3_node = self._build_node("a3", "g/h/i", parent_node=a1_node)
         a1_node.children = (a2_node, a3_node,)
-        crawler = crawlerm.Crawler(workspace=None, pom_template=None)
+        crawler = crawlerm.Crawler(workspace=self._get_workspace(),
+                                   pom_template=None)
         # setup 3rd party deps
         d1 = self._get_3rdparty_dep("com:d1:1.0.0", "d1")
         d2 = self._get_3rdparty_dep("com:d2:1.0.0", "d2")
@@ -215,7 +222,8 @@ class CrawlerUnitTest(unittest.TestCase):
         a10_node.parents = (a1_node, a2_node,)
         a1_node.children = (a10_node,)
         a2_node.children = (a10_node,)
-        crawler = crawlerm.Crawler(workspace=None, pom_template=None)
+        crawler = crawlerm.Crawler(workspace=self._get_workspace(),
+                                   pom_template=None)
         # setup 3rd party deps
         d1 = self._get_3rdparty_dep("com:d1:1.0.0", "d1")
         d2 = self._get_3rdparty_dep("com:d2:1.0.0", "d2")
@@ -239,6 +247,209 @@ class CrawlerUnitTest(unittest.TestCase):
         self.assertEqual(2, len(a1_deps))
         self.assertEqual(d1, a1_deps[0])
         self.assertEqual(d10, a1_deps[1])
+
+    def test_compute_transitive_closure__ext_deps_with_transitives(self):
+        """
+        a1 references both a2 and a3
+        a3 has ext deps: d1, d2
+        a2 has ext deps d1, d3
+        a1 has ext deps d4
+
+        ADDITIONALLY, the ext deps have the following transitives (which are not
+        listed in the BUILD file):
+
+            d1: t1, t2
+            d2: t3
+            d3: (no transitives)
+            d4: t4, t5
+
+        the expected transitive closure of deps are:
+        a3: d1, t1, t2, d2, t3
+        a2: d1, t1, t2, d3
+        a1: d4, t4, t5, d1, t1, t2, d3, d2, t3 (a2 and a3 also, but not tested)
+        """
+        a1_node = self._build_node("a1", "a/b/c")
+        a2_node = self._build_node("a2", "d/e/f", parent_node=a1_node)
+        a3_node = self._build_node("a3", "g/h/i", parent_node=a1_node)
+        a1_node.children = (a2_node, a3_node,)
+        ws = self._get_workspace()
+        crawler = crawlerm.Crawler(workspace=ws, pom_template=None)
+        # setup 3rd party deps
+        d1 = self._get_3rdparty_dep("com:d1:1.0.0", "d1")
+        t1 = self._get_3rdparty_dep("com:t1:1.0.0", "t1")
+        t2 = self._get_3rdparty_dep("com:t2:1.0.0", "t2")
+        ws.dependency_metadata.register_transitives(d1, [t1, t2])
+        d2 = self._get_3rdparty_dep("com:d2:1.0.0", "d2")
+        t3 = self._get_3rdparty_dep("com:t3:1.0.0", "t3")
+        ws.dependency_metadata.register_transitives(d2, [t3,])
+        self._associate_dep(crawler, a3_node, (d1, d2))
+        d3 = self._get_3rdparty_dep("com:d3:1.0.0", "d3")
+        self._associate_dep(crawler, a2_node, (d1, d3))
+        d4 = self._get_3rdparty_dep("com:d4:1.0.0", "d4")
+        t4 = self._get_3rdparty_dep("com:t4:1.0.0", "t4")
+        t5 = self._get_3rdparty_dep("com:t5:1.0.0", "t5")
+        ws.dependency_metadata.register_transitives(d4, [t4, t5])
+        self._associate_dep(crawler, a1_node, (d4,))
+        # setup necessary crawler state to simulate previous crawling
+        crawler.leafnodes = (a2_node, a3_node,)
+
+        target_to_all_deps = crawler._compute_transitive_closures_of_deps()
+
+        a3_deps = self._get_deps_for_node(a3_node, target_to_all_deps)
+        self.assertEqual(5, len(a3_deps))
+        self.assertEqual(d1, a3_deps[0])
+        self.assertEqual(t1, a3_deps[1])
+        self.assertEqual(t2, a3_deps[2])
+        self.assertEqual(d2, a3_deps[3])
+        self.assertEqual(t3, a3_deps[4])
+        a2_deps = self._get_deps_for_node(a2_node, target_to_all_deps)
+        self.assertEqual(4, len(a2_deps))
+        self.assertEqual(d1, a2_deps[0])
+        self.assertEqual(t1, a2_deps[1])
+        self.assertEqual(t2, a2_deps[2])
+        self.assertEqual(d3, a2_deps[3])
+        a1_deps = self._get_deps_for_node(a1_node, target_to_all_deps)
+        self.assertEqual(9, len(a1_deps))
+        self.assertEqual(d4, a1_deps[0])
+        self.assertEqual(t4, a1_deps[1])
+        self.assertEqual(t5, a1_deps[2])
+        self.assertEqual(d1, a1_deps[3])
+        self.assertEqual(t1, a1_deps[4])
+        self.assertEqual(t2, a1_deps[5])
+        self.assertEqual(d3, a1_deps[6])
+        self.assertEqual(d2, a1_deps[7])
+        self.assertEqual(t3, a1_deps[8])
+
+    def test_compute_transitive_closure__ext_deps_with_same_transitives(self):
+        """
+        a1 references both a2 and a3
+        a3 has ext deps: d1, d2
+        a2 has ext deps d1, d3
+        a1 has ext deps d4
+
+        ADDITIONALLY, the ext deps have the following transitives (which are not
+        listed in the BUILD file):
+
+            d1: t1
+            d2: t2
+            d3: t1
+            d4: t2
+
+        the expected transitive closure of deps are:
+        a3: d1, t1, d2, t2
+        a2: d1, t1, d3
+        a1: d4, t2, d1, t1, d3, d2 (a2 and a3 also, but not tested)
+        """
+        a1_node = self._build_node("a1", "a/b/c")
+        a2_node = self._build_node("a2", "d/e/f", parent_node=a1_node)
+        a3_node = self._build_node("a3", "g/h/i", parent_node=a1_node)
+        a1_node.children = (a2_node, a3_node,)
+        ws = self._get_workspace()
+        crawler = crawlerm.Crawler(workspace=ws, pom_template=None)
+        # setup 3rd party deps
+        d1 = self._get_3rdparty_dep("com:d1:1.0.0", "d1")
+        t1 = self._get_3rdparty_dep("com:t1:1.0.0", "t1")
+        ws.dependency_metadata.register_transitives(d1, [t1,])
+        d2 = self._get_3rdparty_dep("com:d2:1.0.0", "d2")
+        t2 = self._get_3rdparty_dep("com:t2:1.0.0", "t2")
+        ws.dependency_metadata.register_transitives(d2, [t2,])
+        self._associate_dep(crawler, a3_node, (d1, d2))
+        d3 = self._get_3rdparty_dep("com:d3:1.0.0", "d3")
+        ws.dependency_metadata.register_transitives(d3, [t1,])
+        self._associate_dep(crawler, a2_node, (d1, d3))
+        d4 = self._get_3rdparty_dep("com:d4:1.0.0", "d4")
+        ws.dependency_metadata.register_transitives(d4, [t2,])
+        self._associate_dep(crawler, a1_node, (d4,))
+        # setup necessary crawler state to simulate previous crawling
+        crawler.leafnodes = (a2_node, a3_node,)
+
+        target_to_all_deps = crawler._compute_transitive_closures_of_deps()
+
+        a3_deps = self._get_deps_for_node(a3_node, target_to_all_deps)
+        self.assertEqual(4, len(a3_deps))
+        self.assertEqual(d1, a3_deps[0])
+        self.assertEqual(t1, a3_deps[1])
+        self.assertEqual(d2, a3_deps[2])
+        self.assertEqual(t2, a3_deps[3])
+        a2_deps = self._get_deps_for_node(a2_node, target_to_all_deps)
+        self.assertEqual(3, len(a2_deps))
+        self.assertEqual(d1, a2_deps[0])
+        self.assertEqual(t1, a2_deps[1])
+        self.assertEqual(d3, a2_deps[2])
+        a1_deps = self._get_deps_for_node(a1_node, target_to_all_deps)
+        self.assertEqual(6, len(a1_deps))
+        self.assertEqual(d4, a1_deps[0])
+        self.assertEqual(t2, a1_deps[1])
+        self.assertEqual(d1, a1_deps[2])
+        self.assertEqual(t1, a1_deps[3])
+        self.assertEqual(d3, a1_deps[4])
+        self.assertEqual(d2, a1_deps[5])
+
+    def test_compute_transitive_closure__ext_deps_some_listed_transitives(self):
+        """
+        a1 references both a2 and a3
+        a3 has ext deps: d1, d2, t1, d3
+        a2 has ext deps t1, t3, d1
+        a1 has ext deps t3, t2, d4
+
+        ADDITIONALLY, the ext deps have the following transitives (which are not
+        listed in the BUILD file):
+
+            d1: t1, t2
+            d2: t3
+
+        the expected transitive closure of deps are:
+        a3: d1, t2, d2, t3, t1, d3
+        a2: t1, t3, d1, t2
+        a1: t3, t2, d4, t1, d1, d2, d3 (a2 and a3 also, but not tested)
+        """
+        a1_node = self._build_node("a1", "a/b/c")
+        a2_node = self._build_node("a2", "d/e/f", parent_node=a1_node)
+        a3_node = self._build_node("a3", "g/h/i", parent_node=a1_node)
+        a1_node.children = (a2_node, a3_node,)
+        ws = self._get_workspace()
+        crawler = crawlerm.Crawler(workspace=ws, pom_template=None)
+        # setup 3rd party deps
+        d1 = self._get_3rdparty_dep("com:d1:1.0.0", "d1")
+        t1 = self._get_3rdparty_dep("com:t1:1.0.0", "t1")
+        t2 = self._get_3rdparty_dep("com:t2:1.0.0", "t2")
+        ws.dependency_metadata.register_transitives(d1, [t1, t2])
+        d2 = self._get_3rdparty_dep("com:d2:1.0.0", "d2")
+        t3 = self._get_3rdparty_dep("com:t3:1.0.0", "t3")
+        ws.dependency_metadata.register_transitives(d2, [t3,])
+        d3 = self._get_3rdparty_dep("com:d3:1.0.0", "d3")
+        self._associate_dep(crawler, a3_node, (d1, d2, t1, d3))
+        self._associate_dep(crawler, a2_node, (t1, t3, d1))
+        d4 = self._get_3rdparty_dep("com:d4:1.0.0", "d4")
+        self._associate_dep(crawler, a1_node, (t3, t2, d4,))
+        # setup necessary crawler state to simulate previous crawling
+        crawler.leafnodes = (a2_node, a3_node,)
+
+        target_to_all_deps = crawler._compute_transitive_closures_of_deps()
+
+        a3_deps = self._get_deps_for_node(a3_node, target_to_all_deps)
+        self.assertEqual(6, len(a3_deps))
+        self.assertEqual(d1, a3_deps[0])
+        self.assertEqual(t2, a3_deps[1])
+        self.assertEqual(d2, a3_deps[2])
+        self.assertEqual(t3, a3_deps[3])
+        self.assertEqual(t1, a3_deps[4])
+        self.assertEqual(d3, a3_deps[5])
+        a2_deps = self._get_deps_for_node(a2_node, target_to_all_deps)
+        self.assertEqual(4, len(a2_deps))
+        self.assertEqual(t1, a2_deps[0])
+        self.assertEqual(t3, a2_deps[1])
+        self.assertEqual(d1, a2_deps[2])
+        self.assertEqual(t2, a2_deps[3])
+        a1_deps = self._get_deps_for_node(a1_node, target_to_all_deps)
+        self.assertEqual(7, len(a1_deps))
+        self.assertEqual(t3, a1_deps[0])
+        self.assertEqual(t2, a1_deps[1])
+        self.assertEqual(d4, a1_deps[2])
+        self.assertEqual(t1, a1_deps[3])
+        self.assertEqual(d1, a1_deps[4])
+        self.assertEqual(d2, a1_deps[5])
+        self.assertEqual(d3, a1_deps[6])
 
     def _build_node(self, artifact_id, bazel_package,
                     pom_generation_mode=pomgenmode.DYNAMIC,
@@ -266,6 +477,13 @@ class CrawlerUnitTest(unittest.TestCase):
 
     def _get_3rdparty_dep(self, artifact_str, name):
         return dependency.new_dep_from_maven_art_str(artifact_str, name)
+
+    def _get_workspace(self):
+        return workspace.Workspace(repo_root_path="a/b/c",
+                                   excluded_dependency_paths=[],
+                                   source_exclusions=[],
+                                   maven_install_info=maveninstallinfo.NOOP,
+                                   pom_content="",)
 
 
 if __name__ == '__main__':

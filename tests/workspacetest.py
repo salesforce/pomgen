@@ -23,16 +23,17 @@ import unittest
 class WorkspaceTest(unittest.TestCase):
 
     def setUp(self):
-        self.orig_bazel_query_maven_install = bazel.query_maven_install
+        self.orig_bazel_parse_maven_install = bazel.parse_maven_install
+        f = dependency.new_dep_from_maven_art_str
         query_result = [
-            "org.apache.maven:maven-artifact:3.3.9",
-            "com.google.guava:guava:23.0",
-            "ch.qos.logback:logback-classic:1.2.3",
+            (f("org.apache.maven:maven-artifact:3.3.9", "maven"), [], []),
+            (f("com.google.guava:guava:23.0", "maven"), [], []),
+            (f("ch.qos.logback:logback-classic:1.2.3", "maven"), [], [])
         ]
-        bazel.query_maven_install = lambda json_file_path: query_result
+        bazel.parse_maven_install = lambda name, path: query_result
     
     def tearDown(self):
-        bazel.query_maven_install = self.orig_bazel_query_maven_install
+        bazel.parse_maven_install = self.orig_bazel_parse_maven_install
 
     def test_normalize_deps__default_removes_refs_to_same_package(self):
         ws = workspace.Workspace("so/path", [], exclusions.src_exclusions(),
@@ -89,6 +90,19 @@ class WorkspaceTest(unittest.TestCase):
         self.assertEqual("1.2.3", deps[0].version)
         self.assertTrue(deps[0].external)
         self.assertIsNone(deps[0].bazel_package)
+
+    def test_parse_ext_dep__unknown_dep(self):
+        """
+        Verifies the error that is thrown when an unknown dep is encountered.
+        """
+        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+                                 maven_install_info=self._mocked_mvn_install_info("maven"),
+                                 pom_content=pomcontent.NOOP)
+
+        with self.assertRaises(Exception) as ctx:
+            deps = ws.parse_dep_labels(["@maven//:bad_qos_logback_logback_classic"])
+        self.assertIn("json files have been registered", str(ctx.exception))
+        self.assertIn("maven_install_paths in the pomgen config file", str(ctx.exception))
 
     def test_excluded_dependency_paths(self):
         """

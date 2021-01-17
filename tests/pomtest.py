@@ -32,17 +32,23 @@ TEST_POM_TEMPLATE = """
 class PomTest(unittest.TestCase):
 
     def setUp(self):
-        self.orig_bazel_query_maven_install = bazel.query_maven_install
+        f = dependency.new_dep_from_maven_art_str
+        all_excluded_dep = f("*:*:-1", "maven")
+        t1_dep = f("gt1:t1:1.0.0", "maven")
+        t2_dep = f("gt2:t2:1.0.0", "maven")
+        e1_dep = f("ge1:e1:-1.0.0", "maven")
+        self.orig_bazel_parse_maven_install = bazel.parse_maven_install
         query_result = [
-            "org.apache.maven:maven-artifact:3.3.9",
-            "com.google.guava:guava:23.0",
-            "ch.qos.logback:logback-classic:1.2.3",
-            "aopalliance:aopalliance:jar:1.0.0",
+            (f("com.google.guava:guava:23.0", "maven"), [t1_dep, t2_dep], [all_excluded_dep]),
+            (f("org.apache.maven:maven-artifact:3.3.9", "maven"), [], []),
+            (f("ch.qos.logback:logback-classic:1.2.3", "maven"), [], []),
+            (f("aopalliance:aopalliance:jar:1.0.0", "maven"), [], [e1_dep]),
+            (t2_dep, [], []),
         ]
-        bazel.query_maven_install = lambda json_file_path: query_result
+        bazel.parse_maven_install = lambda name, path: query_result
     
     def tearDown(self):
-        bazel.query_maven_install = self.orig_bazel_query_maven_install
+        bazel.parse_maven_install = self.orig_bazel_parse_maven_install
 
     def test_dynamic_pom__sanity(self):
         """
@@ -58,7 +64,7 @@ class PomTest(unittest.TestCase):
 
         org_function = bazel.query_java_library_deps_attributes
         try:
-            bazel.query_java_library_deps_attributes = lambda r, p: ("@maven//:com_google_guava_guava", "@maven//:aopalliance_aopalliance", )
+            bazel.query_java_library_deps_attributes = lambda r, p: ("@maven//:com_google_guava_guava", "@maven//:aopalliance_aopalliance", "@maven//:ch_qos_logback_logback_classic", "@maven//:gt2_t2" )
             _, _, deps = pomgen.process_dependencies()
             pomgen.register_dependencies(deps)
             generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
@@ -78,9 +84,41 @@ class PomTest(unittest.TestCase):
                 </exclusion>
             </exclusions>""", generated_pom)
 
-            aop_index = generated_pom.index("aopalliance")
-            guava_index = generated_pom.index("guava")
-            self.assertTrue(guava_index < aop_index) # deps are BUILD file order
+            self.assertIn("""<groupId>aopalliance</groupId>
+            <artifactId>aopalliance</artifactId>
+            <version>1.0.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>ge1</groupId>
+                    <artifactId>e1</artifactId>
+                </exclusion>
+            </exclusions>""", generated_pom)
+
+            self.assertIn("""<dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.2.3</version>
+        </dependency>""", generated_pom)
+
+            self.assertIn("""    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>gt1</groupId>
+                <artifactId>t1</artifactId>
+                <version>1.0.0</version>
+            </dependency>""", generated_pom)
+
+            # deps are BUILD file order
+            aop_index = generated_pom.index("<artifactId>aopalliance</artifactId>")
+            guava_index = generated_pom.index("<artifactId>guava</artifactId>")
+            self.assertTrue(guava_index < aop_index)
+
+            # gt2:t2 is a transitive to guava, but because it is also
+            # referenced explicitly, it is excluded from <dependencyManagement>
+            depman_index = generated_pom.index("<dependencyManagement>")
+            t2_index = generated_pom.index("<artifactId>t2</artifactId>")
+            self.assertTrue(t2_index < depman_index) # t2 is not managed
+            self.assertEqual(1, generated_pom.count("<artifactId>t2</artifactId>"))
         finally:
             bazel.query_java_library_deps_attributes = org_function
 
@@ -132,8 +170,47 @@ class PomTest(unittest.TestCase):
         artifact_def = buildpom.maven_artifact("g1", "a2", "1.2.3")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         pomgen = pom.DynamicPomGen(ws, artifact_def, dep, pom_template)
+
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
+
         self.assertEqual(exepcted_pom, generated_pom)
+
+    def test_dyamic_pom__no_dep_management(self):
+        """
+        If there are not registered transitives, we don't generate
+        a dependencyManagement section.
+        """
+        # we need to overwrite what the default setUp method did to remove all
+        # transitives
+        f = dependency.new_dep_from_maven_art_str
+        query_result = [
+            (f("com.google.guava:guava:23.0", "maven"), [], []),
+        ]
+        orig_bazel_parse_maven_install = bazel.parse_maven_install
+        bazel.parse_maven_install = lambda name, path: query_result
+        artifact_def = buildpom.maven_artifact("g1", "a2", "1.2.3")
+        artifact_def = buildpom._augment_art_def_values(artifact_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+                                 self._mocked_mvn_install_info("maven"),
+                                 pomcontent.NOOP)
+        pomgen = pom.DynamicPomGen(ws, artifact_def, dep, TEST_POM_TEMPLATE)
+        org_function = bazel.query_java_library_deps_attributes
+        try:
+            bazel.query_java_library_deps_attributes = lambda r, p: ("@maven//:com_google_guava_guava", )
+            _, _, deps = pomgen.process_dependencies()
+            pomgen.register_dependencies(deps)
+
+            generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
+
+            self.assertIn("""<dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>23.0</version>""", generated_pom)
+            self.assertNotIn("<dependencyManagement>", generated_pom)
+
+        finally:
+            bazel.query_java_library_deps_attributes = org_function
 
     def test_dynamic_pom__do_not_include_deps(self):
         """

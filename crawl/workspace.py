@@ -10,9 +10,10 @@ This module manages Bazel workspace-level entities.
 
 from common import logger
 from crawl import artifactprocessor
+from crawl import bazel
 from crawl import buildpom
 from crawl import dependency
-from crawl import bazel
+from crawl import dependencymd
 
 class Workspace:
     """
@@ -30,8 +31,10 @@ class Workspace:
         self.source_exclusions = source_exclusions
         self.pom_content = pom_content
         self.verbose = verbose
+        self.dependency_metadata = dependencymd.DependencyMetadata()
         self._name_to_ext_deps = self._parse_maven_install(maven_install_info, repo_root_path)
         self._package_to_artifact_def = {} # cache for artifact_def instances
+
 
     @property
     def name_to_external_dependencies(self):
@@ -149,12 +152,12 @@ class Workspace:
         result = {}
         for name_and_path in maven_install_info.get_maven_install_names_and_paths(repo_root_path):
             mvn_install_name, json_file_path = name_and_path
-            mvn_coords = bazel.query_maven_install(json_file_path)
-            for coord in mvn_coords:
-                dep = dependency.new_dep_from_maven_art_str(coord, mvn_install_name)
-                if dep.classifier != "sources":
-                    key = dep.bazel_label_name
-                    if self.verbose:
-                        logger.debug("Registered dep %s" % key)
-                    result[key] = dep
+            parse_result = bazel.parse_maven_install(mvn_install_name, json_file_path)
+            for dep, transitives, exclusions in parse_result:
+                key = dep.bazel_label_name
+                if self.verbose:
+                    logger.debug("Registered dep %s" % key)
+                result[key] = dep
+                self.dependency_metadata.register_transitives(dep, transitives)
+                self.dependency_metadata.register_exclusions(dep, exclusions)
         return result

@@ -33,7 +33,7 @@ def _parse_arguments(args):
     parser.add_argument("--repo_root", type=str, required=False,
         help="optional - the root of the repository")
     parser.add_argument("--stdin", required=False, action='store_true',
-        help="optional - reads dependencies from stdin - this is useful to chain bazel query command(s), as input to this script. In this mode, this script will look for dependencies of the form \"@<name>//jar\", one on each line. Some special dependencies (for example @remote), are ignored.")
+        help="optional - reads dependencies from stdin - this is useful to chain bazel query command(s), as input to this script. In this mode, this script will look for dependencies of the form \"@<maven_install_name>//:<dep>\" (the same syntax that is used in BUILD files), one on each line. Some special dependencies (for example @remote), are ignored.")
     parser.add_argument("--group_id", type=str, required=False,
         help="optional - the groupId to use in the generated pom")
     parser.add_argument("--artifact_id", type=str, required=False,

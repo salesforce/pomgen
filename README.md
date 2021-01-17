@@ -6,6 +6,14 @@ The set of scripts in this repository provides a solution for:
  - Generating pom.xml files for jars built built by Bazel's ```java_library``` rule
  - Uploading the pom.xmls and jars to a Maven Artifact Repository such as Nexus (or installing them into the local Maven Repository at ~/.m2/repository)
 
+pomgen does not run as part of the Bazel build - therefore Bazel BUILD files can remain free of pom.xml related metadata.
+
+## Usage Requirements
+
+- External Maven Central/Nexus dependencies **must** be managed using [rules_jvm_external](https://github.com/bazelbuild/rules_jvm_external)'s `maven_install` rule
+- Artifacts **must** be [pinned](https://github.com/bazelbuild/rules_jvm_external#pinning-artifacts-and-integration-with-bazels-downloader), because pomgen parses the pinned artifacts' json file(s)
+  - The location of all pinned artifact json files must be declared in the pomgen [config file](#configuration) by setting `maven_install_paths`
+
 ## Setup
 
  - For each Maven Artifact producing Bazel Package, a [BUILD.pom](examples/hello-world/healthyfoods/fruit-api/MVN-INF/BUILD.pom) file defines Maven specific metadata

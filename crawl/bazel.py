@@ -14,6 +14,7 @@ requested data.
 from common import mdfiles
 from common.os_util import run_cmd
 from common import logger
+from crawl import dependency
 import os
 import json
 
@@ -89,21 +90,38 @@ def query_all_libraries(repository_root_path, packages):
     return lib_roots
 
 
-def query_maven_install(json_file_path):
+def parse_maven_install(mvn_install_name, json_file_path):
     """
-    Return a list of strings each a Maven "coord"* from the specified "pinned" 
-    dependencies json file.
+    Returns a list of tuples, one item for each dependency managed by the 
+    specified maven_install json file: (dep, transitives, exclusions)
 
-    * group_id:artifact_id:[packaging]:[classifier]:version
+        dep: dependency.Dependency instance managed by the maven_install rule
+        transitives: for the dep, the transitive closure of dependencies, as
+                     list of dependency.Dependency instances
+        exclusions: for the dep, the transitives that are explicitly excluded,
+                    as a list of dependency.Dependency instances
     """
-    all_coords = []
+    result = []
     logger.info("Processing pinned dependencies [%s]" % json_file_path)
-    with open(json_file_path, "r") as install_input:
-        install_json = json.load(install_input)
+    with open(json_file_path, "r") as f:
+        content = f.read()
+        install_json = json.loads(content)
         json_deps = install_json["dependency_tree"]["dependencies"]
         for json_dep in json_deps:
-            all_coords.append(json_dep["coord"])
-    return all_coords
+            coord = json_dep["coord"]
+            dep = dependency.new_dep_from_maven_art_str(coord, mvn_install_name)
+            if dep.classifier != "sources":
+                transitives = [dependency.new_dep_from_maven_art_str(d, mvn_install_name) for d in json_dep["dependencies"]]
+                # exclusions only specify group_id:artifact_id - we use
+                # dependency.Dependency instances instead of raw strings for
+                # consistency, but then we need to add a dummy version
+                dummy_version = "-1"
+                if "exclusions" in json_dep:
+                    exclusions = [dependency.new_dep_from_maven_art_str("%s:%s" % (d, dummy_version), mvn_install_name) for d in json_dep["exclusions"]]
+                else:
+                    exclusions = ()
+                result.append((dep, transitives, exclusions))
+    return result
 
 
 def target_pattern_to_path(target_pattern):
