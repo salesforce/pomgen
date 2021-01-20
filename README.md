@@ -1,5 +1,7 @@
 # pomgen
 
+:octocat: Please do us a huge favor. If you think this project could be useful for you, now or in the future, please hit the **Star** button at the top. That helps us advocate for more resources on this project. Thanks!
+
 ## Overview
 
 The set of scripts in this repository provides a solution for:
