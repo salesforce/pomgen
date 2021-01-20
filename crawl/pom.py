@@ -509,12 +509,17 @@ class DynamicPomGen(AbstractPomGen):
         if len(self.dependencies) == 0:
             content = self._remove_token(content, "#{dependencies}")
         else:
-            content = content.replace("#{dependencies}", self._gen_dependencies(pomcontenttype))
+            content = content.replace("#{dependencies}", self._gen_all_dependencies_sections(pomcontenttype))
         return content
 
     def _load_additional_dependencies_hook(self):
         return _query_dependencies(self._workspace, self._artifact_def,
                                    self._dependency)
+
+    def _gen_all_dependencies_sections(self, pomcontenttype):
+        dep_section = self._gen_dependencies(pomcontenttype)
+        depman_section = self._gen_dep_management(pomcontenttype)
+        return dep_section if depman_section is None else "%s\n%s" % (dep_section, depman_section)
 
     def _gen_dependencies(self, pomcontenttype):
         deps = self.dependencies
@@ -526,19 +531,50 @@ class DynamicPomGen(AbstractPomGen):
         content, indent = self._xml(content, "dependencies", indent=_INDENT)
         for dep in deps:
             content, indent = self._gen_dependency_element(pomcontenttype, dep, content, indent, close_element=False)
-            if dep.bazel_package is None:
-                # for 3rd party deps that do not live in the monorepo, add
-                # exclusions to mimic how dependencies are handled in BUILD
-                # files
-                excluded_group_and_artifact_ids = [("*", "*")]
-                excluded_group_and_artifact_ids += self._get_explicit_exclusions_for_dep(dep)
+            # handle <exclusions>
+            excluded_group_and_artifact_ids = [(d.group_id, d.artifact_id) for d in self._workspace.dependency_metadata.get_transitive_exclusions(dep)]
+            excluded_group_and_artifact_ids += self._get_hardcoded_exclusions_for_dep(dep)
+            if len(excluded_group_and_artifact_ids) > 0:
                 content, indent = self._gen_exclusions(content, indent, excluded_group_and_artifact_ids)
 
             content, indent = self._xml(content, "dependency", indent, close_element=True)
         content, indent = self._xml(content, "dependencies", indent, close_element=True)
         return content
 
-    def _get_explicit_exclusions_for_dep(self, dep):
+    def _gen_dep_management(self, pomcontenttype):
+        """
+        The transitives of the deps listed in the pom are added to
+        to dependency management - this is to account for any version overrides
+        that need to carry over to the Maven build.
+        """
+        deps = set(self.dependencies)
+        transitives = set()
+        for dep in deps:
+            for transitive in self._workspace.dependency_metadata.get_transitive_closure(dep):
+                if transitive in deps:
+                    # if a dep is listed as <dependency> in the <dependencies>
+                    # section, we won't add it also to <dependencyManagement>
+                    pass
+                else:
+                    transitives.add(transitive)
+
+        if len(transitives) == 0:
+            return None
+
+        sorted_transitives = sorted(transitives)
+
+        content = ""
+        content, indent = self._xml(content, "dependencyManagement", indent=_INDENT)
+        content, indent = self._xml(content, "dependencies", indent, close_element=False)
+        for dep in sorted_transitives:
+            content, indent = self._gen_dependency_element(pomcontenttype, dep, content, indent, close_element=False)
+            content, indent = self._xml(content, "dependency", indent, close_element=True)
+        content, indent = self._xml(content, "dependencies", indent, close_element=True)
+        content, indent = self._xml(content, "dependencyManagement", indent, close_element=True)
+
+        return content
+
+    def _get_hardcoded_exclusions_for_dep(self, dep):
         """
         A few jar artifacts reference dependencies that do not exist; these 
         need to be excluded explicitly.
@@ -657,7 +693,7 @@ def _sort(s):
 
 
 # this method delegates to bazel query to get the value of a bazel target's 
-# "deps" and "runtime_deps" attributes. it really doesn't below in this module,
+# "deps" and "runtime_deps" attributes. it really doesn't belong in this module,
 # because it has nothing to do with generating a pom.xml file.
 # it could move into common.pomgenmode or live closer to the crawler
 def _query_dependencies(workspace, artifact_def, dependency):

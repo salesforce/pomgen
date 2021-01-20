@@ -52,7 +52,7 @@ class AbstractDependency(object):
         self.group_id = group_id
         self.artifact_id = artifact_id
         self.classifier = classifier
-        self.packaging = packaging
+        self.packaging = "jar" if packaging is None else packaging
         self.scope = scope
 
     @property

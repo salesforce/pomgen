@@ -15,9 +15,7 @@ class DependencyTest(unittest.TestCase):
 
     def test_external_dependency__three_coordinates(self):
         """
-        Ensures we can create Dependency instances from maven coordinates, as 
-        specified by maven_jar's "artifact" attribute.  
-        This test verifies an artifact string with 3 maven coordinates.
+        Ensures we can create a Dependency instance from a maven coord.
         """
         artifact = "com.google.guava:guava:20.0"
         dep = dependency.new_dep_from_maven_art_str(artifact, "name")
@@ -25,14 +23,12 @@ class DependencyTest(unittest.TestCase):
         self.assertEqual("guava", dep.artifact_id)
         self.assertEqual("20.0", dep.version)
         self.assertIsNone(dep.classifier)
-        self.assertIsNone(dep.packaging)
+        self.assertEqual("jar", dep.packaging)
         self.assertIsNone(dep.scope)
 
     def test_external_dependency__four_coordinates(self):
         """
-        Ensures we can create Dependency instances from maven coordinates, as 
-        specified by maven_jar's "artifact" attribute.  
-        This test verifies an artifact string with 4 maven coordinates.
+        Ensures we can create a Dependency instance from a maven coord.
         """
         artifact = "com.grail.log-tokenizer:core-log-tokenizer-api:jar:0.0.21"
         dep = dependency.new_dep_from_maven_art_str(artifact, "name")
@@ -45,9 +41,7 @@ class DependencyTest(unittest.TestCase):
 
     def test_external_dependency__five_coordinates(self):
         """
-        Ensures we can create Dependency instances from maven coordinates, as 
-        specified by maven_jar's "artifact" attribute.  
-        This test verifies an artifact string with 5 maven coordinates.
+        Ensures we can create a Dependency instance from a maven coord.
         """
         artifact = "com.grail.servicelibs:dynamic-keystore-impl:jar:tests:2.0.39"
         dep = dependency.new_dep_from_maven_art_str(artifact, "name")
@@ -493,6 +487,18 @@ class DependencyTest(unittest.TestCase):
         self.assertTrue(dep1 in s)
         self.assertTrue(dep2 in s)
         self.assertTrue(dep3 in s)
+
+    def test_equals_hash_code__default_packaging(self):
+        dep1 = dependency.new_dep_from_maven_art_str("com.google.guava:guava:jar:20.0", "name")
+        dep2 = dependency.new_dep_from_maven_art_str("com.google.guava:guava:20.0", "name")
+        s = set()
+        s.add(dep1)
+        s.add(dep2)
+
+        self.assertEqual(dep1, dep2)
+        self.assertEqual(1, len(s))
+        self.assertTrue(dep1 in s)
+        self.assertTrue(dep2 in s)
 
     def test_equals_ignores_version(self):
         dep1 = dependency.new_dep_from_maven_art_str("com.google.guava:guava:20.0", "name")

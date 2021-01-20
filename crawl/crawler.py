@@ -306,8 +306,27 @@ class Crawler:
 
         processed_deps = set() # to remove duplicate deps
 
-        this_node_all_deps = list(this_node_deps)
-        processed_deps.update(this_node_all_deps)
+        this_node_all_deps = [] # the list we are building in this method
+
+        processed_deps.update(this_node_deps)
+
+        depmd = self.workspace.dependency_metadata
+        for dep in this_node_deps:
+            # add each dep that is explicitly listed in the BUILD file
+            this_node_all_deps.append(dep)
+            # for each explicitly listed dep, we add the transitive closure of
+            # Maven deps
+            # this is an extra lookup because these may not be listed in the
+            # BUILD file
+            transitives = depmd.get_transitive_closure(dep)
+            for transitive in transitives:
+                if transitive not in processed_deps:
+                    # only add the transitive if it isn't explicitly listed
+                    # in the BUILD file and if it wasn't already a handled
+                    # transitive from a previous dep
+                    this_node_all_deps.append(transitive)
+                    processed_deps.add(transitive)
+
 
         # when encountering a duplicate dep, we keep this order:
         # 1) current deps from target
