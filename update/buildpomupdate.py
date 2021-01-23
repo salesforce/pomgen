@@ -67,8 +67,12 @@ def update_build_pom_file(root_path,
 
             # add version qualifier to current version
             if updated_version is None and version_qualifier_to_add is not None:
-                update_strategy = _get_version_qualifier_update_strategy(version_qualifier_to_add)
-                updated_version = version.version_update_handler(current_version, update_strategy)
+                vq = _sanitize_version_qualifier(version_qualifier_to_add)
+                if current_version.upper().endswith("-SNAPSHOT"):
+                    # special case - we insert the new qualifer BEFORE -SNAPSHOT
+                    updated_version = _insert_version_qualifier(current_version, vq)
+                else:
+                    updated_version = _append_version_qualifier(current_version, vq)
 
             if updated_version is not None:
                 build_pom_content = _update_version_in_build_pom_content(build_pom_content, updated_version)
@@ -189,10 +193,17 @@ def _get_build_pom_released_content(version, artifact_hash):
 """
     return content % (version.strip(), artifact_hash.strip())
 
-def _get_version_qualifier_update_strategy(version_qualifier):
+def _sanitize_version_qualifier(version_qualifier):
     version_qualifier = version_qualifier.strip()
     if version_qualifier.startswith("-"):
         version_qualifier = version_qualifier[1:]
     if version_qualifier.endswith("-"):
         version_qualifier = version_qualifier[:-1]
-    return lambda current_version:"%s-%s" % (current_version, version_qualifier)
+    return version_qualifier
+
+def _append_version_qualifier(current_version, version_qualifier):
+    return "%s-%s" % (current_version, version_qualifier)
+
+def _insert_version_qualifier(current_version, version_qualifier):
+    s = lambda current_version:"%s-%s" % (current_version, version_qualifier)
+    return version.version_update_handler(current_version, s)
