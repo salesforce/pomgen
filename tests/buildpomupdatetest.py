@@ -454,6 +454,27 @@ maven_artifact_update(
             self.assertIn('version = "3.2.1-the_qual"', content)
             self.assertIn(')', content)
 
+    def test_update_version_in_BUILD_pom__add_version_qualifier__non_snapshot_qualifiers_are_appended(self):
+        pack1 = "somedir/p1"
+        repo_root = tempfile.mkdtemp("monorepo")
+        pack1_path = os.path.join(repo_root, pack1)
+        os.makedirs(pack1_path)
+        self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1",
+                              version_increment_strategy="major")
+
+        buildpomupdate.update_build_pom_file(
+            repo_root, [pack1], version_qualifier_to_add="rel1")
+        buildpomupdate.update_build_pom_file(
+            repo_root, [pack1], version_qualifier_to_add="rel2")
+
+        with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
+            content = f.read()
+            self.assertIn('maven_artifact(', content)
+            self.assertIn('group_id = "p1g"', content)
+            self.assertIn('artifact_id = "p1a"', content)
+            self.assertIn('version = "3.2.1-rel1-rel2"', content)
+            self.assertIn(')', content)
+
     def test_update_pom_generation_mode_in_BUILD_pom(self):
         pack1 = "somedir/p1"
         repo_root = tempfile.mkdtemp("monorepo")
