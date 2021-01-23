@@ -7,9 +7,11 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 
 version related shared code.
 """
+
 from . import code
 from collections import namedtuple
 import re
+
 
 version_re = re.compile("(^.*version *= *[\"'])(.*?)([\"'].*)$", re.S)
 
@@ -42,6 +44,7 @@ def get_version_increment_strategy(build_pom_content, path):
         raise Exception("Unknown version increment strategy: %s" % maven_art_up.version_increment_strategy)
     return lambda version: version_update_handler(version, incr_strat)
 
+
 def parse_build_pom_version(build_pom_content):
     """
     Returns the value of maven_artifact.version.
@@ -60,8 +63,6 @@ def parse_build_pom_released_version(build_pom_released_content):
     """
     return parse_build_pom_version(build_pom_released_content)
 
-
-REL_QUALIFIER_PREFIX = "-rel-"
 
 def get_release_version(current_version, last_released_version=None, incremental_release=False):
     """
@@ -143,14 +144,33 @@ def version_update_handler(version, version_update_strategy):
     return next_version
 
 
+OLD_REL_QUALIFIER_PREFIX = "-rel-"
+REL_QUALIFIER_PREFIX = "-rel"
+
+
 def _incr_rel_qualifier(version):
-    i = version.rfind(REL_QUALIFIER_PREFIX)
-    if i == -1:
-        counter = 1
-    else:
-        counter = int(version[i+len(REL_QUALIFIER_PREFIX)]) + 1
-        version = version[:i]
-    return "%s%s%s" % (version, REL_QUALIFIER_PREFIX, counter)
+    start_rel_qual_i = None
+    end_rel_qual_i = None
+    current_counter_value = None
+    for qual in (OLD_REL_QUALIFIER_PREFIX, REL_QUALIFIER_PREFIX,):
+        start_rel_qual_i = version.rfind(qual)
+        if start_rel_qual_i == -1:
+            continue
+        start_counter_i = start_rel_qual_i + len(qual)
+        end_rel_qual_i = version.rfind("-", start_counter_i + 1)
+        if end_rel_qual_i == -1:
+            end_rel_qual_i = len(version)
+        counter_str = version[start_counter_i:end_rel_qual_i]
+        current_counter_value = int(counter_str)
+        break
+
+    if current_counter_value is None:
+        start_rel_qual_i = end_rel_qual_i = len(version)
+        current_counter_value = 0
+    return "%s%s%s%s" % (version[:start_rel_qual_i],
+                         REL_QUALIFIER_PREFIX,
+                         current_counter_value + 1,
+                         version[end_rel_qual_i:])
 
 
 def _parse_maven_artifact_update(build_pom_content, path):

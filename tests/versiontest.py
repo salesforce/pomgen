@@ -15,9 +15,27 @@ class VersionTest(unittest.TestCase):
         self.assertEqual("1.2.3", version.get_release_version("1.2.3"))
 
     def test_get_release_version__incremental_release(self):
-        self.assertEqual("1.2.3-rel-1", version.get_release_version("foo", last_released_version="1.2.3", incremental_release=True))
-        self.assertEqual("1.2.3-rel-2", version.get_release_version("foo", last_released_version="1.2.3-rel-1", incremental_release=True))
-        self.assertEqual("0.0.0-rel-1", version.get_release_version("foo", last_released_version=None, incremental_release=True))
+        self.assertEqual("1.2.3-rel1", version.get_release_version("foo", last_released_version="1.2.3", incremental_release=True))
+        self.assertEqual("1.2.3-rel2", version.get_release_version("foo", last_released_version="1.2.3-rel1", incremental_release=True))
+        self.assertEqual("0.0.0-rel1", version.get_release_version("foo", last_released_version=None, incremental_release=True))
+
+    def test_get_release_version__incremental_release__multiple_digits(self):
+        self.assertEqual("1.2.3-rel10", version.get_release_version("foo", last_released_version="1.2.3-rel9", incremental_release=True))
+        self.assertEqual("1.2.3-rel11", version.get_release_version("foo", last_released_version="1.2.3-rel10", incremental_release=True))
+        self.assertEqual("1.2.3-rel100", version.get_release_version("foo", last_released_version="1.2.3-rel99", incremental_release=True))
+
+    def test_get_release_version__incremental_release__last_rel_qualifier_uses_old_dash_number_syntax(self):
+        # we used to use rel-<num>, for example rel-1, rel-2 etc
+        # we switched this to rel<num> (so rel1, rel2 etc) so that '-' is only
+        # used as a separator between version qualifiers: 1.0.0-rel1-SNAPSHOT
+        self.assertEqual("1.2.3-rel2", version.get_release_version("foo", last_released_version="1.2.3-rel-1", incremental_release=True))
+        self.assertEqual("1.2.3-rel11", version.get_release_version("foo", last_released_version="1.2.3-rel-10", incremental_release=True))
+
+    def test_get_release_version__multiple_qualifiers(self):
+        self.assertEqual("1.2.3-rel2-foo22", version.get_release_version("foo", last_released_version="1.2.3-rel1-foo22", incremental_release=True))
+        self.assertEqual("1.2.3-rel10-foo22", version.get_release_version("foo", last_released_version="1.2.3-rel9-foo22", incremental_release=True))
+        self.assertEqual("1.2.3-rel2-foo22", version.get_release_version("foo", last_released_version="1.2.3-rel-1-foo22", incremental_release=True))
+        self.assertEqual("1.2.3-rel10-foo22", version.get_release_version("foo", last_released_version="1.2.3-rel-9-foo22", incremental_release=True))
 
     def test_get_next_dev_version__semver_release(self):
         build_pom_content = self._get_build_pom("major")
@@ -162,6 +180,7 @@ maven_artifact_update(
 )
 """
         return build_pom % version_increment_strategy
+
 
 if __name__ == '__main__':
     unittest.main()
