@@ -6,7 +6,7 @@ The set of scripts in this repository provides a solution for:
  - Generating pom.xml files for jars built built by Bazel's ```java_library``` rule
  - Uploading the pom.xmls and jars to a Maven Artifact Repository such as Nexus (or installing them into the local Maven Repository at ~/.m2/repository)
 
-:octocat: Please do us a huge favor. If you think this project could be useful for you, now or in the future, please hit the **Star** button at the top. That helps us advocate for more resources on this project. Thanks!
+**NOTE** this branch has support for the old `maven_jar` rule, the master branch supports the modern `maven_install` rule.
 
 ## Setup
 
