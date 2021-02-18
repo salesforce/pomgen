@@ -55,6 +55,8 @@ bazel run @pomgen//:update -- --package examples/hello-world \
     --new_released_version 1.0.0
 ```
 
+For more details on working with snapshot jars, see [this doc](./bazel_maven_workflow.md).
+
 ## Release Reasons
 
 pomgen query can show information about the Libraries being relased and their "release reason".  For example:
