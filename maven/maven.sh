@@ -62,6 +62,10 @@ Usage: maven.sh -a action(s) [-t bazel package]
       or ${REPOSITORY_URL}/releases/content, based on whether the artifact
       version ends in -SNAPTSHOT or not.
 
+    REPOSITORY_ID: in settings.xml, the <id> of the <server> entry to use for
+      authentication. Defaults to "nexus".
+      See https://maven.apache.org/plugins/maven-deploy-plugin/deploy-file-mojo.html
+
     POM_DESCRIPTION: if set, used as the value of the <description> element
       in the generated pom(s).
 

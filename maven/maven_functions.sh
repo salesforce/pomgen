@@ -240,6 +240,10 @@ _deploy_artifacts_to_nexus() {
         exit 1
     fi
 
+    if [ -z "$REPOSITORY_ID" ]; then
+        REPOSITORY_ID="nexus"
+    fi
+
     if [[ "$version" = *"-SNAPSHOT" ]]; then
         repository="snapshots"
     else
@@ -285,7 +289,7 @@ _deploy_artifacts_to_nexus() {
     mvn ${MVN_ARGS} org.apache.maven.plugins:maven-deploy-plugin:2.8.2:deploy-file \
         -DpomFile=$pom_path \
         -Dfile=$artifact_path \
-        -DrepositoryId="default" \
+        -DrepositoryId=${REPOSITORY_ID} \
         -Durl=$full_repository_url \
         $file_arg $type_arg $classifier_arg
 }
