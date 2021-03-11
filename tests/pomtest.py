@@ -31,6 +31,8 @@ TEST_POM_TEMPLATE = """
 
 class PomTest(unittest.TestCase):
 
+    maxDiff = None
+
     def setUp(self):
         f = dependency.new_dep_from_maven_art_str
         all_excluded_dep = f("*:*:-1", "maven")
@@ -437,12 +439,15 @@ __pomgen.end_dependency_customization__
 
         expected_pom = """
 <project>
+    <properties>
+        <group1.version>1.0.0</group1.version>
+    </properties>
     <dependencyManagement>
         <dependencies>
             <dependency>
                 <artifactId>art1</artifactId>
                 <groupId>group1</groupId>
-                <version>1.0.0</version>
+                <version>${group1.version}</version>
                 <exclusions>
                     <exclusion>
                         <artifactId>ea1</artifactId>
@@ -461,9 +466,7 @@ __pomgen.end_dependency_customization__
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = pom_template
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
-
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
-
         self.assertEqual(expected_pom, generated_pom)
 
     def test_template__library_transitives(self):
@@ -483,17 +486,21 @@ __pomgen.end_dependency_customization__
 
         expected_pom = """
 <project>
+    <properties>
+        <cg.version>0.0.1</cg.version>
+        <com.grail.srpc.version>5.6.7</com.grail.srpc.version>
+    </properties>
     <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>com.grail.srpc</groupId>
                 <artifactId>srpc-api</artifactId>
-                <version>5.6.7</version>
+                <version>${com.grail.srpc.version}</version>
             </dependency>
             <dependency>
                 <groupId>cg</groupId>
                 <artifactId>ca</artifactId>
-                <version>0.0.1</version>
+                <version>${cg.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -552,12 +559,15 @@ __pomgen.end_dependency_customization__
 
         expected_pom = """
 <project>
+    <properties>
+        <cg.version>0.0.1</cg.version>
+    </properties>
     <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>cg</groupId>
                 <artifactId>ca</artifactId>
-                <version>0.0.1</version>
+                <version>${cg.version}</version>
                 <classifier>c1</classifier>
                 <exclusions>
                     <exclusion>
@@ -614,12 +624,15 @@ __pomgen.end_dependency_customization__
 
         expected_pom = """
 <project>
+    <properties>
+        <cg.version>0.0.1</cg.version>
+    </properties>
     <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>cg</groupId>
                 <artifactId>ca</artifactId>
-                <version>0.0.1</version>
+                <version>${cg.version}</version>
                 <classifier>sources</classifier>
                 <scope>test</scope>
             </dependency>

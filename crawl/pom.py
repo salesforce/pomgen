@@ -204,7 +204,7 @@ class AbstractPomGen(object):
         else:
             return "%s%s<%s>%s</%s>%s" % (content, ' '*indent, element, value, element, os.linesep), indent
 
-    def _gen_dependency_element(self, pomcontenttype, dep, content, indent, close_element):
+    def _gen_dependency_element(self, pomcontenttype, dep, content, indent, close_element, group_version_dict={}):
         """
         Generates a pomx.xml <dependency> element.
 
@@ -216,7 +216,11 @@ class AbstractPomGen(object):
         content, indent = self._xml(content, "dependency", indent)
         content, indent = self._xml(content, "groupId", indent, dep.group_id)
         content, indent = self._xml(content, "artifactId", indent, dep.artifact_id)
-        content, indent = self._xml(content, "version", indent, self._dep_version(pomcontenttype, dep))
+        version_from_dep = self._dep_version(pomcontenttype, dep)
+        if dep.group_id in group_version_dict and version_from_dep == group_version_dict[dep.group_id].get_property_value():
+            content, indent = self._xml(content, "version", indent, "${%s}" % group_version_dict[dep.group_id].get_property_name())
+        else:
+            content, indent = self._xml(content, "version", indent, version_from_dep)
         if dep.classifier is not None:
             content, indent = self._xml(content, "classifier", indent, dep.classifier)
         if dep.scope is not None:
@@ -265,6 +269,16 @@ class AbstractPomGen(object):
         else:
             return content.replace("#{description}", self._gen_description(description))
 
+    def _get_group_version_dict(self, deps, group_version_dict={}):
+        content = ""
+        result_group_version_dict = dict(group_version_dict)
+        for dep in deps:
+            group_id = dep.group_id
+            version = dep.version
+            if not group_id in result_group_version_dict:
+                result_group_version_dict[group_id] = pomparser.ParsedProperty("%s.version" % group_id, version)
+        return result_group_version_dict
+
 class NoopPomGen(AbstractPomGen):
     """
     A placeholder pom generator that doesn't generator anything, but still
@@ -284,6 +298,8 @@ class TemplatePomGen(AbstractPomGen):
     UNUSED_CONFIGURED_DEPS_PROP_NAME = "pomgen.unencountered_dependencies"
     DEPS_CONFIG_SECTION_START = "__pomgen.start_dependency_customization__"
     DEPS_CONFIG_SECTION_END = "__pomgen.end_dependency_customization__"
+    PROPERTIES_SECTION_START = "<properties>"
+    PROPERTIES_SECTION_END = "</properties>"
 
     # these properties need to be replaced first in pom templates
     # because their values may reference other properties
@@ -297,10 +313,10 @@ class TemplatePomGen(AbstractPomGen):
         super(TemplatePomGen, self).__init__(workspace, artifact_def, dependency)
     def gen(self, pomcontenttype):
         pom_content = self.artifact_def.custom_pom_template_content
-        pom_content, parsed_dependencies = self._process_pom_template_content(pom_content)
+        pom_content, parsed_dependencies, parsed_properties = self._process_pom_template_content(pom_content)
 
-        properties = self._get_properties(pomcontenttype, parsed_dependencies)
-
+        properties, group_version_dict = self._get_properties(pomcontenttype, parsed_dependencies, parsed_properties)
+        pom_content = self._add_generated_version_properties(pom_content, group_version_dict)
         for k in TemplatePomGen.INITAL_PROPERTY_SUBSTITUTIONS:
             if k in properties:
                 pom_content = pom_content.replace("#{%s}" % k, properties[k])
@@ -322,9 +338,16 @@ class TemplatePomGen(AbstractPomGen):
         Returns a tuple:
            (updated_pom_template_content, pomparser.ParsedDependencies instance)
         """
+        start_section_index = pom_template_content.find(TemplatePomGen.PROPERTIES_SECTION_START)
+        if start_section_index == -1:
+            parsed_properties = {}
+        else:
+            end_section_index = pom_template_content.index(TemplatePomGen.PROPERTIES_SECTION_END)
+            properties_content = pom_template_content[start_section_index:end_section_index + len(TemplatePomGen.PROPERTIES_SECTION_END)]
+            parsed_properties = pomparser.parse_version_properties(properties_content)
         start_section_index = pom_template_content.find(TemplatePomGen.DEPS_CONFIG_SECTION_START)
         if start_section_index == -1:
-            return pom_template_content, pomparser.ParsedDependencies()
+            return (pom_template_content, pomparser.ParsedDependencies(), parsed_properties)
         else:
             end_section_index = pom_template_content.index(TemplatePomGen.DEPS_CONFIG_SECTION_END)
             dynamic_deps_content = pom_template_content[start_section_index + len(TemplatePomGen.DEPS_CONFIG_SECTION_START):end_section_index]
@@ -334,14 +357,15 @@ class TemplatePomGen(AbstractPomGen):
             # now that dependencies have been parsed, remove the special 
             # depdendency config section from pom template
             pom_template_content = pom_template_content[:start_section_index] + pom_template_content[end_section_index + len(TemplatePomGen.DEPS_CONFIG_SECTION_END)+1:]
-            return (pom_template_content, parsed_dependencies)
+            return (pom_template_content, parsed_dependencies, parsed_properties)
 
-    def _get_properties(self, pomcontenttype, pom_template_parsed_deps):
-        properties = self._get_version_properties(pomcontenttype)
-        properties.update(self._get_crawled_dependencies_properties(pomcontenttype, pom_template_parsed_deps))
-        return properties
+    def _get_properties(self, pomcontenttype, pom_template_parsed_deps, pom_template_parsed_properties):
+        properties, version_properties, group_version_dict = self._get_version_properties(pomcontenttype, pom_template_parsed_properties)
+        updated_properties, updated_group_version_dict = self._get_crawled_dependencies_properties(pomcontenttype, pom_template_parsed_deps, version_properties, group_version_dict)
+        properties.update(updated_properties)
+        return (properties, updated_group_version_dict)
 
-    def _get_version_properties(self, pomcontenttype):
+    def _get_version_properties(self, pomcontenttype, pom_template_parsed_properties):
         # the version of all dependencies can be referenced in a pom template
         # using the syntax: #{<groupId>:<artifactId>:[<classifier>:]version}.
         #
@@ -409,51 +433,67 @@ class TemplatePomGen(AbstractPomGen):
         key_to_version["group_id"] = self._artifact_def.group_id
         key_to_version["version"] = self._artifact_def_version(pomcontenttype)
 
-        return key_to_version
+        updated_properties = []
+        group_version_dict = {}
+        for parsed_property in pom_template_parsed_properties:
+            property_name = parsed_property.get_property_name()
+            property_value = parsed_property.get_property_value()
+            templated = re.match('#{(.+)}', property_value)
+            if templated:
+                key = templated.group(1)
+                version_property = pomparser.ParsedProperty(property_name, key_to_version[key])
+                updated_properties.append(version_property)
+                group_id = key_to_dep[key].group_id
+                group_version_dict[group_id] = version_property
+            else:
+                updated_properties.add(parsed_property)
+        return key_to_version, updated_properties, group_version_dict
 
-    def _get_crawled_dependencies_properties(self, pomcontenttype, pom_template_parsed_deps):
+    def _get_crawled_dependencies_properties(self, pomcontenttype, pom_template_parsed_deps, version_property_to_value, group_version_dict):
         # this is somewhat lame: an educated guess on where the properties
         # being build here will be referenced (within 
-        # project/depedencyManagement/dependencies)
+        # project/dependencyManagement/dependencies)
         indent = _INDENT*3
 
         properties = {}
+        updated_group_version_dict = self._get_group_version_dict(self.dependencies_library_transitive_closure, group_version_dict=group_version_dict)
 
         content = self._build_deps_property_content(
             self.dependencies_library_transitive_closure,
             pom_template_parsed_deps,
-            pomcontenttype, indent)
+            pomcontenttype, indent, updated_group_version_dict)
         properties[TemplatePomGen.TRANSITIVE_DEPS_PROP_NAME] = content
-
         pom_template_only_deps = pom_template_parsed_deps.get_parsed_deps_set_missing_from(self.dependencies_library_transitive_closure)
+        updated_group_version_dict = self._get_group_version_dict(pom_template_only_deps, group_version_dict=updated_group_version_dict)
         content = self._build_template_only_deps_property_content(\
             _sort(pom_template_only_deps),
             pom_template_parsed_deps,
-            indent)
+            indent, updated_group_version_dict)
         properties[TemplatePomGen.UNUSED_CONFIGURED_DEPS_PROP_NAME] = content
-
-        return properties
+        return properties, updated_group_version_dict
 
     def _build_template_only_deps_property_content(self, deps,
                                                    pom_template_parsed_deps,
-                                                   indent):
+                                                   indent, group_version_dict):
         content = ""
         for dep in deps:
             raw_xml = pom_template_parsed_deps.get_parsed_xml_str_for(dep)
+            if dep.group_id in group_version_dict and dep.version == group_version_dict[dep.group_id].get_property_value():
+                replace_version = group_version_dict[dep.group_id].get_property_name()
+                raw_xml = raw_xml.replace(dep.version, "${%s}" % replace_version)
             content += pomparser.indent_xml(raw_xml, indent)
         content = content.rstrip()
         return content
 
     def _build_deps_property_content(self, deps, pom_template_parsed_deps, 
-                                     pomcontenttype, indent):
-
+                                     pomcontenttype, indent, group_version_dict):
         content = ""
         deps = _sort(deps)
         for dep in deps:
             dep = self._copy_attributes_from_parsed_dep(dep, pom_template_parsed_deps)
             pom_template_exclusions = pom_template_parsed_deps.get_parsed_exclusions_for(dep)
             dep_has_exclusions = len(pom_template_exclusions) > 0
-            content, indent = self._gen_dependency_element(pomcontenttype, dep, content, indent, close_element=not dep_has_exclusions)
+            content, indent = self._gen_dependency_element(pomcontenttype, dep, content, indent, close_element=not dep_has_exclusions, group_version_dict=group_version_dict)
             if dep_has_exclusions:
                 exclusions = list(pom_template_exclusions)
                 exclusions.sort()
@@ -478,13 +518,45 @@ class TemplatePomGen(AbstractPomGen):
                     dep.classifier = parsed_dep.classifier
         return dep
 
+    def _add_generated_version_properties(self, pom_template_content, group_version_dict):
+        if len(group_version_dict) == 0:
+            return pom_template_content
+        start_section_index = pom_template_content.find(TemplatePomGen.PROPERTIES_SECTION_START)
+        if start_section_index == -1:
+            match = re.search('<project.*>', pom_template_content)
+            if not match:
+                # Incomplete pom, maybe in test mode. Just return original pom content
+                return pom_template_content
+            start_section_index = match.end()
+            end_section_index = start_section_index+1
+            content = pom_template_content[:start_section_index+1]
+            content, indent = self._xml(content, "properties", indent=_INDENT)
+            for group_id in group_version_dict:
+                version_property = group_version_dict[group_id]
+                property_name = version_property.get_property_name()
+                property_value = version_property.get_property_value()
+                content, indent = self._xml(content, property_name, indent, property_value)
+            content, indent = self._xml(content, "properties", indent, close_element=True)
+            content = content + pom_template_content[end_section_index:]
+        else:
+            end_section_index = pom_template_content.index(TemplatePomGen.PROPERTIES_SECTION_END)
+            content = pom_template_content[:end_section_index]
+            indent = _INDENT*2
+            for group_id in group_version_dict:
+                version_property = group_version_dict[group_id]
+                property_name = version_property.get_property_name()
+                property_value = version_property.get_property_value()
+                if not property_name in pom_template_content:
+                    content, indent = self._xml(content, property_name, indent, property_value)
+            content = content + pom_template_content[end_section_index:]
+        return content
 
 class DynamicPomGen(AbstractPomGen):
     """
     A non-generic, non-reusable, specialized pom.xml generator, targeted 
     for the "monorepo pom generation" use-case.
 
-    Generates a pom.xm file based on the specified singleton (shared) template.
+    Generates a pom.xml file based on the specified singleton (shared) template.
 
     The following placesholders must exist in the specified template:
        #{dependencies} - will be replaced with the <dependencies> section
@@ -506,6 +578,7 @@ class DynamicPomGen(AbstractPomGen):
         version = self._artifact_def_version(pomcontenttype)
         content = content.replace("#{version}", version)
         content = self._handle_description(content, self.pom_content.description)
+        content = self._remove_token(content, "#{version_properties}")
         if len(self.dependencies) == 0:
             content = self._remove_token(content, "#{dependencies}")
         else:
@@ -623,8 +696,12 @@ class DependencyManagementPomGen(AbstractPomGen):
         content = self._handle_description(content, self.pom_content.description)
         if len(self.dependencies_artifact_transitive_closure) == 0:
             content = self._remove_token(content, "#{dependencies}")
+            content = self._remove_token(content, "#{version_properties}")
         else:
-            dep_man_content = self._gen_dependency_management(self.dependencies_artifact_transitive_closure)
+            group_version_dict = self._get_group_version_dict(self.dependencies_artifact_transitive_closure)
+            version_properties_content = self._gen_version_properties(self.dependencies_artifact_transitive_closure, group_version_dict)
+            content = content.replace("#{version_properties}", version_properties_content)
+            dep_man_content = self._gen_dependency_management(self.dependencies_artifact_transitive_closure, group_version_dict)
             content = content.replace("#{dependencies}", dep_man_content)
 
         # we assume the template specified <packaging>jar</packaging>
@@ -636,12 +713,20 @@ class DependencyManagementPomGen(AbstractPomGen):
         
         return content
 
-    def _gen_dependency_management(self, deps):
+    def _gen_version_properties(self, deps, group_version_dict):
+        content = ""
+        indent = _INDENT*2
+        for group_id in group_version_dict:
+            version_property = group_version_dict[group_id]
+            content, indent = self._xml(content, version_property.get_property_name(), indent, version_property.get_property_value())
+        return content
+
+    def _gen_dependency_management(self, deps, group_version_dict):
         content = ""
         content, indent = self._xml(content, "dependencyManagement", indent=_INDENT)
         content, indent = self._xml(content, "dependencies", indent)
         for dep in deps:
-            content, indent = self._gen_dependency_element(PomContentType.RELEASE, dep, content, indent, close_element=True)
+            content, indent = self._gen_dependency_element(PomContentType.RELEASE, dep, content, indent, close_element=True, group_version_dict=group_version_dict)
         content, indent = self._xml(content, "dependencies", indent, close_element=True)
         content, indent = self._xml(content, "dependencyManagement", indent, close_element=True)
         return content
