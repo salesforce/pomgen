@@ -279,6 +279,7 @@ class TemplatePomGen(AbstractPomGen):
     DEPS_CONFIG_SECTION_END = "__pomgen.end_dependency_customization__"
     PROPERTIES_SECTION_START = "<properties>"
     PROPERTIES_SECTION_END = "</properties>"
+    VERSION_PROPERTY_SUBSTITUTION = "pomgen.template_generated_properties"
 
     # these properties need to be replaced first in pom templates
     # because their values may reference other properties
@@ -292,40 +293,25 @@ class TemplatePomGen(AbstractPomGen):
         super(TemplatePomGen, self).__init__(workspace, artifact_def, dependency)
     def gen(self, pomcontenttype):
         pom_content = self.artifact_def.custom_pom_template_content
-        pom_content, parsed_dependencies, parsed_properties = self._process_pom_template_content(pom_content)
+        parsed_properties = self._process_properties_content(pom_content)
+        pom_content, parsed_dependencies = self._process_deps_customization_content(pom_content)
         all_version_properties, template_version_properties, group_version_dict = self._get_version_properties(pomcontenttype, parsed_properties)
         for k in all_version_properties.keys():
             pom_content = pom_content.replace("#{%s}" % k, all_version_properties[k])
-        generate_properties_section = "#{pomgen.generate_properties}"
-        properties_section_start_index = pom_content.find(TemplatePomGen.PROPERTIES_SECTION_START)
-        substitute_version_properties = False
-        if generate_properties_section in pom_content or properties_section_start_index != -1:
-            substitute_version_properties = True
+        substitute_version_properties = ("#{%s}" % TemplatePomGen.VERSION_PROPERTY_SUBSTITUTION in pom_content or pom_content.find(TemplatePomGen.PROPERTIES_SECTION_START) != -1)
         initial_properties, updated_group_version_dict = self._get_crawled_dependencies_properties(pomcontenttype, parsed_dependencies, group_version_dict, substitute_version_properties)
-        version_properties_content = pomproperties.gen_version_properties(updated_group_version_dict, pom_content)
-
-        if generate_properties_section in pom_content:
-            content = ""
-            content, indent = common.xml(content, "properties", indent=_INDENT)
-            content += version_properties_content
-            content, indent = common.xml(content, "properties", indent, close_element=True)
-            pom_content = pom_content.replace(generate_properties_section, content)
-        elif properties_section_start_index != -1:
-            properties_section_end_index = pom_content.index(TemplatePomGen.PROPERTIES_SECTION_END)
-            inject_index = pom_content[:properties_section_end_index].rfind(os.linesep) + 1
-            pom_content = pom_content[:inject_index] + version_properties_content + pom_content[inject_index:]
-
         for k in TemplatePomGen.INITAL_PROPERTY_SUBSTITUTIONS:
             if k in initial_properties:
                 pom_content = pom_content.replace("#{%s}" % k, initial_properties[k])
                 del initial_properties[k]
-
+        if substitute_version_properties:
+            pom_content = self._add_generated_version_properties(updated_group_version_dict, pom_content)
         bad_refs = [match.group(1) for match in re.finditer(r"""\#\{(.*?)\}""", pom_content) if len(match.groups()) == 1]
         if len(bad_refs) > 0:
             raise Exception("pom template for [%s] has unresolvable references: %s" % (self._artifact_def, bad_refs))
         return pom_content
 
-    def _process_pom_template_content(self, pom_template_content):
+    def _process_deps_customization_content(self, pom_template_content):
         """
         Handles the special "dependency config markers" that may be present
         in the pom template file.
@@ -333,16 +319,9 @@ class TemplatePomGen(AbstractPomGen):
         Returns a tuple:
            (updated_pom_template_content, pomparser.ParsedDependencies instance)
         """
-        start_section_index = pom_template_content.find(TemplatePomGen.PROPERTIES_SECTION_START)
-        if start_section_index == -1:
-            parsed_properties = {}
-        else:
-            end_section_index = pom_template_content.index(TemplatePomGen.PROPERTIES_SECTION_END)
-            properties_content = pom_template_content[start_section_index:end_section_index + len(TemplatePomGen.PROPERTIES_SECTION_END)]
-            parsed_properties = pomparser.parse_version_properties(properties_content)
         start_section_index = pom_template_content.find(TemplatePomGen.DEPS_CONFIG_SECTION_START)
         if start_section_index == -1:
-            return (pom_template_content, pomparser.ParsedDependencies(), parsed_properties)
+            return (pom_template_content, pomparser.ParsedDependencies())
         else:
             if TemplatePomGen.TRANSITIVE_DEPS_PROP_NAME not in pom_template_content and TemplatePomGen.UNUSED_CONFIGURED_DEPS_PROP_NAME not in pom_template_content:
                 logger.error("Dependency customization section found but neither %s nor %s substitution is used. Dependency customization will be ignored." % TemplatePomGen.INITAL_PROPERTY_SUBSTITUTIONS)
@@ -354,7 +333,21 @@ class TemplatePomGen(AbstractPomGen):
             # now that dependencies have been parsed, remove the special 
             # depdendency config section from pom template
             pom_template_content = pom_template_content[:start_section_index] + pom_template_content[end_section_index + len(TemplatePomGen.DEPS_CONFIG_SECTION_END)+1:]
-            return (pom_template_content, parsed_dependencies, parsed_properties)
+            return (pom_template_content, parsed_dependencies)
+
+    def _process_properties_content(self, pom_template_content):
+        """
+        Processes the <properties> section in pom template if exists.
+
+        Returns a list of pomparser.ParsedProperty instances
+        """
+        parsed_properties = []
+        start_section_index = pom_template_content.find(TemplatePomGen.PROPERTIES_SECTION_START)
+        if start_section_index != -1:
+            end_section_index = pom_template_content.index(TemplatePomGen.PROPERTIES_SECTION_END)
+            properties_content = pom_template_content[start_section_index:end_section_index + len(TemplatePomGen.PROPERTIES_SECTION_END)]
+            parsed_properties = pomparser.parse_version_properties(properties_content)
+        return parsed_properties
 
     def _get_version_properties(self, pomcontenttype, pom_template_parsed_properties):
         # the version of all dependencies can be referenced in a pom template
@@ -515,6 +508,22 @@ class TemplatePomGen(AbstractPomGen):
                     dep.classifier = parsed_dep.classifier
         return dep
 
+    def _add_generated_version_properties(self, group_version_dict, pom_content):
+        version_properties_content = pomproperties.gen_version_properties(group_version_dict, pom_content)
+        if "#{%s}" % TemplatePomGen.VERSION_PROPERTY_SUBSTITUTION in pom_content:
+            content = ""
+            if version_properties_content:
+                content, indent = common.xml(content, "properties", indent=_INDENT)
+                content += version_properties_content
+                content, indent = common.xml(content, "properties", indent, close_element=True)
+            pom_content = pom_content.replace("#{%s}" % TemplatePomGen.VERSION_PROPERTY_SUBSTITUTION, content)
+        else:
+            properties_section_start_index = pom_content.find(TemplatePomGen.PROPERTIES_SECTION_START)
+            properties_section_end_index = pom_content.index(TemplatePomGen.PROPERTIES_SECTION_END)
+            inject_index = pom_content[:properties_section_end_index].rfind(os.linesep) + 1
+            pom_content = pom_content[:inject_index] + version_properties_content + pom_content[inject_index:]
+        return pom_content
+
 class DynamicPomGen(AbstractPomGen):
     """
     A non-generic, non-reusable, specialized pom.xml generator, targeted 
@@ -542,7 +551,7 @@ class DynamicPomGen(AbstractPomGen):
         version = self._artifact_def_version(pomcontenttype)
         content = content.replace("#{version}", version)
         content = self._handle_description(content, self.pom_content.description)
-        content = self._remove_token(content, "#{version_properties}")
+        content = self._remove_token(content, "#{%s}" % DependencyManagementPomGen.VERSION_PROPERTY_SUBSTITUTION)
         if len(self.dependencies) == 0:
             content = self._remove_token(content, "#{dependencies}")
         else:
@@ -628,6 +637,9 @@ class DynamicPomGen(AbstractPomGen):
 
 
 class DependencyManagementPomGen(AbstractPomGen):
+
+    VERSION_PROPERTY_SUBSTITUTION = "dependency_management_version_properties"
+
     """
     Generates a dependency management" only pom, containing a
     <dependencyManagement> section with the transitive closure of all
@@ -643,6 +655,7 @@ class DependencyManagementPomGen(AbstractPomGen):
        #{group_id}
        #{version}
     """
+
     def __init__(self, workspace, artifact_def, dependency, pom_template):
         super(DependencyManagementPomGen, self).__init__(workspace, artifact_def, dependency)
         self.pom_template = pom_template
@@ -660,11 +673,11 @@ class DependencyManagementPomGen(AbstractPomGen):
         content = self._handle_description(content, self.pom_content.description)
         if len(self.dependencies_artifact_transitive_closure) == 0:
             content = self._remove_token(content, "#{dependencies}")
-            content = self._remove_token(content, "#{version_properties}")
+            content = self._remove_token(content, "#{%s}" % DependencyManagementPomGen.VERSION_PROPERTY_SUBSTITUTION)
         else:
             group_version_dict = pomproperties.get_group_version_dict(self.dependencies_artifact_transitive_closure)
             version_properties_content = pomproperties.gen_version_properties(group_version_dict)
-            content = content.replace("#{version_properties}", version_properties_content)
+            content = content.replace("#{%s}" % DependencyManagementPomGen.VERSION_PROPERTY_SUBSTITUTION, version_properties_content)
             dep_man_content = self._gen_dependency_management(self.dependencies_artifact_transitive_closure, group_version_dict)
             content = content.replace("#{dependencies}", dep_man_content)
 

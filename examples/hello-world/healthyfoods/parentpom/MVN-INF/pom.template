@@ -11,9 +11,9 @@
     <version>#{version}</version>
     <packaging>pom</packaging>
 
-    <!-- properties -->
-        <!-- healthyfoods.version>#{com.pomgen.example:fruit-api:version}</healthyfoods.version -->
-    <!-- /properties -->
+    <properties>
+        <healthyfoods.version>#{com.pomgen.example:fruit-api:version}</healthyfoods.version>
+    </properties>
 
     <dependencyManagement>
         <dependencies>
@@ -22,14 +22,9 @@
                 <artifactId>guava</artifactId>
                 <version>#{com.google.guava:guava:version}</version>
             </dependency>
-	    <dependency>
-                <groupId>com.pomgen.example</groupId>
-                <artifactId>fruit-api</artifactId>
-                <version>1.0.0-SNAPSHOT</version>
-            </dependency>
-#{pomgen.transitive_closure_of_library_dependencies}
         </dependencies>
     </dependencyManagement>
+
     <build>
         <plugins>
             <plugin>

@@ -310,7 +310,7 @@ monorepo artifact version #{version}
                                  pomcontent.NOOP)
         artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
-        artifact_def.custom_pom_template_content = "#{pomgen.generate_properties} srpc #{com.grail.srpc:srpc-api:version}"
+        artifact_def.custom_pom_template_content = "#{pomgen.template_generated_properties} srpc #{com.grail.srpc:srpc-api:version}"
         srpc_artifact_def = buildpom.MavenArtifactDef(
             "com.grail.srpc", "srpc-api", "5.6.7", bazel_package="a/b/c")
         srpc_dep = dependency.MonorepoDependency(srpc_artifact_def, bazel_target=None)
@@ -357,7 +357,7 @@ monorepo artifact version #{version}
         srpc_artifact_def = buildpom._augment_art_def_values(srpc_artifact_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
         srpc_dep = dependency.MonorepoDependency(srpc_artifact_def, bazel_target=None)
         artifact_def.custom_pom_template_content = """
-#{pomgen.generate_properties}
+#{pomgen.template_generated_properties}
 this artifact version #{version}
 logback coord #{ch.qos.logback:logback-classic:version}
 logback qualified #{@maven//:ch_qos_logback_logback_classic.version}
@@ -474,7 +474,7 @@ __pomgen.end_dependency_customization__
         """
         pom_template = """
 <project>
-#{pomgen.generate_properties}
+#{pomgen.template_generated_properties}
     <dependencyManagement>
         <dependencies>
 #{pomgen.transitive_closure_of_library_dependencies}
@@ -531,7 +531,7 @@ __pomgen.end_dependency_customization__
         """
         pom_template = """
 <project>
-#{pomgen.generate_properties}
+#{pomgen.template_generated_properties}
     <dependencyManagement>
         <dependencies>
 __pomgen.start_dependency_customization__
@@ -607,7 +607,7 @@ __pomgen.end_dependency_customization__
         """
         pom_template = """
 <project>
-#{pomgen.generate_properties}
+#{pomgen.template_generated_properties}
     <dependencyManagement>
         <dependencies>
 __pomgen.start_dependency_customization__
