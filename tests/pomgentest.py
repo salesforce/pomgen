@@ -114,7 +114,6 @@ maven_artifact_update(
         self._write_file(package_rel_path, "MVN-INF", "LIBRARY.root", "")
 
     def _write_file(self, package_rel_path, rel_path, filename, content):
-        print(content)
         path = os.path.join(self.repo_root_path, package_rel_path, rel_path, 
                             filename)
         parent_dir = os.path.dirname(path)

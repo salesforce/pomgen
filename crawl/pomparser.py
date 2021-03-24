@@ -11,6 +11,7 @@ pom.xml parsing.
 from collections import defaultdict
 from crawl import dependency
 import os
+from common import common
 try:
     from lxml import etree
 except ImportError as ex:
@@ -23,7 +24,7 @@ XML_NS = "{http://maven.apache.org/POM/4.0.0}"
 
 # this is the indentation used when writing out pom content, including content
 # for pom templates
-INDENT = 4 # spaces
+_INDENT = common.INDENT # spaces
 
 def format_for_comparison(pom_content):
     """
@@ -34,6 +35,7 @@ def format_for_comparison(pom_content):
     """
     parser = etree.XMLParser(remove_blank_text=True)
     tree = etree.XML(pom_content.encode().strip(), parser=parser)
+
 
     # remove <description>, if it exists
     description_el = tree.find(XML_NS + "description")
@@ -56,11 +58,11 @@ def indent_xml(xml_content, indent):
         line = line.strip()
         handled_indent = False
         if line.startswith("</"):
-            current_indent -= INDENT
+            current_indent -= _INDENT
             handled_indent = True
         indented_xml += (' '*current_indent) + line + os.linesep
         if not handled_indent and line.startswith("<") and not "</" in line:
-            current_indent += INDENT
+            current_indent += _INDENT
             handled_indent = True
     return indented_xml
 
@@ -80,7 +82,7 @@ def parse_version_properties(pom_content):
     """
     Parses the <properties> section in the specified pom_content.
 
-    Returns a mapping of a version property name to its actual value.
+    Returns a list of ParsedProperty instances.
     """
 
     parser = etree.XMLParser(remove_blank_text=True)
