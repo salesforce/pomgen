@@ -296,8 +296,6 @@ class TemplatePomGen(AbstractPomGen):
         parsed_properties = self._process_properties_content(pom_content)
         pom_content, parsed_dependencies = self._process_deps_customization_content(pom_content)
         all_version_properties, template_version_properties, group_version_dict = self._get_version_properties(pomcontenttype, parsed_properties)
-        for k in all_version_properties.keys():
-            pom_content = pom_content.replace("#{%s}" % k, all_version_properties[k])
         substitute_version_properties = ("#{%s}" % TemplatePomGen.VERSION_PROPERTY_SUBSTITUTION in pom_content or pom_content.find(TemplatePomGen.PROPERTIES_SECTION_START) != -1)
         initial_properties, updated_group_version_dict = self._get_crawled_dependencies_properties(pomcontenttype, parsed_dependencies, group_version_dict, substitute_version_properties)
         for k in TemplatePomGen.INITAL_PROPERTY_SUBSTITUTIONS:
@@ -306,7 +304,10 @@ class TemplatePomGen(AbstractPomGen):
                 del initial_properties[k]
         if substitute_version_properties:
             pom_content = self._add_generated_version_properties(updated_group_version_dict, pom_content)
+        for k in all_version_properties.keys():
+            pom_content = pom_content.replace("#{%s}" % k, all_version_properties[k])
         bad_refs = [match.group(1) for match in re.finditer(r"""\#\{(.*?)\}""", pom_content) if len(match.groups()) == 1]
+
         if len(bad_refs) > 0:
             raise Exception("pom template for [%s] has unresolvable references: %s" % (self._artifact_def, bad_refs))
         return pom_content
@@ -410,12 +411,9 @@ class TemplatePomGen(AbstractPomGen):
                 # of which maven install rule they are managed by
                 # if the versions differ, then the fully qualified label name
                 # has to be used
-                key_to_version["%s.version" % dep.unqualified_bazel_label_name] = dep.version
-
-        # the maven coordinates of this artifact can be referenced directly:
-        key_to_version["artifact_id"] = self._artifact_def.artifact_id
-        key_to_version["group_id"] = self._artifact_def.group_id
-        key_to_version["version"] = self._artifact_def_version(pomcontenttype)
+                key = "%s.version" % dep.unqualified_bazel_label_name
+                key_to_version[key] = dep.version
+                key_to_dep[key] = dep
 
         updated_properties = []
         group_version_dict = {}
@@ -425,12 +423,20 @@ class TemplatePomGen(AbstractPomGen):
             templated = re.match('#{(.+)}', property_value)
             if templated:
                 key = templated.group(1)
+                if key in ["artifact_id", "group_id", "version"]:
+                    continue
                 version_property = pomparser.ParsedProperty(property_name, key_to_version[key])
                 updated_properties.append(version_property)
                 group_id = key_to_dep[key].group_id
                 group_version_dict[group_id] = version_property
             else:
-                updated_properties.add(parsed_property)
+                updated_properties.append(parsed_property)
+
+        # the maven coordinates of this artifact can be referenced directly:
+        key_to_version["artifact_id"] = self._artifact_def.artifact_id
+        key_to_version["group_id"] = self._artifact_def.group_id
+        key_to_version["version"] = self._artifact_def_version(pomcontenttype)
+
         return key_to_version, updated_properties, group_version_dict
 
     def _get_crawled_dependencies_properties(self, pomcontenttype, pom_template_parsed_deps, group_version_dict, substitute_version_properties):

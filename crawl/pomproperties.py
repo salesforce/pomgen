@@ -27,7 +27,7 @@ def get_group_version_dict(deps, group_version_dict={}):
     for dep in deps:
         group_id = dep.group_id
         version = dep.version
-        if not group_id in result_group_version_dict:
+        if group_id not in result_group_version_dict:
             result_group_version_dict[group_id] = pomparser.ParsedProperty("%s.version" % group_id, version)
     return result_group_version_dict
 
