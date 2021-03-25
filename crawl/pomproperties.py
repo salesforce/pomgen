@@ -10,6 +10,7 @@ content based on groupId.
 """
 from common import common
 from crawl import pomparser
+import re
 
 _INDENT = common.INDENT
 
@@ -28,6 +29,8 @@ def get_group_version_dict(deps, group_version_dict={}):
         group_id = dep.group_id
         version = dep.version
         if group_id not in result_group_version_dict:
+            if re.match('#{(.+)}', version) or re.match('\${(.+)}', version):
+                continue
             result_group_version_dict[group_id] = pomparser.ParsedProperty("%s.version" % group_id, version)
     return result_group_version_dict
 
