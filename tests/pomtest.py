@@ -31,6 +31,8 @@ TEST_POM_TEMPLATE = """
 
 class PomTest(unittest.TestCase):
 
+    maxDiff = None
+
     def setUp(self):
         f = dependency.new_dep_from_maven_art_str
         all_excluded_dep = f("*:*:-1", "maven")
@@ -308,7 +310,7 @@ monorepo artifact version #{version}
                                  pomcontent.NOOP)
         artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
-        artifact_def.custom_pom_template_content = "srpc #{com.grail.srpc:srpc-api:version}"
+        artifact_def.custom_pom_template_content = "#{pomgen.template_generated_properties} srpc #{com.grail.srpc:srpc-api:version}"
         srpc_artifact_def = buildpom.MavenArtifactDef(
             "com.grail.srpc", "srpc-api", "5.6.7", bazel_package="a/b/c")
         srpc_dep = dependency.MonorepoDependency(srpc_artifact_def, bazel_target=None)
@@ -355,6 +357,7 @@ monorepo artifact version #{version}
         srpc_artifact_def = buildpom._augment_art_def_values(srpc_artifact_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
         srpc_dep = dependency.MonorepoDependency(srpc_artifact_def, bazel_target=None)
         artifact_def.custom_pom_template_content = """
+#{pomgen.template_generated_properties}
 this artifact version #{version}
 logback coord #{ch.qos.logback:logback-classic:version}
 logback qualified #{@maven//:ch_qos_logback_logback_classic.version}
@@ -461,9 +464,7 @@ __pomgen.end_dependency_customization__
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = pom_template
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
-
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
-
         self.assertEqual(expected_pom, generated_pom)
 
     def test_template__library_transitives(self):
@@ -473,6 +474,7 @@ __pomgen.end_dependency_customization__
         """
         pom_template = """
 <project>
+#{pomgen.template_generated_properties}
     <dependencyManagement>
         <dependencies>
 #{pomgen.transitive_closure_of_library_dependencies}
@@ -483,17 +485,22 @@ __pomgen.end_dependency_customization__
 
         expected_pom = """
 <project>
+    <properties>
+        <cg.version>0.0.1</cg.version>
+        <com.grail.srpc.version>5.6.7</com.grail.srpc.version>
+    </properties>
+
     <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>com.grail.srpc</groupId>
                 <artifactId>srpc-api</artifactId>
-                <version>5.6.7</version>
+                <version>${com.grail.srpc.version}</version>
             </dependency>
             <dependency>
                 <groupId>cg</groupId>
                 <artifactId>ca</artifactId>
-                <version>0.0.1</version>
+                <version>${cg.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -524,6 +531,7 @@ __pomgen.end_dependency_customization__
         """
         pom_template = """
 <project>
+#{pomgen.template_generated_properties}
     <dependencyManagement>
         <dependencies>
 __pomgen.start_dependency_customization__
@@ -552,12 +560,16 @@ __pomgen.end_dependency_customization__
 
         expected_pom = """
 <project>
+    <properties>
+        <cg.version>0.0.1</cg.version>
+    </properties>
+
     <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>cg</groupId>
                 <artifactId>ca</artifactId>
-                <version>0.0.1</version>
+                <version>${cg.version}</version>
                 <classifier>c1</classifier>
                 <exclusions>
                     <exclusion>
@@ -595,6 +607,7 @@ __pomgen.end_dependency_customization__
         """
         pom_template = """
 <project>
+#{pomgen.template_generated_properties}
     <dependencyManagement>
         <dependencies>
 __pomgen.start_dependency_customization__
@@ -614,12 +627,16 @@ __pomgen.end_dependency_customization__
 
         expected_pom = """
 <project>
+    <properties>
+        <cg.version>0.0.1</cg.version>
+    </properties>
+
     <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>cg</groupId>
                 <artifactId>ca</artifactId>
-                <version>0.0.1</version>
+                <version>${cg.version}</version>
                 <classifier>sources</classifier>
                 <scope>test</scope>
             </dependency>
@@ -639,6 +656,63 @@ __pomgen.end_dependency_customization__
 
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
 
+        self.assertEqual(expected_pom, generated_pom)
+
+    def test_template__reuse_version_properties(self):
+        """
+        Verifies that transitive dependencies can be referenced using the
+        property pomgen.transitive_closure_of_library_dependencies.
+        """
+        pom_template = """
+<project>
+    <properties>
+        <existing.srpc.version>#{com.grail.srpc:srpc-api:version}</existing.srpc.version>
+    </properties>
+    <dependencyManagement>
+        <dependencies>
+#{pomgen.transitive_closure_of_library_dependencies}
+        </dependencies>
+    </dependencyManagement>
+</project>
+"""
+
+        expected_pom = """
+<project>
+    <properties>
+        <existing.srpc.version>5.6.7</existing.srpc.version>
+        <cg.version>0.0.1</cg.version>
+    </properties>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.grail.srpc</groupId>
+                <artifactId>srpc-api</artifactId>
+                <version>${existing.srpc.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>cg</groupId>
+                <artifactId>ca</artifactId>
+                <version>${cg.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>
+"""
+        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+                                 maveninstallinfo.NOOP,
+                                 pomcontent.NOOP)
+        artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.2.3")
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        artifact_def.custom_pom_template_content = pom_template
+        pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
+        srpc_artifact_def = buildpom.MavenArtifactDef(
+            "com.grail.srpc", "srpc-api", "5.6.7", bazel_package="a/b/c")
+        internal_dep = dependency.MonorepoDependency(srpc_artifact_def, bazel_target=None)
+
+        external_dep = dependency.ThirdPartyDependency("name", "cg", "ca", "0.0.1")
+        pomgen.register_dependencies_transitive_closure__library(set([external_dep, internal_dep]))
+
+        generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
         self.assertEqual(expected_pom, generated_pom)
 
     def test_template_unknown_variable(self):
