@@ -258,6 +258,9 @@ class AbstractPomGen(object):
         else:
             return content.replace("#{description}", self._gen_description(description))
 
+    def _get_property_prefix_suffix(self):
+        return self._workspace.property_prefix_suffix
+
 class NoopPomGen(AbstractPomGen):
     """
     A placeholder pom generator that doesn't generator anything, but still
@@ -447,7 +450,7 @@ class TemplatePomGen(AbstractPomGen):
 
         properties = {}
         if substitute_version_properties:
-            updated_group_version_dict = pomproperties.get_group_version_dict(self.dependencies_library_transitive_closure, group_version_dict=group_version_dict)
+            updated_group_version_dict = pomproperties.get_group_version_dict(self.dependencies_library_transitive_closure, self._get_property_prefix_suffix(), group_version_dict=group_version_dict)
         else:
             updated_group_version_dict = {}
         content = self._build_deps_property_content(
@@ -458,7 +461,7 @@ class TemplatePomGen(AbstractPomGen):
         pom_template_only_deps = pom_template_parsed_deps.get_parsed_deps_set_missing_from(self.dependencies_library_transitive_closure)
 
         if substitute_version_properties:
-            updated_group_version_dict = pomproperties.get_group_version_dict(pom_template_only_deps, group_version_dict=updated_group_version_dict)
+            updated_group_version_dict = pomproperties.get_group_version_dict(pom_template_only_deps, self._get_property_prefix_suffix(), group_version_dict=updated_group_version_dict)
         else:
             updated_group_version_dict = {}
         content = self._build_template_only_deps_property_content(\
@@ -681,7 +684,7 @@ class DependencyManagementPomGen(AbstractPomGen):
             content = self._remove_token(content, "#{dependencies}")
             content = self._remove_token(content, "#{%s}" % DependencyManagementPomGen.VERSION_PROPERTY_SUBSTITUTION)
         else:
-            group_version_dict = pomproperties.get_group_version_dict(self.dependencies_artifact_transitive_closure)
+            group_version_dict = pomproperties.get_group_version_dict(self.dependencies_artifact_transitive_closure, self._get_property_prefix_suffix())
             version_properties_content = pomproperties.gen_version_properties(group_version_dict)
             content = content.replace("#{%s}" % DependencyManagementPomGen.VERSION_PROPERTY_SUBSTITUTION, version_properties_content)
             dep_man_content = self._gen_dependency_management(self.dependencies_artifact_transitive_closure, group_version_dict)

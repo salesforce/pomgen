@@ -481,7 +481,7 @@ class CrawlerUnitTest(unittest.TestCase):
     def _get_workspace(self):
         return workspace.Workspace(repo_root_path="a/b/c",
                                    excluded_dependency_paths=[],
-                                   source_exclusions=[],
+                                   source_exclusions=[], property_prefix_suffix=("", ""),
                                    maven_install_info=maveninstallinfo.NOOP,
                                    pom_content="",)
 

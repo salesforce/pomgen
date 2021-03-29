@@ -80,6 +80,8 @@ def load(repo_root, verbose=False):
     cfg = Config(
         pom_template_path_and_content=_read_files(repo_root, pom_template_p)[0],
         maven_install_paths=gen("maven_install_paths", ("maven_install.json",)),
+        version_property_prefix=gen("version_property_prefix", ""),
+        version_property_suffix=gen("version_property_suffix", ""),
         excluded_dependency_paths=crawl("excluded_dependency_paths", ()),
         excluded_src_relpaths=artifact("excluded_relative_paths", ("src/test",)),
         excluded_src_file_names=artifact("excluded_filenames", (".gitignore",)),
@@ -110,6 +112,8 @@ class Config:
     def __init__(self, 
                  pom_template_path_and_content=("",""),
                  maven_install_paths=(),
+                 version_property_prefix="",
+                 version_property_suffix="",
                  excluded_dependency_paths=(),
                  excluded_src_relpaths=(),
                  excluded_src_file_names=(),
@@ -117,8 +121,10 @@ class Config:
                  transitives_versioning_mode="semver"):
 
         # general
-        self.pom_template_path_and_content=pom_template_path_and_content
+        self.pom_template_path_and_content = pom_template_path_and_content
         self.maven_install_paths = _to_tuple(maven_install_paths)
+        self._version_property_prefix = version_property_prefix
+        self._version_property_suffix = version_property_suffix
 
         # crawler
         self.excluded_dependency_paths = _add_pathsep(_to_tuple(excluded_dependency_paths))
@@ -141,6 +147,20 @@ class Config:
         return exclusions.src_exclusions(self.excluded_src_relpaths,
                                          self.excluded_src_file_names,
                                          self.excluded_src_file_extensions)
+
+    @property
+    def version_property_prefix(self):
+        """
+        Convenience method that returns the prefix to use for generated version properties.
+        """
+        return self._version_property_prefix
+
+    @property
+    def version_property_suffix(self):
+        """
+        Convenience method that returns the suffix to use for generated version properties.
+        """
+        return self._version_property_suffix
 
     def __str__(self):
         return """[general]

@@ -67,6 +67,7 @@ def main(args):
     ws = workspace.Workspace(repo_root, 
                              cfg.excluded_dependency_paths,
                              cfg.all_src_exclusions,
+                             (cfg.version_property_prefix, cfg.version_property_suffix),
                              mvn_install_info,
                              pomcontent.NOOP)
     group_id = "all_ext_deps_group" if args.group_id is None else args.group_id

@@ -37,7 +37,7 @@ class WorkspaceTest(unittest.TestCase):
 
     def test_normalize_deps__default_removes_refs_to_same_package(self):
         ws = workspace.Workspace("so/path", [], exclusions.src_exclusions(),
-                                 maveninstallinfo.NOOP, 
+                                 ("",""), maveninstallinfo.NOOP,
                                  pom_content=pomcontent.NOOP)
         package = "a/b/c"
         art1 = buildpom.MavenArtifactDef("g1", "a1", "1", bazel_package=package,
@@ -56,7 +56,7 @@ class WorkspaceTest(unittest.TestCase):
 
     def test_normalize_deps__skip_pomgen_mode_allows_refs_to_same_package(self):
         ws = workspace.Workspace("so/path", [], exclusions.src_exclusions(),
-                                 maveninstallinfo.NOOP,
+                                 ("",""), maveninstallinfo.NOOP,
                                  pom_content=pomcontent.NOOP)
         package = "a/b/c"
         art1 = buildpom.MavenArtifactDef("g1", "a1", "1", bazel_package=package,
@@ -78,7 +78,7 @@ class WorkspaceTest(unittest.TestCase):
         Verifies that an external dependency label is correctly parsed into a 
         Dependency instance.
         """
-        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(), ("",""),
                                  maven_install_info=self._mocked_mvn_install_info("maven"),
                                  pom_content=pomcontent.NOOP)
 
@@ -95,7 +95,7 @@ class WorkspaceTest(unittest.TestCase):
         """
         Verifies the error that is thrown when an unknown dep is encountered.
         """
-        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(), ("",""),
                                  maven_install_info=self._mocked_mvn_install_info("maven"),
                                  pom_content=pomcontent.NOOP)
 
@@ -112,6 +112,7 @@ class WorkspaceTest(unittest.TestCase):
         ws = workspace.Workspace("some/path",
             excluded_dependency_paths=["projects/protos/",], 
             source_exclusions=exclusions.src_exclusions(),
+            property_prefix_suffix=("",""),
             maven_install_info=self._mocked_mvn_install_info("maven"),
             pom_content=pomcontent.NOOP)
 
@@ -129,7 +130,7 @@ class WorkspaceTest(unittest.TestCase):
         Dependency instance when the strings being parsed contain reserved words
         such as "artifact".
         """
-        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(), ("",""),
                                  maven_install_info=self._mocked_mvn_install_info("maven"),
                                  pom_content=pomcontent.NOOP)
 
@@ -153,7 +154,7 @@ class WorkspaceTest(unittest.TestCase):
         self._touch_file_at_path(repo_root, "", "MVN-INF", "LIBRARY.root")
         self._write_build_pom(repo_root, package_name, artifact_id, group_id, artifact_version)
         ws = workspace.Workspace(repo_root, [], exclusions.src_exclusions(),
-                                 maveninstallinfo.NOOP,
+                                 ("",""), maveninstallinfo.NOOP,
                                  pom_content=pomcontent.NOOP)
 
         deps = ws.parse_dep_labels(["//%s" % package_name])
@@ -178,7 +179,7 @@ class WorkspaceTest(unittest.TestCase):
         self._touch_file_at_path(repo_root, "", "MVN-INF", "LIBRARY.root")
         self._write_build_pom(repo_root, package_name, artifact_id, group_id, artifact_version)
         ws = workspace.Workspace(repo_root, [], exclusions.src_exclusions(),
-                                 maveninstallinfo.NOOP,
+                                 ("",""), maveninstallinfo.NOOP,
                                  pom_content=pomcontent.NOOP)
 
         deps = ws.parse_dep_labels(["//%s:my_cool_target" % package_name])
@@ -207,7 +208,7 @@ class WorkspaceTest(unittest.TestCase):
         os.mkdir(os.path.join(repo_root, bad_package_name)) # no BUILD.pom
 
         ws = workspace.Workspace(repo_root, [], exclusions.src_exclusions(),
-                                 maveninstallinfo.NOOP,
+                                 ("",""), maveninstallinfo.NOOP,
                                  pom_content=pomcontent.NOOP)
 
         with self.assertRaises(Exception) as ctx:
@@ -222,7 +223,7 @@ class WorkspaceTest(unittest.TestCase):
         Verifies that parsing of an invalid label behaves as expected.
         """
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
-                                 maveninstallinfo.NOOP,
+                                 ("",""), maveninstallinfo.NOOP,
                                  pom_content=pomcontent.NOOP)
 
         with self.assertRaises(Exception) as ctx:
@@ -253,7 +254,7 @@ class WorkspaceTest(unittest.TestCase):
         package_hash = git.get_dir_hash(repo_root, package_name, exclusions.src_exclusions())
         self._write_build_pom_released(repo_root, package_name, released_version, package_hash)
         ws = workspace.Workspace(repo_root, [], exclusions.src_exclusions(),
-                                 maveninstallinfo.NOOP,
+                                 ("",""), maveninstallinfo.NOOP,
                                  pom_content=pomcontent.NOOP)
 
         deps = ws.parse_dep_labels(["//%s" % package_name])
@@ -288,7 +289,7 @@ class WorkspaceTest(unittest.TestCase):
         self._touch_file_at_path(repo_root, package_name, "", "myfile")
         self._commit(repo_root)
         ws = workspace.Workspace(repo_root, [], exclusions.src_exclusions(),
-                                 maveninstallinfo.NOOP,
+                                 ("",""), maveninstallinfo.NOOP,
                                  pom_content=pomcontent.NOOP)
 
         deps = ws.parse_dep_labels(["//%s" % package_name])
