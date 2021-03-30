@@ -14,7 +14,7 @@ import re
 
 _INDENT = common.INDENT
 
-def get_group_version_dict(deps, group_version_dict={}):
+def get_group_version_dict(deps, property_prefix_suffix, group_version_dict={}):
     """
     Processes a list of Dependency instances, and optionally a mapping from groupId to ParsedProperty instance.
     If multiple artifacts with same groupId have different versions, this will create a version property for
@@ -24,6 +24,7 @@ def get_group_version_dict(deps, group_version_dict={}):
     Returns a mapping from groupId to ParsedProperty instance.
     """
     content = ""
+    prefix, suffix = property_prefix_suffix
     result_group_version_dict = dict(group_version_dict)
     for dep in deps:
         group_id = dep.group_id
@@ -31,7 +32,12 @@ def get_group_version_dict(deps, group_version_dict={}):
         if group_id not in result_group_version_dict:
             if re.match('#{(.+)}', version) or re.match('\${(.+)}', version):
                 continue
-            result_group_version_dict[group_id] = pomparser.ParsedProperty("%s.version" % group_id, version)
+            property_name = group_id
+            if prefix:
+                property_name = "%s.%s" % (prefix, property_name)
+            if suffix:
+                property_name = "%s.%s" % (property_name, suffix)
+            result_group_version_dict[group_id] = pomparser.ParsedProperty("%s.managed_version" % property_name, version)
     return result_group_version_dict
 
 def gen_version_properties(group_version_dict, pom_content = ""):

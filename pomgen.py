@@ -78,6 +78,7 @@ def main(args):
     ws = workspace.Workspace(repo_root,
                              cfg.excluded_dependency_paths,
                              cfg.all_src_exclusions,
+                             (cfg.version_property_prefix, cfg.version_property_suffix),
                              mvn_install_info,
                              pom_content)
     packages = argsupport.get_all_packages(repo_root, args.package)

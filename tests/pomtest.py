@@ -57,7 +57,7 @@ class PomTest(unittest.TestCase):
         Ensures that dynamic pom generation isn't totally broken.
         """
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
-                                 self._mocked_mvn_install_info("maven"),
+                                 ("", ""), self._mocked_mvn_install_info("maven"),
                                  pomcontent.NOOP)
         artifact_def = buildpom.maven_artifact("g1", "a2", "1.2.3")
         artifact_def = buildpom._augment_art_def_values(artifact_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
@@ -137,9 +137,9 @@ class PomTest(unittest.TestCase):
 """
         pc = pomcontent.PomContent()
         pc.description = "this is a cool description"
-        ws = workspace.Workspace("some/path", [], 
+        ws = workspace.Workspace("some/path", [],
                                  exclusions.src_exclusions(),
-                                 maveninstallinfo.NOOP,
+                                 ("", ""), maveninstallinfo.NOOP,
                                  pc)
         pom_template = """<project>
 #{description}
@@ -163,7 +163,7 @@ class PomTest(unittest.TestCase):
         # pc.description IS NOT set here - that's the point of this test
         ws = workspace.Workspace("some/path", [],
                                  exclusions.src_exclusions(),
-                                 maveninstallinfo.NOOP,
+                                 ("", ""), maveninstallinfo.NOOP,
                                  pc)
         pom_template = """<project>
 #{description}
@@ -194,7 +194,7 @@ class PomTest(unittest.TestCase):
         artifact_def = buildpom._augment_art_def_values(artifact_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
-                                 self._mocked_mvn_install_info("maven"),
+                                 ("", ""), self._mocked_mvn_install_info("maven"),
                                  pomcontent.NOOP)
         pomgen = pom.DynamicPomGen(ws, artifact_def, dep, TEST_POM_TEMPLATE)
         org_function = bazel.query_java_library_deps_attributes
@@ -219,7 +219,7 @@ class PomTest(unittest.TestCase):
         Tests the seldomly used "include_deps = False" BUILD.pom attribute.
         """
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
-                                 maveninstallinfo.NOOP,
+                                 ("", ""), maveninstallinfo.NOOP,
                                  pomcontent.NOOP)
         artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3",
                                                  include_deps=False)
@@ -241,7 +241,7 @@ class PomTest(unittest.TestCase):
         Test goldfile mode with dynamic pom gen.
         """
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
-                                 self._mocked_mvn_install_info("maven"),
+                                 ("", ""), self._mocked_mvn_install_info("maven"),
                                  pomcontent.NOOP)
         artifact_def = buildpom.maven_artifact("g1", "a2", "1.2.3")
         artifact_def = buildpom._augment_art_def_values(artifact_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
@@ -283,7 +283,7 @@ class PomTest(unittest.TestCase):
         Verifies variable substitution in a pom template.
         """
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
-                                 self._mocked_mvn_install_info("maven"),
+                                 ("", ""), self._mocked_mvn_install_info("maven"),
                                  pomcontent.NOOP)
         artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.4.4")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
@@ -306,7 +306,7 @@ monorepo artifact version #{version}
         Verifies references to monorepo versions in a pom template.
         """
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
-                                 maveninstallinfo.NOOP,
+                                 ("", ""), maveninstallinfo.NOOP,
                                  pomcontent.NOOP)
         artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
@@ -327,7 +327,7 @@ monorepo artifact version #{version}
         and what is set in BUILD.pom files.
         """
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
-                                 self._mocked_mvn_install_info("maven"),
+                                 ("", ""), self._mocked_mvn_install_info("maven"),
                                  pomcontent.NOOP)
         artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.2.3")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
@@ -348,7 +348,7 @@ monorepo artifact version #{version}
         Verifies version omissions when genmode is GOLDFILE.
         """
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
-                                 self._mocked_mvn_install_info("maven"),
+                                 ("", ""), self._mocked_mvn_install_info("maven"),
                                  pomcontent.NOOP)
         artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.2.3")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
@@ -399,7 +399,7 @@ __pomgen.end_dependency_customization__
 </project>
 """
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
-                                 maveninstallinfo.NOOP,
+                                 ("", ""), maveninstallinfo.NOOP,
                                  pomcontent.NOOP)
         artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.2.3")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
@@ -458,7 +458,7 @@ __pomgen.end_dependency_customization__
 </project>
 """
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
-                                 maveninstallinfo.NOOP,
+                                 ("", ""), maveninstallinfo.NOOP,
                                  pomcontent.NOOP)
         artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.2.3")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
@@ -486,8 +486,8 @@ __pomgen.end_dependency_customization__
         expected_pom = """
 <project>
     <properties>
-        <cg.version>0.0.1</cg.version>
-        <com.grail.srpc.version>5.6.7</com.grail.srpc.version>
+        <cg.managed_version>0.0.1</cg.managed_version>
+        <com.grail.srpc.managed_version>5.6.7</com.grail.srpc.managed_version>
     </properties>
 
     <dependencyManagement>
@@ -495,19 +495,19 @@ __pomgen.end_dependency_customization__
             <dependency>
                 <groupId>com.grail.srpc</groupId>
                 <artifactId>srpc-api</artifactId>
-                <version>${com.grail.srpc.version}</version>
+                <version>${com.grail.srpc.managed_version}</version>
             </dependency>
             <dependency>
                 <groupId>cg</groupId>
                 <artifactId>ca</artifactId>
-                <version>${cg.version}</version>
+                <version>${cg.managed_version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
 </project>
 """
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
-                                 maveninstallinfo.NOOP,
+                                 ("", ""), maveninstallinfo.NOOP,
                                  pomcontent.NOOP)
         artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.2.3")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
@@ -561,7 +561,7 @@ __pomgen.end_dependency_customization__
         expected_pom = """
 <project>
     <properties>
-        <cg.version>0.0.1</cg.version>
+        <cg.managed_version>0.0.1</cg.managed_version>
     </properties>
 
     <dependencyManagement>
@@ -569,7 +569,7 @@ __pomgen.end_dependency_customization__
             <dependency>
                 <groupId>cg</groupId>
                 <artifactId>ca</artifactId>
-                <version>${cg.version}</version>
+                <version>${cg.managed_version}</version>
                 <classifier>c1</classifier>
                 <exclusions>
                     <exclusion>
@@ -587,7 +587,7 @@ __pomgen.end_dependency_customization__
 </project>
 """
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
-                                 maveninstallinfo.NOOP,
+                                 ("", ""), maveninstallinfo.NOOP,
                                  pomcontent.NOOP)
         artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.2.3")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
@@ -628,7 +628,7 @@ __pomgen.end_dependency_customization__
         expected_pom = """
 <project>
     <properties>
-        <cg.version>0.0.1</cg.version>
+        <cg.managed_version>0.0.1</cg.managed_version>
     </properties>
 
     <dependencyManagement>
@@ -636,7 +636,7 @@ __pomgen.end_dependency_customization__
             <dependency>
                 <groupId>cg</groupId>
                 <artifactId>ca</artifactId>
-                <version>${cg.version}</version>
+                <version>${cg.managed_version}</version>
                 <classifier>sources</classifier>
                 <scope>test</scope>
             </dependency>
@@ -645,7 +645,7 @@ __pomgen.end_dependency_customization__
 </project>
 """
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
-                                 maveninstallinfo.NOOP,
+                                 ("", ""), maveninstallinfo.NOOP,
                                  pomcontent.NOOP)
         artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.2.3")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
@@ -680,7 +680,7 @@ __pomgen.end_dependency_customization__
 <project>
     <properties>
         <existing.srpc.version>5.6.7</existing.srpc.version>
-        <cg.version>0.0.1</cg.version>
+        <cg.managed_version>0.0.1</cg.managed_version>
     </properties>
     <dependencyManagement>
         <dependencies>
@@ -692,14 +692,14 @@ __pomgen.end_dependency_customization__
             <dependency>
                 <groupId>cg</groupId>
                 <artifactId>ca</artifactId>
-                <version>${cg.version}</version>
+                <version>${cg.managed_version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
 </project>
 """
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
-                                 maveninstallinfo.NOOP,
+                                 ("", ""), maveninstallinfo.NOOP,
                                  pomcontent.NOOP)
         artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.2.3")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
@@ -721,7 +721,7 @@ __pomgen.end_dependency_customization__
         results in an error during template processing.
         """
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
-                                 maveninstallinfo.NOOP,
+                                 ("", ""), maveninstallinfo.NOOP,
                                  pomcontent.NOOP)
         artifact_def = buildpom.maven_artifact("groupId", "artifactId",
                                                "1.2.3")
@@ -740,7 +740,7 @@ __pomgen.end_dependency_customization__
         Ensures that dependency management pom generation isn't totally broken.
         """
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
-                                 maveninstallinfo.NOOP,
+                                 ("", ""), maveninstallinfo.NOOP,
                                  pomcontent.NOOP)
         artifact_def = buildpom.MavenArtifactDef(
             "g1", "a2", "1.2.3", gen_dependency_management_pom=True)
