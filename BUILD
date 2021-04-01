@@ -87,7 +87,6 @@ py_test(
 py_test(
     name = "buildpomtest",
     srcs = ["common/code.py",
-            "common/common.py",
             "common/mdfiles.py",
             "common/pomgenmode.py",
             "common/version.py",
@@ -209,23 +208,9 @@ py_test(
 py_test(
     name = "pomparsertest",
     srcs = ["common/logger.py",
-            "common/common.py",
             "crawl/dependency.py", 
             "crawl/pomparser.py", 
             "tests/pomparsertest.py"],
-    imports = ["."],
-    size = "small",
-    python_version = python_version,
-)
-
-py_test(
-    name = "pompropertiestest",
-    srcs = ["common/common.py",
-            "common/logger.py",
-            "crawl/dependency.py",
-            "crawl/pomparser.py",
-            "crawl/pomproperties.py",
-            "tests/pompropertiestest.py"],
     imports = ["."],
     size = "small",
     python_version = python_version,

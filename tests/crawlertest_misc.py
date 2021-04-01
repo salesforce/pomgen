@@ -41,7 +41,7 @@ class CrawlerTest(unittest.TestCase):
         self._add_artifact(repo_root_path, "lib/a2", "template", deps=["//lib/a1"])
 
         ws = workspace.Workspace(repo_root_path, [],
-                                 exclusions.src_exclusions(), ("", ""),
+                                 exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
                                  pomcontent.NOOP)
         crawler = crawlerm.Crawler(ws, pom_template="")
@@ -63,7 +63,7 @@ class CrawlerTest(unittest.TestCase):
         self._add_artifact(repo_root_path, "lib/a2", "template", deps=["//lib/a1:a1"])
 
         ws = workspace.Workspace(repo_root_path, [],
-                                 exclusions.src_exclusions(), ("", ""),
+                                 exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
                                  pomcontent.NOOP)
         crawler = crawlerm.Crawler(ws, pom_template="")
@@ -86,7 +86,7 @@ class CrawlerTest(unittest.TestCase):
         self._add_artifact(repo_root_path, "lib/a2", "template", deps=["//lib/a1:foo"])
 
         ws = workspace.Workspace(repo_root_path, [],
-                                 exclusions.src_exclusions(), ("", ""),
+                                 exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
                                  pomcontent.NOOP)
         crawler = crawlerm.Crawler(ws, pom_template="")
@@ -108,7 +108,7 @@ class CrawlerTest(unittest.TestCase):
         self._add_artifact(repo_root_path, "lib/a2", "template", deps=["//lib/a1:foo"])
 
         ws = workspace.Workspace(repo_root_path, [],
-                                 exclusions.src_exclusions(), ("", ""),
+                                 exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
                                  pomcontent.NOOP)
         crawler = crawlerm.Crawler(ws, pom_template="")

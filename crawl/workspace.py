@@ -22,15 +22,13 @@ class Workspace:
     """
 
     def __init__(self, repo_root_path, excluded_dependency_paths, 
-                 source_exclusions,
-                 property_prefix_suffix,
+                 source_exclusions, 
                  maven_install_info,
                  pom_content,
                  verbose=False):
         self.repo_root_path = repo_root_path
         self.excluded_dependency_paths = excluded_dependency_paths
         self.source_exclusions = source_exclusions
-        self.property_prefix_suffix = property_prefix_suffix
         self.pom_content = pom_content
         self.verbose = verbose
         self.dependency_metadata = dependencymd.DependencyMetadata()

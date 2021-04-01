@@ -10,8 +10,6 @@ Common utility functions shared between command line entrypoints.
 
 import os
 
-INDENT = 4 # spaces
-
 def get_repo_root(repo_root=None):
     if repo_root is None:
         repo_root = os.getcwd()
@@ -28,16 +26,4 @@ def get_repo_root(repo_root=None):
 
 def _has_workspace_file(repo_root):
     return os.path.exists(os.path.join(repo_root, "WORKSPACE"))
-
-def xml(content, element, indent, value=None, close_element=False):
-    """
-    Helper method used to generated xml.
-    """
-    if value is None:
-        if close_element:
-            return "%s%s</%s>%s" % (content, ' '*(indent - INDENT), element, os.linesep), indent - INDENT
-        else:
-            return "%s%s<%s>%s" % (content, ' '*indent, element, os.linesep), indent + INDENT
-    else:
-        return "%s%s<%s>%s</%s>%s" % (content, ' '*indent, element, value, element, os.linesep), indent
 
