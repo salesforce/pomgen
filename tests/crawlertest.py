@@ -57,7 +57,7 @@ class CrawlerTest(unittest.TestCase):
         self.cwd = os.getcwd()
         os.chdir(self.repo_root_path)
         ws = workspace.Workspace(self.repo_root_path,
-                                 [], exclusions.src_exclusions(), ("",""),
+                                 [], exclusions.src_exclusions(),
                                  maven_install_info=maveninstallinfo.NOOP,
                                  pom_content=pomcontent.NOOP)
         self.crawler = crawler.Crawler(ws, pom_template="")

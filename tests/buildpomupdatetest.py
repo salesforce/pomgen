@@ -508,6 +508,7 @@ maven_artifact_update(
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
+            print(content)
             self.assertIn('maven_artifact(', content)
             self.assertIn('    group_id = "p1g"', content)
             self.assertIn('    artifact_id = "p1a"', content)
