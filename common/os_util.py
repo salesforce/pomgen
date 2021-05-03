@@ -67,8 +67,13 @@ def run_cmd(cmd, cwd=os.getcwd()):
     env['HOME'] = home if home is not None else cwd
 
     with subprocess.Popen(cmd, shell=True, env=env, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as process:
+        output = bytearray()
+        while True:
+            line = process.stdout.readline()
+            if not line:
+                break
+            output.extend(line)
         return_code = process.wait()
-        output = process.stdout.read()
         # python3 returns byte objects, python2 return strings
         try:
             output = output.decode()
