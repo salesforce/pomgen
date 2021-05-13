@@ -79,7 +79,7 @@ Commit and send PR.
 
 ## About propsed versions
 
-`pomgen query` can be used to determine release and development versions to use. This information is part of the json response when asking or `--library_release_plan_json`.
+`pomgen query` can be used to determine release and development versions to use. This information is part of the json response when asking for `--library_release_plan_json`.
 
 For example:
 
