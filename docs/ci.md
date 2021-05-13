@@ -117,7 +117,7 @@ In this example, pomgen does not distinguish between the main library being quer
 
 ### Using a different version increment mode for transitives
 
-If library owners want to tightly control when their [semver](https://semver.org) version components are incremented, then transitive library releases cannot change semver version, since library owners have no control over transitive releases. pomgen supports another transitives versioning scheme for this use case - it can be enabled by setting `transitives_versioning_mode=counter` in the [pomgenrc file](../README.md#configuration). This versioning mode works as follows:
+If library owners want to tightly control when their [semver](https://semver.org) version components are incremented, then transitive library releases cannot change their semver version, since library owners have no control over transitive releases. pomgen supports another transitives versioning scheme for this use case - it can be enabled by setting `transitives_versioning_mode=counter` in the [pomgenrc file](../README.md#configuration). This versioning mode works as follows:
 
 1. IMPORTANT this versioning scheme only affects libraries released **transitively**. So in the example above, this versioning logic would be used for *healthyfoods* and *wintervegetables* only, NOT for *juicer*
 1. Start with the last released version, for example 1.2.3. If the library has never been released, the last released version defaults to 0.0.0
