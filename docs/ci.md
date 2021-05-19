@@ -51,7 +51,7 @@ bazel run @pomgen//maven -- -a deploy_all
 These files are used by pomgen to determine whether a new release is required because the pom has changed since the last release.
 
 ```
-bazel run @pomgen//:pomgen -- --package <bazel package> --destdir <root of repo> --recursive --pom_goldfile
+bazel run @pomgen//:pomgen -- --package <bazel package> --destdir <root of repo> --pom_goldfile
 ```
 
 #### Write BUILD.pom.released files

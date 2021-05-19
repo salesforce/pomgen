@@ -15,7 +15,7 @@ parent (contains 2 artifacts: parent1 and parent2) -> passthrough -> lib
 From the root of the repository:
 
 ```
-bazel run @pomgen//:pomgen -- --package examples/skip-artifact-generation/parent --destdir /tmp/pomgen --recursive
+bazel run @pomgen//:pomgen -- --package examples/skip-artifact-generation/parent --destdir /tmp/pomgen
 ```
 
 The command above generates 3 poms, for:
