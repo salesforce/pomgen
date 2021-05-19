@@ -5,7 +5,7 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 
 
-Crawls monorepo src dependencies and builds a DAG.
+Crawls Bazel BUILD file dependencies and builds a DAG.
 """
 from collections import defaultdict
 from common import logger
@@ -50,8 +50,7 @@ class Node:
 
 class CrawlerResult:
     """
-    Useful bits and pieces that are the outcome of crawling monorepo 
-    BUILD files.
+    Useful bits and pieces that are the outcome of crawling Bazel BUILD files.
     """
 
     def __init__(self, pomgens, nodes, crawled_bazel_packages):
@@ -81,17 +80,18 @@ class Crawler:
         self.pomgens = [] # all pomgen instances
         self.leafnodes = [] # all leafnodes discovered while crawling
 
-    def crawl(self, packages, follow_monorepo_references=True, force_release=False):
+    def crawl(self, packages, follow_references=True, force_release=False):
         """
-        Crawls monorepo dependencies, starting at the specified packages.
+        Crawls Bazel BUILD file dependencies, starting at the specified
+        Bazel packages.
 
         Builds up a DAG of Node instances based on the references in BUILD
         files.
         
         Arguments:
 
-        follow_monorepo_references: 
-            If False, this crawler will not crawl monorepo references, 
+        follow_references: 
+            If False, this crawler will not crawl BUILD file references, 
             effectively only processing the packages passed into this method
 
             This is typically only used for debugging.
@@ -108,7 +108,7 @@ class Crawler:
         # deps and runtime deps of single java_library target.
         # there must be only one java_library target defined in each processed
         # bazel package/BUILD file
-        nodes = self._crawl_packages(packages, follow_monorepo_references)
+        nodes = self._crawl_packages(packages, follow_references)
 
 
         # a library (LIBRARY.root) may have more than one artifact (Bazel
@@ -117,11 +117,11 @@ class Crawler:
         # artifacts for all libraries referenced. gathering artifacts may drag
         # in more artifacts in different libraries, so we continue until there
         # are no artifacts left to process
-        if follow_monorepo_references:
+        if follow_references:
             missing_packages = self._get_unprocessed_packages()
             while len(missing_packages) > 0:
                 logger.info("Discovered additional packages %s" % missing_packages)
-                nodes += self._crawl_packages(missing_packages, follow_monorepo_references)
+                nodes += self._crawl_packages(missing_packages, follow_references)
                 missing_packages = self._get_unprocessed_packages()
 
 
@@ -459,7 +459,7 @@ class Crawler:
                                         transitive_dep_requires_release,
                                         force_release)
 
-    def _crawl_packages(self, packages, follow_monorepo_references):
+    def _crawl_packages(self, packages, follow_references):
         """
         Returns a list of Node instances, one for each of the specified Bazel
         packages (directories). Each package must have a BUILD.pom file,
@@ -467,20 +467,20 @@ class Crawler:
         BUILD.pom file or in a parent directory (for libraries with more than
         one artifact).
         
-        follow_monorepo_references: 
-            If False, this method doesn't follow monorepo references.
+        follow_references: 
+            If False, this method doesn't follow BUILD file references.
         """
         nodes = []
         for package in packages:
             n = self._crawl(package, dep=None, parent_node=None, 
-                            follow_monorepo_references=follow_monorepo_references)
+                            follow_references=follow_references)
             nodes.append(n)
         return nodes
     
-    def _crawl(self, package, dep, parent_node, follow_monorepo_references):
+    def _crawl(self, package, dep, parent_node, follow_references):
         """
-        For the specified package, crawl monorepo dependencies, unless
-        follow_monorepo_references is False.
+        For the specified package, crawl BUILD file dependencies, unless
+        follow_references is False.
 
         The dependency instance is the dependency pointing at this package.
 
@@ -527,12 +527,12 @@ class Crawler:
                 logger.debug("Ext deps: %s" % "\n".join([str(d) for d in ext_deps]))
                 logger.debug("All deps: %s" % "\n".join([str(d) for d in all_deps]))
             node = Node(parent_node, artifact_def, pomgen.dependency)
-            if follow_monorepo_references:
-                # crawl monorepo dependencies
+            if follow_references:
+                # crawl BUILD file dependencies
                 for source_dep in source_deps:
                     child_node = self._crawl(source_dep.bazel_package,
                                              source_dep, node, 
-                                             follow_monorepo_references)
+                                             follow_references)
                     node.children.append(child_node)
             self.target_to_node[target_key] = node
             self.library_to_nodes[node.artifact_def.library_path].append(node)
