@@ -5,9 +5,9 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
-from common import logger
 from functools import total_ordering
 import os
+
 
 @total_ordering
 class AbstractDependency(object):
@@ -299,9 +299,8 @@ def new_dep_from_maven_art_str(maven_artifact_str, name):
         else:
             # com.grail.servicelibs:dynamic-keystore-impl:jar:tests:2.0.39
             group_id, artifact_id, packaging, classifier, version = maven_artifact_str.split(':')
-    except:
-        logger.error("Cannot parse [%s]" % maven_artifact_str)
-        raise
+    except Exception as e:
+        raise Exception ("cannot parse artifact specification [%s]" % maven_artifact_str) from e
 
     version = version.strip()
     if len(version) == 0:

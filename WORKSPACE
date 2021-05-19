@@ -35,10 +35,29 @@ maven_install(
     ],
     version_conflict_policy = "pinned",
     strict_visibility = True,
-    generate_compat_repositories = True,
+    generate_compat_repositories = False,
     maven_install_json = "//:maven_install.json",  # regenerate: bazel run @unpinned_maven//:pin
     resolve_timeout = 1800,
 )
 
 load("@maven//:defs.bzl", "pinned_maven_install")
 pinned_maven_install()
+
+# this rule is here to test pomgen with multipe maven_install rules
+maven_install(
+    name = "antlr",
+    artifacts = [
+        maven.artifact(group = "org.antlr", artifact = "ST4", version = "4.0.7",),
+    ],
+    repositories = [
+        "https://repo1.maven.org/maven2",
+    ],
+    version_conflict_policy = "pinned",
+    strict_visibility = True,
+    generate_compat_repositories = False,
+    maven_install_json = "//:antlr_install.json",  # regenerate: bazel run @unpinned_antlr//:pin
+    resolve_timeout = 1800,
+)
+
+load("@antlr//:defs.bzl", antlr_pinned = "pinned_maven_install")
+antlr_pinned()
