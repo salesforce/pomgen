@@ -16,7 +16,7 @@ from common import logger
 from common import maveninstallinfo
 from common import mdfiles
 from config import config
-from crawl import crawler
+from crawl import crawler as crawlermod
 from crawl import pom
 from crawl import pomcontent as pomcontentm
 from crawl import workspace
@@ -39,16 +39,19 @@ def _parse_arguments(args):
         help="The root directory generated poms are written to")
     parser.add_argument("--repo_root", type=str, required=False,
         help="The root of the repository")
-    parser.add_argument("--recursive", required=False, action='store_true',
-        help="Also generate poms for dependencies, disabled by default")
-    parser.add_argument("--force", required=False, action='store_true',
+    parser.add_argument("--force", required=False, action="store_true",
         help="If set, always generated poms, regardless of whether an artifact has changed since it was last released")
-    parser.add_argument("--pom_goldfile", required=False, action='store_true',
+    parser.add_argument("--pom_goldfile", required=False, action="store_true",
         help="Generates a goldfile pom")
-    parser.add_argument("--verbose", required=False, action='store_true',
+    parser.add_argument("--verbose", required=False, action="store_true",
         help="Verbose output")
     parser.add_argument("--pom.description", type=str, required=False,
         dest="pom_description", help="Written as the pom's <description/>")
+
+    # deprecated May 2021
+    parser.add_argument("--recursive", required=False, action="store_true",
+        help=argparse.SUPPRESS)
+
     return parser.parse_args(args)
 
 
@@ -66,6 +69,10 @@ def _get_output_dir(args):
 
 def main(args):
     args = _parse_arguments(args)
+
+    if args.recursive:
+        logger.warning("The --recursive argument has been deprecated, setting it has no effect, pomgen always runs with --recursive enabled. Please do not set this argument anymore")
+
     repo_root = common.get_repo_root(args.repo_root)
     cfg = config.load(repo_root, args.verbose)
     pom_content = pomcontentm.PomContent()
@@ -84,9 +91,9 @@ def main(args):
     packages = ws.filter_artifact_producing_packages(packages)
     if len(packages) == 0:
         raise Exception("Did not find any artifact producing BUILD.pom packages at [%s]" % args.package)
-    spider = crawler.Crawler(ws, cfg.pom_template, args.verbose)
-    result = spider.crawl(packages,
-                          follow_monorepo_references=args.recursive,
+    crawler = crawlermod.Crawler(ws, cfg.pom_template, args.verbose)
+    result = crawler.crawl(packages,
+                          follow_monorepo_references=True,
                           force_release=args.force)
 
     if len(result.pomgens) == 0:

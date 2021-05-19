@@ -227,7 +227,6 @@ do
         bazel run @pomgen//:pomgen -- \
                --package $target \
                --destdir $repo_root_path/bazel-bin \
-               --recursive \
                --pom.description "${POM_DESCRIPTION:-""}" $extra_args
 
 
