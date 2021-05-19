@@ -92,9 +92,7 @@ def main(args):
     if len(packages) == 0:
         raise Exception("Did not find any artifact producing BUILD.pom packages at [%s]" % args.package)
     crawler = crawlermod.Crawler(ws, cfg.pom_template, args.verbose)
-    result = crawler.crawl(packages,
-                          follow_monorepo_references=True,
-                          force_release=args.force)
+    result = crawler.crawl(packages, follow_references=True, force_release=args.force)
 
     if len(result.pomgens) == 0:
         logger.info("No releases are required. pomgen will not generate any pom files. To force pom generation, use pomgen's --force option.")

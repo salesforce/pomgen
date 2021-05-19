@@ -185,17 +185,17 @@ class CrawlerTest(unittest.TestCase):
             self.assertEqual(rr.ReleaseReason.ALWAYS,
                 p.artifact_def.release_reason)
 
-    def test_all_libs_changed__dont_follow_monorepo_refs(self):
+    def test_all_libs_changed__dont_follow_refs(self):
         """
         All 3 libraries have changed, but explicitly disable crawling.
         """
         self._update_files(self.repo_root_path, ["libs/a/a1", "libs/b/a1", "libs/c/a1"])
         self._commit(self.repo_root_path)
 
-        result = self.crawler.crawl(["libs/a/a1"], follow_monorepo_references=False)
+        result = self.crawler.crawl(["libs/a/a1"], follow_references=False)
 
         self.assertEqual(set(["libs/a/a1"]),
-                          set([p.artifact_def.bazel_package for p in result.pomgens]))
+                         set([p.artifact_def.bazel_package for p in result.pomgens]))
 
     def test_register_dependencies(self):
         """
