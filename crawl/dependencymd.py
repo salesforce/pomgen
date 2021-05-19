@@ -22,7 +22,8 @@ class DependencyMetadata:
         This method is a noop for dependency instances that do not represent
         external (from Maven Central/Nexus) Maven dependencies.
         """
-        return self._dep_to_transitives.get(dependency, [])
+        key = self._get_key(dependency)
+        return self._dep_to_transitives.get(key, [])
 
     def get_transitive_exclusions(self, dependency):
         """
@@ -35,12 +36,20 @@ class DependencyMetadata:
         This method is a noop for dependency instances that do not represent
         external (from Maven Central/Nexus) Maven dependencies.
         """
-        return self._dep_to_exclusions.get(dependency, [])
+        key = self._get_key(dependency)
+        return self._dep_to_exclusions.get(key, [])
 
     def register_transitives(self, dependency, transitives):
-        assert not dependency in self._dep_to_transitives, "duplicate key [%s]" % dependency
-        self._dep_to_transitives[dependency] = transitives
+        key = self._get_key(dependency)
+        assert key is not None, "no key for dependency: [%s]" % dependency
+        assert not key in self._dep_to_transitives, "duplicate key [%s] for dependency [%]" % (key, dependency)
+        self._dep_to_transitives[key] = transitives
 
     def register_exclusions(self, dependency, exclusions):
-        assert not dependency in self._dep_to_exclusions, "duplicate key [%s]" % dependency
-        self._dep_to_exclusions[dependency] = exclusions
+        key = self._get_key(dependency)
+        assert key is not None, "no key for dependency: [%s]" % dependency
+        assert not key in self._dep_to_exclusions, "duplicate key [%s] for dependency [%s]" % (key, dependency)
+        self._dep_to_exclusions[key] = exclusions
+
+    def _get_key(self, dependency):
+        return dependency.bazel_label_name # the label used in BUILD files

@@ -157,13 +157,11 @@ class DependencyTest(unittest.TestCase):
         Ensures that external dependency parsing fails when the entire artifact
         string is invalid.        
         """
-        artifact = "group"
+        artifact = "group:artifact"
         with self.assertRaises(Exception) as ctx:
             dependency.new_dep_from_maven_art_str(artifact, "bazel-name")
-        if sys.version_info[0] < 3:
-            self.assertIn("need more than 1 value to unpack", str(ctx.exception))
-        else:
-            self.assertIn("(expected 5, got 1)", str(ctx.exception))
+
+        self.assertIn("cannot parse", str(ctx.exception))
 
     def test_external_dependency__unsupported_version_syntax(self):
         """

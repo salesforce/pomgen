@@ -5,7 +5,7 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
-python_version = 'PY3'
+python_version = "PY3"
 
 py_binary(
     name = "pomgen",
@@ -150,7 +150,7 @@ py_test(
 
 py_test(
     name = "dependencytest",
-    srcs = ["common/code.py", 
+    srcs = ["common/code.py",
             "common/logger.py",
             "common/mdfiles.py",
             "common/pomgenmode.py",
@@ -158,6 +158,16 @@ py_test(
             "crawl/buildpom.py",
             "crawl/dependency.py",
             "tests/dependencytest.py"],
+    imports = ["."],
+    size = "small",
+    python_version = python_version,
+)
+
+py_test(
+    name = "dependencymdtest",
+    srcs = ["crawl/dependency.py",
+            "crawl/dependencymd.py",
+            "tests/dependencymdtest.py"],
     imports = ["."],
     size = "small",
     python_version = python_version,
