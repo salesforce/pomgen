@@ -13,6 +13,7 @@ Command line utility that shows information about Maven artifacts.
 from collections import OrderedDict
 from common import argsupport
 from common import common
+from common import instancequery
 from common import maveninstallinfo
 from common import version
 from config import config
@@ -36,34 +37,34 @@ def _parse_arguments(args):
     parser.add_argument("--repo_root", type=str, required=False,
         help="the root of the repository")
     
-    parser.add_argument("--list_libraries", action='store_true', required=False,
+    parser.add_argument("--list_libraries", action="store_true", required=False,
         help="Prints list of libraries under the specified package - output is json")
 
-    parser.add_argument("--list_artifacts", action='store_true', required=False,
+    parser.add_argument("--list_artifacts", action="store_true", required=False,
         help="Prints list of artifacts under the specified package - output is json")
 
-    parser.add_argument("--list_all_external_dependencies", action='store_true', required=False,
+    parser.add_argument("--list_external_dependencies", action="store_true", required=False,
         help="Prints list of all declared external dependencies, ignores the 'package' argument - output is json")
 
-    parser.add_argument("--library_release_plan_tree", action='store_true',
+    parser.add_argument("--library_release_plan_tree", action="store_true",
                         required=False,
                         help="Prints release information about the libraries in the monorepo - output is human-readable")
 
-    parser.add_argument("--library_release_plan_json", action='store_true',
+    parser.add_argument("--library_release_plan_json", action="store_true",
                         required=False,
                         help="Prints release information about the libraries in the monorepo - output is json")
 
-    parser.add_argument("--artifact_release_plan", action='store_true',
+    parser.add_argument("--artifact_release_plan", action="store_true",
                         required=False,
                         help="Prints release information about the artifacts in the monorepo - output is json")
 
-    parser.add_argument("--verbose", required=False, action='store_true',
+    parser.add_argument("--verbose", required=False, action="store_true",
         help="Verbose output")
 
-    # this is experimental and not generalized yet
     parser.add_argument("--filter", type=str, required=False,
-        help="Generic query filter, currently only supported for artifact queries")
-    parser.add_argument("--force", required=False, action='store_true',
+        help="Experimental support for further narrowing down results")
+
+    parser.add_argument("--force", required=False, action="store_true",
         help="Simulates release information when --force option is used")
 
     return parser.parse_args(args)
@@ -71,18 +72,6 @@ def _parse_arguments(args):
 
 def _to_json(thing):
     return json.dumps(thing, indent=2)
-
-
-def _matches_filter(maven_artifact, all_filters):
-    if all_filters is None:
-        return True
-    for fil in [f.strip() for f in all_filters.split("and")]:
-        attr_filter_name, attr_filter_value = fil.split("=")
-        if hasattr(maven_artifact, attr_filter_name):
-            value = getattr(maven_artifact, attr_filter_name)
-            if attr_filter_value != str(value):
-                return False
-    return True
 
 
 if __name__ == "__main__":
@@ -121,9 +110,10 @@ if __name__ == "__main__":
     if args.list_artifacts:
         maven_artifacts = [buildpom.parse_maven_artifact_def(repo_root, p) for p in packages]
         all_artifacts = []
+        if args.filter is not None:
+            query = instancequery.InstanceQuery(args.filter)
+            maven_artifacts = query(maven_artifacts)
         for maven_artifact in maven_artifacts:
-            if not _matches_filter(maven_artifact, args.filter):
-                continue
             attrs = OrderedDict()
             attrs["artifact_id"] = maven_artifact.artifact_id
             attrs["group_id"] = maven_artifact.group_id
@@ -132,9 +122,9 @@ if __name__ == "__main__":
             all_artifacts.append(attrs)
         print(_to_json(all_artifacts))
 
-    if args.list_all_external_dependencies:
+    if args.list_external_dependencies:
         external_dependencies = sorted(ws.name_to_external_dependencies.values(), key=lambda dep: dep.bazel_label_name)
-        all_ext_deps = []
+        ext_deps = []
         for external_dependency in external_dependencies:
             attrs = OrderedDict()
             attrs["artifact_id"] = external_dependency.artifact_id
@@ -142,8 +132,14 @@ if __name__ == "__main__":
             attrs["version"] = external_dependency.version
             attrs["classifier"] = external_dependency.classifier
             attrs["name"] = external_dependency.bazel_label_name
-            all_ext_deps.append(attrs)
-        print(_to_json(all_ext_deps))
+            attrs["ancestors"] = sorted([d.bazel_label_name for d in ws.dependency_metadata.get_ancestors(external_dependency)])
+            ext_deps.append(attrs)
+        if args.filter is not None:
+            # filter AFTER building result dict so that filtering on ancestors
+            # is possible
+            query = instancequery.InstanceQuery(args.filter)
+            ext_deps = query(ext_deps)
+        print(_to_json(ext_deps))
 
     crawl_artifact_dependencies = (args.library_release_plan_tree or
                                    args.library_release_plan_json or

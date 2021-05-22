@@ -174,6 +174,15 @@ py_test(
 )
 
 py_test(
+    name = "instancequerytest",
+    srcs = ["common/instancequery.py",
+            "tests/instancequerytest.py"],
+    imports = ["."],
+    size = "small",
+    python_version = python_version,
+)
+
+py_test(
     name = "libaggregatortest",
     srcs = [":pomgen_files",
             "tests/libaggregatortest.py"],
