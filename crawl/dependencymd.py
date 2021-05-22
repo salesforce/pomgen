@@ -13,11 +13,12 @@ class DependencyMetadata:
     def __init__(self):
         self._dep_to_transitives = {}
         self._dep_to_exclusions = {}
+        self._dep_key_to_dependency = {}
 
     def get_transitive_closure(self, dependency):
         """
-        Returns a list of dependency.Dependency instances, the transitive
-        closure of dependencies the specified dependency references.
+        Returns the transitive closure of dependencies that the specified
+        dependency has, as a list of dependency.Dependency instances.
 
         This method is a noop for dependency instances that do not represent
         external (from Maven Central/Nexus) Maven dependencies.
@@ -27,8 +28,8 @@ class DependencyMetadata:
 
     def get_transitive_exclusions(self, dependency):
         """
-        Returns a list of dependency.Dependency instances that represent the
-        exclusions for the specified dependency.
+        Returns the exclusions for the specified dependency, as a list of
+        dependency.Dependency instances.
 
         These are the exclusions in the Maven/pom.xml sense - these dependencies
         are excluded from the transitive closure of depdendencies.
@@ -39,11 +40,28 @@ class DependencyMetadata:
         key = self._get_key(dependency)
         return self._dep_to_exclusions.get(key, [])
 
+    def get_ancestors(self, dependency):
+        """
+        For the specified dependency, returns all of its ancestors: a list of
+        dependency.Dependency instances, all dependencies that have the
+        specified dependency as a direct or indirect dependency).
+        """
+        ancestors = []
+        for dep_key, transitives in self._dep_to_transitives.items():
+            for transitive in transitives:
+                if transitive.bazel_label_name == dependency.bazel_label_name:
+                    # we don't use dependency.Dependency's defined equality
+                    # because we want to compare within the same maven_install
+                    # rule
+                    ancestors.append(self._dep_key_to_dependency[dep_key])
+        return ancestors
+                
     def register_transitives(self, dependency, transitives):
         key = self._get_key(dependency)
         assert key is not None, "no key for dependency: [%s]" % dependency
-        assert not key in self._dep_to_transitives, "duplicate key [%s] for dependency [%]" % (key, dependency)
+        assert not key in self._dep_to_transitives, "duplicate key [%s] for dependency [%s]" % (key, dependency)
         self._dep_to_transitives[key] = transitives
+        self._dep_key_to_dependency[key] = dependency
 
     def register_exclusions(self, dependency, exclusions):
         key = self._get_key(dependency)
