@@ -13,7 +13,7 @@ The libraries in this example are, and reference each other in this order:
 
 ### Before running pomgen
 
-Make sure you have installed the required [external dependencies](../README.md#external-dependencies).
+Make sure you have installed the required [external dependencies](../../README.md#external-dependencies).
 
 From the root of the repository:
 
@@ -29,7 +29,7 @@ bazel test //...
 
 ### pomgen query
 
-The [query_maven_metadata](../../query_maven_metadata.py) script provides information about Libraries and Maven Artifacts in the repository.  It also shows information on whether a Library needs to be released or not.
+The [metadata query](../../query.py) script provides information about Libraries and Maven Artifacts in the repository.  It also shows information on whether a Library needs to be released or not.
 
 From the root of the repository:
 
@@ -64,7 +64,7 @@ The command above generates 5 poms, one for each Maven Artifact (healthyfoods ha
 
 ### Updating Maven Metadata
 
-There's also [a script](../../update_maven_metadata.py) that can be used to update Maven metadata. For example, from the root of the repository:
+There's also [a script](../../update.py) that can be used to update Maven metadata. For example, from the root of the repository:
 
 ```
 bazel run @pomgen//:update -- --package examples/hello-world/healthyfoods --new_version 5.0.0-SNAPSHOT
