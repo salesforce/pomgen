@@ -11,8 +11,14 @@ import os
 import tempfile
 
 
-def get_dir_hash(repo_root_path, rel_path, source_exclusions):
-    files_output = _ls_files(repo_root_path, rel_path, source_exclusions)
+def get_dir_hash(repo_root_path, rel_paths, source_exclusions):
+    """
+    Returns a checksum for the content of the specified rel_paths (list of
+    strings, relative to repo_root_path).
+    """
+    files_output = ""
+    for rel_path in rel_paths:
+        files_output += _ls_files(repo_root_path, rel_path, source_exclusions)
     with tempfile.NamedTemporaryFile("w") as f:
         f.write(files_output)
         f.flush()

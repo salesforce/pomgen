@@ -125,6 +125,24 @@ class BuildPomTest(unittest.TestCase):
         self.assertIs(pomgenmode.TEMPLATE, art_def.pom_generation_mode)
         self.assertTrue(art_def.pom_generation_mode.produces_artifact)
 
+    def test_parse_BUILD_pom__additional_change_detected_packages(self):
+        package_rel_path = "package1/package2"
+        group_id = "group1"
+        artifact_id = "art1"
+        version = "1.2.3"
+        more_packages = ["//root/a/b/c", "root/a/b/c"]
+        repo_root = tempfile.mkdtemp("monorepo")
+        repo_package = os.path.join(repo_root, package_rel_path)
+        os.makedirs(repo_package)
+        self._write_build_pom_with_additional_change_detected_packages(
+            repo_package, artifact_id, group_id, version,
+            pom_gen_mode="template",
+            additional_change_detected_packages=more_packages)
+
+        art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
+
+        self.assertEquals(art_def.additional_change_detected_packages, more_packages)
+
     def test_parse_BUILD_pom__skip_pomgen_mode(self):
         package_rel_path = "package1/package2"
         group_id = "group1"
@@ -241,6 +259,27 @@ maven_artifact(
             os.makedirs(path)
         with open(os.path.join(path, "BUILD.pom"), "w") as f:
            f.write(build_pom)
+
+    def _write_build_pom_with_additional_change_detected_packages(self, package_path, artifact_id, group_id, version, pom_gen_mode, additional_change_detected_packages):
+        build_pom = """
+maven_artifact(
+    artifact_id = "%s",
+    group_id = "%s",
+    version = "%s",
+    pom_generation_mode = '%s',
+    additional_change_detected_packages = [%s],
+)
+
+maven_artifact_update(
+    version_increment_strategy = "major",
+)
+"""
+
+        path = os.path.join(package_path, "MVN-INF")
+        if not os.path.exists(path):
+            os.makedirs(path)
+        with open(os.path.join(path, "BUILD.pom"), "w") as f:
+           f.write(build_pom % (artifact_id, group_id, version, pom_gen_mode, ",".join(['"%s"' % p for p in additional_change_detected_packages])))
 
     def _write_build_pom_released(self, package_path, released_version, released_artifact_hash):
         build_pom_released = """
