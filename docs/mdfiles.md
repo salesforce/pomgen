@@ -60,7 +60,7 @@ If set to `True`, a dependency management only pom is generated in addition to t
 
 Default value: `False`
 
-##### maven_artifact.include_deps:
+##### maven_artifact.include_deps
 
 Whether pomgen should include dependencies in the generated pom. Setting this to False disables crawling source dependencies referenced by this bazel package. This is useful for some edge cases when uploading self-contained ("uber") jars.
 
