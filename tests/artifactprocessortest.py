@@ -62,7 +62,7 @@ class ArtifactProcessorTest(unittest.TestCase):
 
     def test_artifact_without_changes_since_last_release(self):
         repo_root_path = self._setup_repo_with_package("pack1/pack2")
-        current_artifact_hash = git.get_dir_hash(repo_root_path, "pack1/pack2", exclusions.src_exclusions())
+        current_artifact_hash = git.get_dir_hash(repo_root_path, ["pack1/pack2"], exclusions.src_exclusions())
         art_def = buildpom.MavenArtifactDef("g1", "a1", "1.1.0", bazel_package="pack1/pack2", released_version="1.2.0", released_artifact_hash=current_artifact_hash)
         
         art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions())
@@ -73,7 +73,7 @@ class ArtifactProcessorTest(unittest.TestCase):
 
     def test_artifact_without_changes_always_release(self):
         repo_root_path = self._setup_repo_with_package("pack1/pack2")
-        current_artifact_hash = git.get_dir_hash(repo_root_path, "pack1/pack2", exclusions.src_exclusions())
+        current_artifact_hash = git.get_dir_hash(repo_root_path, ["pack1/pack2"], exclusions.src_exclusions())
         art_def = buildpom.MavenArtifactDef("g1", "a1", "1.1.0", bazel_package="pack1/pack2", released_version="1.2.0", released_artifact_hash=current_artifact_hash, change_detection=False)
 
         art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions())
@@ -85,7 +85,7 @@ class ArtifactProcessorTest(unittest.TestCase):
     def test_artifact_with_changes_since_last_release__new_file(self):
         package = "pack1/pack2"
         repo_root_path = self._setup_repo_with_package(package)
-        current_artifact_hash = git.get_dir_hash(repo_root_path, package, exclusions.src_exclusions())
+        current_artifact_hash = git.get_dir_hash(repo_root_path, [package], exclusions.src_exclusions())
         art_def = buildpom.MavenArtifactDef("g1", "a1", "1.1.0", released_version="1.2.0", bazel_package=package, released_artifact_hash=current_artifact_hash)
         # add a new file:
         self._touch_file_at_path(repo_root_path, package, "", "Foo.java")
@@ -102,7 +102,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         repo_root_path = self._setup_repo_with_package(package)
         self._touch_file_at_path(repo_root_path, package, "", "Blah.java")
         self._commit(repo_root_path)
-        current_artifact_hash = git.get_dir_hash(repo_root_path, package, exclusions.src_exclusions())
+        current_artifact_hash = git.get_dir_hash(repo_root_path, [package], exclusions.src_exclusions())
         art_def = buildpom.MavenArtifactDef("g1", "a1", "1.1.0", released_version="1.2.0", bazel_package=package, released_artifact_hash=current_artifact_hash)
         # modify an existing file:
         self._touch_file_at_path(repo_root_path, package, "", "Blah.java")
@@ -114,6 +114,50 @@ class ArtifactProcessorTest(unittest.TestCase):
         self.assertTrue(art_def.requires_release, "Expected artifact to require release")
         self.assertIs(releasereason.ReleaseReason.ARTIFACT, art_def.release_reason)
 
+    def test_additional_change_detected_packages__set(self):
+        package1 = "path/pack1" # change detected (by default)
+        package2 = "path/pack2" # change detected
+        repo_root_path = self._setup_repo_with_package(package1)
+        self._add_package(repo_root_path, package2)
+        self._touch_file_at_path(repo_root_path, package1, "", "Blah.java")
+        self._touch_file_at_path(repo_root_path, package2, "", "Blah.java")
+        self._commit(repo_root_path)
+        current_artifact_hash = git.get_dir_hash(repo_root_path, [package1, package2], exclusions.src_exclusions())
+        art_def = buildpom.MavenArtifactDef("g1", "a1", "1.1.0", released_version="1.2.0", bazel_package=package1, released_artifact_hash=current_artifact_hash, additional_change_detected_packages=[package2])
+        # sanity: no release required
+        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions())
+        self.assertNotEqual(None, art_def.requires_release)
+        self.assertFalse(art_def.requires_release, "Artifact should not be released")
+
+        # modify an existing file in package2
+        self._touch_file_at_path(repo_root_path, package2, "", "Blah.java")
+        self._commit(repo_root_path)
+
+        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions())
+
+        self.assertNotEqual(None, art_def.requires_release)
+        self.assertTrue(art_def.requires_release, "Artifact should not be released")
+
+    def test_additional_change_detected_packages__not_set(self):
+        package1 = "path/pack1" # change detected (by default)
+        package2 = "path/pack2" # ignored
+        repo_root_path = self._setup_repo_with_package(package1)
+        self._add_package(repo_root_path, package2)
+        self._touch_file_at_path(repo_root_path, package1, "", "Blah.java")
+        self._touch_file_at_path(repo_root_path, package2, "", "Blah.java")
+        self._commit(repo_root_path)
+        current_artifact_hash = git.get_dir_hash(repo_root_path, [package1], exclusions.src_exclusions())
+        art_def = buildpom.MavenArtifactDef("g1", "a1", "1.1.0", released_version="1.2.0", bazel_package=package1, released_artifact_hash=current_artifact_hash)
+        # modify an existing file in package2 - since we are not explicitly
+        # detecting changes in it, it shouldn't matter:
+        self._touch_file_at_path(repo_root_path, package2, "", "Blah.java")
+        self._commit(repo_root_path)
+
+        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions())
+
+        self.assertNotEqual(None, art_def.requires_release)
+        self.assertFalse(art_def.requires_release, "Artifact should not be released")
+
     def test_artifact_with_changes_since_last_release__local_edits(self):
         """
         We added uncommitted change detection to improve the local developer
@@ -122,7 +166,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         """
         package = "pack1/pack2"
         repo_root_path = self._setup_repo_with_package(package)
-        current_artifact_hash = git.get_dir_hash(repo_root_path, package, exclusions.src_exclusions())
+        current_artifact_hash = git.get_dir_hash(repo_root_path, [package], exclusions.src_exclusions())
         art_def = buildpom.MavenArtifactDef("g1", "a1", "1.1.0", released_version="1.2.0", bazel_package=package, released_artifact_hash=current_artifact_hash)
         # add a new file ...
         self._touch_file_at_path(repo_root_path, package, "", "Foo.java")
@@ -140,7 +184,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         self._touch_file_at_path(repo_root_path, package, "MVN-INF", "BUILD.pom")
         self._touch_file_at_path(repo_root_path, package, "", "some_file")
         self._commit(repo_root_path)
-        current_artifact_hash = git.get_dir_hash(repo_root_path, package, exclusions.src_exclusions())
+        current_artifact_hash = git.get_dir_hash(repo_root_path, [package], exclusions.src_exclusions())
         art_def = buildpom.MavenArtifactDef("g1", "a1", "1.1.0", bazel_package=package, released_version="1.2.0", released_artifact_hash=current_artifact_hash)
         # update BUILD.pom and commit - that change should be ignored
         self._touch_file_at_path(repo_root_path, package, "MVN-INF", "BUILD.pom")
@@ -158,7 +202,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         self._touch_file_at_path(repo_root_path, package, "MVN-INF", "BUILD.pom")
         self._touch_file_at_path(repo_root_path, package, "docs", "f.md")
         self._commit(repo_root_path)
-        current_artifact_hash = git.get_dir_hash(repo_root_path, package, src_exclusions)
+        current_artifact_hash = git.get_dir_hash(repo_root_path, [package], src_exclusions)
         art_def = buildpom.MavenArtifactDef("g1", "a1", "1.1.0", bazel_package=package, released_version="1.2.0", released_artifact_hash=current_artifact_hash)
         # update .md file - that change should be ignored
         self._touch_file_at_path(repo_root_path, package, "docs", "f.md")
@@ -176,7 +220,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         self._touch_file_at_path(repo_root_path, package, "MVN-INF", "BUILD.pom")
         self._touch_file_at_path(repo_root_path, package, "f", ".gitignore")
         self._commit(repo_root_path)
-        current_artifact_hash = git.get_dir_hash(repo_root_path, package, src_exclusions)
+        current_artifact_hash = git.get_dir_hash(repo_root_path, [package], src_exclusions)
         art_def = buildpom.MavenArtifactDef("g1", "a1", "1.1.0", bazel_package=package, released_version="1.2.0", released_artifact_hash=current_artifact_hash)
         # update .md file - that change should be ignored
         self._touch_file_at_path(repo_root_path, package, "f", ".gitignore")
@@ -193,7 +237,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         self._touch_file_at_path(repo_root_path, package, "MVN-INF", "BUILD.pom.released")
         self._touch_file_at_path(repo_root_path, package, "", "some_file")
         self._commit(repo_root_path)
-        current_artifact_hash = git.get_dir_hash(repo_root_path, package, exclusions.src_exclusions())
+        current_artifact_hash = git.get_dir_hash(repo_root_path, [package], exclusions.src_exclusions())
         art_def = buildpom.MavenArtifactDef("g1", "a1", "1.1.0", bazel_package=package, released_version="1.2.0", released_artifact_hash=current_artifact_hash)
         # update BUILD.pom.released and commit - that change should be ignored
         self._touch_file_at_path(repo_root_path, package, "MVN-INF", "BUILD.pom.released")
@@ -210,7 +254,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         self._touch_file_at_path(repo_root_path, package, "MVN-INF", "pom.xml.released")
         self._touch_file_at_path(repo_root_path, package, "", "some_file")
         self._commit(repo_root_path)
-        current_artifact_hash = git.get_dir_hash(repo_root_path, package, exclusions.src_exclusions())
+        current_artifact_hash = git.get_dir_hash(repo_root_path, [package], exclusions.src_exclusions())
         art_def = buildpom.MavenArtifactDef("g1", "a1", "1.1.0", bazel_package=package, released_version="1.2.0", released_artifact_hash=current_artifact_hash)
         # update pom.xml.released and commit - that change should be ignored
         self._touch_file_at_path(repo_root_path, package, "MVN-INF", "pom.xml.released")
@@ -234,7 +278,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         self._touch_file_at_path(repo_root_path, package, "src/main", "MyClass.java")
         self._touch_file_at_path(repo_root_path, package, "src/test", "MyTest.java")
         self._commit(repo_root_path)
-        current_artifact_hash = git.get_dir_hash(repo_root_path, package, src_exclusions)
+        current_artifact_hash = git.get_dir_hash(repo_root_path, [package], src_exclusions)
         art_def = buildpom.MavenArtifactDef("g1", "a1", "1.1.0", bazel_package=package, released_version="1.2.0", released_artifact_hash=current_artifact_hash)
         # update test class and commit - that change should be ignored
         self._touch_file_at_path(repo_root_path, package, "src/test", "MyTest.java")
@@ -266,21 +310,19 @@ class ArtifactProcessorTest(unittest.TestCase):
 
         self._commit(repo_root_path)
 
-        a1_hash = git.get_dir_hash(repo_root_path, a1_package, exclusions.src_exclusions())
+        a1_hash = git.get_dir_hash(repo_root_path, [a1_package], exclusions.src_exclusions())
         # modify file under a2 metadata - should be ignored
         self._touch_file_at_path(repo_root_path, a2_package, "MVN-INF", "BUILD.pom.released")
         self._commit(repo_root_path)
 
-        updated_a1_hash = git.get_dir_hash(repo_root_path, a1_package, exclusions.src_exclusions())
+        updated_a1_hash = git.get_dir_hash(repo_root_path, [a1_package], exclusions.src_exclusions())
 
         self.assertEqual(a1_hash, updated_a1_hash)
 
     def _setup_repo_with_package(self, package_rel_path):
         repo_root_path = tempfile.mkdtemp("monorepo")
         self._touch_file_at_path(repo_root_path, "", "MVN-INF", "LIBRARY.root")
-        repo_package = os.path.join(repo_root_path, package_rel_path)
-        os.makedirs(repo_package)
-        self._touch_file_at_path(repo_root_path, package_rel_path, "MVN-INF", "BUILD.pom")
+        self._add_package(repo_root_path, package_rel_path)
         run_cmd("git init .", cwd=repo_root_path)
         run_cmd("git config user.email 'test@example.com'", cwd=repo_root_path)
         run_cmd("git config user.name 'test example'", cwd=repo_root_path)
@@ -288,6 +330,11 @@ class ArtifactProcessorTest(unittest.TestCase):
         run_cmd("git add .", cwd=repo_root_path)
         run_cmd("git commit -m 'test commit'", cwd=repo_root_path)
         return repo_root_path
+
+    def _add_package(self, repo_root_path, package_rel_path):
+        repo_package = os.path.join(repo_root_path, package_rel_path)
+        os.makedirs(repo_package)
+        self._touch_file_at_path(repo_root_path, package_rel_path, "MVN-INF", "BUILD.pom")
 
     def _touch_file_at_path(self, repo_root_path, package_rel_path, within_package_rel_path, file_path):
         abs_path = os.path.join(repo_root_path, package_rel_path, within_package_rel_path, file_path)

@@ -30,10 +30,10 @@ class BuildPomUpdateTest(unittest.TestCase):
         self._commit(repo_root)
         self._touch_file_at_path(repo_root, pack1, "blah1")
         self._commit(repo_root)
-        pack1_hash = git.get_dir_hash(repo_root, pack1, exclusions.src_exclusions())
+        pack1_hash = git.get_dir_hash(repo_root, [pack1], exclusions.src_exclusions())
         self._touch_file_at_path(repo_root, pack2, "blah2")
         self._commit(repo_root)
-        pack2_hash = git.get_dir_hash(repo_root, pack2, exclusions.src_exclusions())
+        pack2_hash = git.get_dir_hash(repo_root, [pack2], exclusions.src_exclusions())
         self.assertNotEqual(pack1_hash, pack2_hash)
         
         buildpomupdate.update_released_artifact(repo_root, [pack1, pack2], exclusions.src_exclusions(), use_current_artifact_hash=True)

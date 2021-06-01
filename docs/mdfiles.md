@@ -66,6 +66,13 @@ Whether pomgen should include dependencies in the generated pom. Setting this to
 
 Default value: `True`
 
+##### maven_artifact.additional_change_detected_packages
+
+List of additional bazel packages pomgen should check for changes when
+determining whether this artifact needs to be released.
+
+Default value: `[]` (empty list). By default pomgen only checks the package this BUILD.pom file lives in for changes to determine whether this artifact needs to be released.
+
 ### LIBRARY.root (required)
 
 The LIBRARY.root file is a marker file that is currently empty.  It groups together multiple artifacts, defined by BUILD.pom files, into a single "library". All artifacts that belong to a single library are processed (installed/uploaded) together. Change detection also operates at the library level. If a single artifact in a library has changed, then all artifacts in the library are marked as needing to be released.

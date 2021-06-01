@@ -449,7 +449,7 @@ class CrawlerTest(unittest.TestCase):
         self._write_file(self.repo_root_path, "libs/b/a1", "MVN-INF", 
                          POM_TEMPLATE_FILE, "<project></project>")
         self._commit(self.repo_root_path)
-        released_artifact_hash = git.get_dir_hash(self.repo_root_path, "libs/b/a1", exclusions.src_exclusions())
+        released_artifact_hash = git.get_dir_hash(self.repo_root_path, ["libs/b/a1"], exclusions.src_exclusions())
         self._write_build_pom_released(self.repo_root_path, "libs/b/a1", "1.0.0", released_artifact_hash)
 
         result = self.crawler.crawl(["libs/a/a1"])
@@ -466,7 +466,7 @@ class CrawlerTest(unittest.TestCase):
         self._write_file(self.repo_root_path, "libs/b/a2", "MVN-INF", 
                          POM_TEMPLATE_FILE, "<project></project>")
         self._commit(self.repo_root_path)
-        released_artifact_hash = git.get_dir_hash(self.repo_root_path, "libs/b/a2", exclusions.src_exclusions())
+        released_artifact_hash = git.get_dir_hash(self.repo_root_path, ["libs/b/a2"], exclusions.src_exclusions())
         self._write_build_pom_released(self.repo_root_path, "libs/b/a2", "1.0.0", released_artifact_hash)
 
         result = self.crawler.crawl(["libs/a/a1"])
@@ -657,19 +657,19 @@ class CrawlerTest(unittest.TestCase):
 
     def _write_all_build_pom_released(self, repo_root_path):
         # LIB A
-        dir_hash = git.get_dir_hash(repo_root_path, "libs/a/a1", exclusions.src_exclusions())
+        dir_hash = git.get_dir_hash(repo_root_path, ["libs/a/a1"], exclusions.src_exclusions())
         self._write_build_pom_released(repo_root_path, "libs/a/a1", "0.0.1", dir_hash)
-        dir_hash = git.get_dir_hash(repo_root_path, "libs/a/a2", exclusions.src_exclusions())
+        dir_hash = git.get_dir_hash(repo_root_path, ["libs/a/a2"], exclusions.src_exclusions())
         self._write_build_pom_released(repo_root_path, "libs/a/a2", "0.0.1", dir_hash)
         # LIB B
-        dir_hash = git.get_dir_hash(repo_root_path, "libs/b/a1", exclusions.src_exclusions())
+        dir_hash = git.get_dir_hash(repo_root_path, ["libs/b/a1"], exclusions.src_exclusions())
         self._write_build_pom_released(repo_root_path, "libs/b/a1", "0.0.2", dir_hash)
-        dir_hash = git.get_dir_hash(repo_root_path, "libs/b/a2", exclusions.src_exclusions())
+        dir_hash = git.get_dir_hash(repo_root_path, ["libs/b/a2"], exclusions.src_exclusions())
         self._write_build_pom_released(repo_root_path, "libs/b/a2", "0.0.2", dir_hash)
         # LIB C
-        dir_hash = git.get_dir_hash(repo_root_path, "libs/c/a1", exclusions.src_exclusions())
+        dir_hash = git.get_dir_hash(repo_root_path, ["libs/c/a1"], exclusions.src_exclusions())
         self._write_build_pom_released(repo_root_path, "libs/c/a1", "0.0.3", dir_hash)
-        dir_hash = git.get_dir_hash(repo_root_path, "libs/c/a2", exclusions.src_exclusions())
+        dir_hash = git.get_dir_hash(repo_root_path, ["libs/c/a2"], exclusions.src_exclusions())
         self._write_build_pom_released(repo_root_path, "libs/c/a2", "0.0.3", dir_hash)
         
     def _add_library(self, library_name, version, repo_root_path, lib_rel_path, deps):

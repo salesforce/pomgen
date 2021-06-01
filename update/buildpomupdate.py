@@ -101,7 +101,7 @@ def update_released_artifact(root_path, packages, source_exclusions, new_version
         try:
             if use_current_artifact_hash:
                 assert new_artifact_hash is None
-                artifact_hash = git.get_dir_hash(root_path, package, source_exclusions)
+                artifact_hash = git.get_dir_hash(root_path, [package], source_exclusions)
                 assert artifact_hash is not None
             else:
                 artifact_hash = new_artifact_hash

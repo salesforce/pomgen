@@ -7,7 +7,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 
 Attaches additional metadata to maven_artifact instances.  
 
-This logic could run during BUILD.pom.released parsing, but it feels a bit
+This logic could run during BUILD.pom[.released] parsing, but it feels a bit
 too heavy (things like running git...). Separating it into its own module also 
 helps with testing.
 """
@@ -67,7 +67,9 @@ def _get_library_path(repo_root_path, art_def):
 
 
 def _has_changed_since_last_release(repo_root_path, art_def, source_exclusions):
-    current_artifact_hash = git.get_dir_hash(repo_root_path, art_def.bazel_package, source_exclusions)
+    all_packages = [art_def.bazel_package] + art_def.additional_change_detected_packages
+    current_artifact_hash = git.get_dir_hash(repo_root_path, all_packages,
+                                             source_exclusions)
 
     assert current_artifact_hash is not None
 

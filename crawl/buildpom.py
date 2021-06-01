@@ -19,9 +19,8 @@ import sys
 
 class MavenArtifactDef(object):
     """
-    maven_artifact "targets" in BUILD.pom files are parsed into instances of
-    this type. Information from BUILD.pom.released files is added, if that file
-    exists.
+    Represents an instance of a maven_artifact rule defined in BUILD.pom file.
+    Information from the BUILD.pom.released file is added, if that file exists.
 
     ==== Read out of the BUILD.pom file ====
 
@@ -51,12 +50,15 @@ class MavenArtifactDef(object):
         If set explicitly to False, then the artifact is unconditionally marked
         as needing to be released.
 
+    additional_change_detected_packages: list of additional bazel packages
+        pomgen should check for changes when determining whether this artifact
+        needs to be released.
+
     gen_dependency_management_pom: whether to generate an additional pom.xml
        that only contains <dependencyManagement>. Defaults to False.
 
     version_increment_strategy: specifies how this artifacts version should
         be incremented. Current supported values are: major|minor|patch
-        
 
     ==== Read out of the optional BUILD.pom.released file ====
 
@@ -103,6 +105,7 @@ class MavenArtifactDef(object):
                  custom_pom_template_content=None,
                  include_deps=True,
                  change_detection=True,
+                 additional_change_detected_packages=[],
                  gen_dependency_management_pom=False,
                  deps=[],
                  version_increment_strategy=None,
@@ -120,6 +123,7 @@ class MavenArtifactDef(object):
         self._custom_pom_template_content = custom_pom_template_content
         self._include_deps = include_deps
         self._change_detection = change_detection
+        self._additional_change_detection_packages = additional_change_detected_packages
         self._gen_dependency_management_pom = gen_dependency_management_pom
         self._deps = deps
         self._version_increment_strategy = version_increment_strategy
@@ -162,6 +166,10 @@ class MavenArtifactDef(object):
     @property
     def change_detection(self):
         return self._change_detection
+
+    @property
+    def additional_change_detected_packages(self):
+        return self._additional_change_detection_packages
 
     @property
     def gen_dependency_management_pom(self):
@@ -240,6 +248,7 @@ def maven_artifact(group_id=None,
                    pom_template_file=None,
                    include_deps=True,
                    change_detection=True,
+                   additional_change_detected_packages=[],
                    generate_dependency_management_pom=False,
                    deps=[]):
     """
@@ -250,10 +259,11 @@ def maven_artifact(group_id=None,
                             version=version,
                             pom_generation_mode=pom_generation_mode,
                             # on purpose, the content starts out with only the
-                            # path to the content
+                            # path to the file that has the content
                             custom_pom_template_content=pom_template_file,
                             include_deps=include_deps,
                             change_detection=change_detection,
+                            additional_change_detected_packages=additional_change_detected_packages,
                             gen_dependency_management_pom=generate_dependency_management_pom,
                             deps=deps)
 
@@ -344,6 +354,7 @@ def _augment_art_def_values(user_art_def, rel_art_def, bazel_package,
         custom_pom_template_content=user_art_def.custom_pom_template_content,
         include_deps=True if user_art_def.include_deps is None else user_art_def.include_deps,
         change_detection=True if user_art_def.change_detection is None else user_art_def.change_detection,
+        additional_change_detected_packages=[] if user_art_def.additional_change_detected_packages is None else user_art_def.additional_change_detected_packages,
         gen_dependency_management_pom=False if user_art_def.gen_dependency_management_pom is None else user_art_def.gen_dependency_management_pom,
         deps=user_art_def.deps,
         released_version=rel_art_def.version if rel_art_def is not None else None,
