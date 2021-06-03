@@ -16,8 +16,13 @@ def get_dir_hash(repo_root_path, rel_paths, source_exclusions):
     Returns a checksum for the content of the specified rel_paths (list of
     strings, relative to repo_root_path).
     """
+    if not isinstance(rel_paths, (list, tuple)):
+        raise Exception("rel_paths must be a list or a tuple")
     files_output = ""
     for rel_path in rel_paths:
+        dir_path = os.path.join(repo_root_path, rel_path)
+        if not os.path.exists(dir_path):
+            raise Exception("Directory must exist for hash computation: [%s]" % dir_path)
         files_output += _ls_files(repo_root_path, rel_path, source_exclusions)
     with tempfile.NamedTemporaryFile("w") as f:
         f.write(files_output)

@@ -130,7 +130,7 @@ class BuildPomTest(unittest.TestCase):
         group_id = "group1"
         artifact_id = "art1"
         version = "1.2.3"
-        more_packages = ["//root/a/b/c", "root/a/b/c"]
+        more_packages = ["//root/a/b/c", "root/d/e/f"]
         repo_root = tempfile.mkdtemp("monorepo")
         repo_package = os.path.join(repo_root, package_rel_path)
         os.makedirs(repo_package)
@@ -141,7 +141,7 @@ class BuildPomTest(unittest.TestCase):
 
         art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
 
-        self.assertEquals(art_def.additional_change_detected_packages, more_packages)
+        self.assertEquals(art_def.additional_change_detected_packages, ["root/a/b/c", "root/d/e/f"])
 
     def test_parse_BUILD_pom__skip_pomgen_mode(self):
         package_rel_path = "package1/package2"

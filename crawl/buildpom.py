@@ -123,7 +123,7 @@ class MavenArtifactDef(object):
         self._custom_pom_template_content = custom_pom_template_content
         self._include_deps = include_deps
         self._change_detection = change_detection
-        self._additional_change_detection_packages = additional_change_detected_packages
+        self._additional_change_detected_packages = additional_change_detected_packages
         self._gen_dependency_management_pom = gen_dependency_management_pom
         self._deps = deps
         self._version_increment_strategy = version_increment_strategy
@@ -134,6 +134,10 @@ class MavenArtifactDef(object):
         self._requires_release = requires_release
         self._release_reason = None
         self._released_pom_content = released_pom_content
+
+        # data cleanup/verification/sanitization
+        # these are separate methods for better readability
+        self._sanitize_additional_change_detected_packages()
 
     @property
     def group_id(self):
@@ -169,7 +173,7 @@ class MavenArtifactDef(object):
 
     @property
     def additional_change_detected_packages(self):
-        return self._additional_change_detection_packages
+        return self._additional_change_detected_packages
 
     @property
     def gen_dependency_management_pom(self):
@@ -235,6 +239,11 @@ class MavenArtifactDef(object):
 
     def __repr__(self):
         return str(self)
+
+    def _sanitize_additional_change_detected_packages(self):
+        # we treat these bazel package as paths relative to the repo root,
+        # so make sure they don't start with "//"
+        self._additional_change_detected_packages = [p[2:] if p.startswith("//") else p for p in self._additional_change_detected_packages]
 
 
 # only used internally for parsing
