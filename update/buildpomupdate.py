@@ -10,6 +10,7 @@ This module is responsible for updating BUILD.pom and BUILD.pom.released files.
 from common import mdfiles
 from common import pomgenmode
 from common import version
+from crawl import buildpom
 from crawl import git
 import os
 import re
@@ -29,7 +30,6 @@ def update_build_pom_file(root_path,
     files in the specified packages:
         - version (also version qualifier)
         - version_increment_strategy
-        - pom_generation_mode
         - pom_generation_mode
     """
     for package in packages:
@@ -101,7 +101,15 @@ def update_released_artifact(root_path, packages, source_exclusions, new_version
         try:
             if use_current_artifact_hash:
                 assert new_artifact_hash is None
-                artifact_hash = git.get_dir_hash(root_path, [package], source_exclusions)
+                # we need to load the BUILD.pom file to see whether additional
+                # packages are specified
+                packages = [package]
+                art_def = buildpom.parse_maven_artifact_def(root_path, package)
+                if art_def is not None:
+                    # if the BUILD.pom file doesn't exist, then by definition
+                    # additional packages cannot have been specified
+                    packages += art_def.additional_change_detected_packages
+                artifact_hash = git.get_dir_hash(root_path, packages, source_exclusions)
                 assert artifact_hash is not None
             else:
                 artifact_hash = new_artifact_hash
@@ -184,7 +192,7 @@ def _update_artifact_hash_in_build_pom_released_content(build_pom_released_conte
         return "%s%s%s" % (m.group(1), new_artifact_hash.strip(), m.group(3))
 
 def _get_build_pom_released_content(version, artifact_hash):
-    assert version is not None, "version cannot be None"
+    assert version is not None, "a released version must be specified, use --new_released_version"
     assert artifact_hash is not None, "artifact_hash cannot be None"
     content = """released_maven_artifact(
     version = "%s",
