@@ -250,7 +250,7 @@ class WorkspaceTest(unittest.TestCase):
         self._touch_file_at_path(repo_root, "", "MVN-INF", "LIBRARY.root")
         self._write_build_pom(repo_root, package_name, artifact_id, group_id, version)
         self._setup_repo(repo_root)
-        package_hash = git.get_dir_hash(repo_root, package_name, exclusions.src_exclusions())
+        package_hash = git.get_dir_hash(repo_root, [package_name], exclusions.src_exclusions())
         self._write_build_pom_released(repo_root, package_name, released_version, package_hash)
         ws = workspace.Workspace(repo_root, [], exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
@@ -283,7 +283,7 @@ class WorkspaceTest(unittest.TestCase):
         self._touch_file_at_path(repo_root, "", "MVN-INF", "LIBRARY.root")
         self._write_build_pom(repo_root, package_name, artifact_id, group_id, version)
         self._setup_repo(repo_root)
-        package_hash = git.get_dir_hash(repo_root, package_name, exclusions.src_exclusions())
+        package_hash = git.get_dir_hash(repo_root, [package_name], exclusions.src_exclusions())
         self._write_build_pom_released(repo_root, package_name, released_version, package_hash)
         self._touch_file_at_path(repo_root, package_name, "", "myfile")
         self._commit(repo_root)
