@@ -104,6 +104,7 @@ py_test(
             "common/pomgenmode.py",
             "common/version.py",
             "config/exclusions.py",
+            "crawl/buildpom.py",
             "crawl/git.py",
             "common/os_util.py",
             "tests/buildpomupdatetest.py",

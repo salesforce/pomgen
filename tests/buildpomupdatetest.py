@@ -5,6 +5,7 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
+
 from crawl import git
 from common.os_util import run_cmd
 from config import exclusions
@@ -13,6 +14,7 @@ import os
 import tempfile
 import unittest
 import subprocess
+
 
 class BuildPomUpdateTest(unittest.TestCase):
 
@@ -35,7 +37,39 @@ class BuildPomUpdateTest(unittest.TestCase):
         self._commit(repo_root)
         pack2_hash = git.get_dir_hash(repo_root, [pack2], exclusions.src_exclusions())
         self.assertNotEqual(pack1_hash, pack2_hash)
-        
+
+        buildpomupdate.update_released_artifact(repo_root, [pack1, pack2], exclusions.src_exclusions(), use_current_artifact_hash=True)
+
+        with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom.released"), "r") as f:
+            content = f.read()
+            self.assertIn('artifact_hash = "%s"' % pack1_hash, content)
+        with open(os.path.join(pack2_path, "MVN-INF", "BUILD.pom.released"), "r") as f:
+            content = f.read()
+            self.assertIn('artifact_hash = "%s"' % pack2_hash, content)
+
+    def test_update_BUILD_pom_released__set_artifact_hash_to_current__with_change_detected_packages(self):
+        pack1 = "somedir/p1"
+        pack2 = "somedir/p2"
+        repo_root = tempfile.mkdtemp("monorepo")
+        pack1_path = os.path.join(repo_root, pack1)
+        os.makedirs(os.path.join(pack1_path))
+        pack2_path = os.path.join(repo_root, pack2)
+        os.makedirs(os.path.join(pack2_path))
+        self._write_build_pom_released(pack1_path, "1.0.0", "aaa")
+        self._write_build_pom(pack2_path, "p2", "g2", "0.0.0",
+                              pom_generation_mode="dynamic",
+                              additional_change_detected_packages=[pack1])
+        self._write_build_pom_released(pack2_path, "1.0.0", "bbb")
+        self._setup_repo(repo_root)
+        self._commit(repo_root)
+        self._touch_file_at_path(repo_root, pack1, "blah1")
+        self._commit(repo_root)
+        pack1_hash = git.get_dir_hash(repo_root, [pack1], exclusions.src_exclusions())
+        self._touch_file_at_path(repo_root, pack2, "blah2")
+        self._commit(repo_root)
+        pack2_hash = git.get_dir_hash(repo_root, [pack2, pack1], exclusions.src_exclusions())
+        self.assertNotEqual(pack1_hash, pack2_hash)
+
         buildpomupdate.update_released_artifact(repo_root, [pack1, pack2], exclusions.src_exclusions(), use_current_artifact_hash=True)
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom.released"), "r") as f:
@@ -518,7 +552,8 @@ maven_artifact_update(
 
     def _write_build_pom(self, package_path, artifact_id, group_id, version,
                          pom_generation_mode=None,
-                         version_increment_strategy="minor"):
+                         version_increment_strategy="minor",
+                         additional_change_detected_packages=None):
         build_pom = """
 maven_artifact(
     artifact_id = "%s",
@@ -529,6 +564,9 @@ maven_artifact(
 
         if pom_generation_mode is not None:
             build_pom += "    pom_generation_mode = \"%s\"," % pom_generation_mode
+
+        if additional_change_detected_packages is not None:
+              build_pom += "    additional_change_detected_packages = [%s]," % ",".join(["'%s'" % p for p in additional_change_detected_packages])
 
         build_pom += """
 )
@@ -580,6 +618,7 @@ released_maven_artifact(
         else:
             with open(path, "w") as f:
                 f.write("abc\n")
+
 
 if __name__ == '__main__':
     unittest.main()
