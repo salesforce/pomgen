@@ -102,7 +102,6 @@ def parse_maven_install(mvn_install_name, json_file_path):
                     as a list of dependency.Dependency instances
     """
     result = []
-    logger.info("Processing pinned dependencies [%s]" % json_file_path)
     with open(json_file_path, "r") as f:
         content = f.read()
         install_json = json.loads(content)
@@ -115,9 +114,10 @@ def parse_maven_install(mvn_install_name, json_file_path):
                 # exclusions only specify group_id:artifact_id - we use
                 # dependency.Dependency instances instead of raw strings for
                 # consistency, but then we need to add a dummy version
-                dummy_version = "-1"
                 if "exclusions" in json_dep:
-                    exclusions = [dependency.new_dep_from_maven_art_str("%s:%s" % (d, dummy_version), mvn_install_name) for d in json_dep["exclusions"]]
+                    exclusions = [dependency.new_dep_from_maven_art_str(
+                        "%s:%s" % (d, dependency.GA_DUMMY_DEP_VERSION),
+                        mvn_install_name) for d in json_dep["exclusions"]]
                 else:
                     exclusions = ()
                 result.append((dep, transitives, exclusions))

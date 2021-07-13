@@ -146,7 +146,7 @@ class Workspace:
         """
         Parses all pinned json files for the specified maven_install rules.
 
-        Returns a dictionary mapping of the dependency fq name (used in BUILD 
+        Returns a dictionary mapping of the dependency label (as used in BUILD
         files) -> the corresponding dependency.Dependency instance.
         """
         result = {}

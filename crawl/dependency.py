@@ -179,6 +179,7 @@ class AbstractDependency(object):
 
 
 class ThirdPartyDependency(AbstractDependency):
+
     def __init__(self, maven_install_name, group_id, artifact_id, version,
                  classifier=None, packaging=None, scope=None):
         super(ThirdPartyDependency, self).__init__(group_id, artifact_id,
@@ -310,7 +311,22 @@ def new_dep_from_maven_art_str(maven_artifact_str, name):
     return ThirdPartyDependency(name, group_id, artifact_id, version,
                                 classifier, packaging)
 
+
 def new_dep_from_maven_artifact_def(artifact_def, bazel_target=None):
     if bazel_target is not None:
         assert len(bazel_target) > 0, "bazel target must not be empty for artifact def %s" % artifact_def.bazel_package
     return MonorepoDependency(artifact_def, bazel_target)
+
+
+"""
+Dummy version for dependencies instances that only have significant
+group/artifact ids (such as the dependencies used to represent exclusions)
+"""
+GA_DUMMY_DEP_VERSION = "-1"
+
+
+"""
+Dependency instance with artifact and group ids set to "*".
+"""
+EXCLUDE_ALL_PLACEHOLDER_DEP = new_dep_from_maven_art_str(
+    "*:*:%s" % GA_DUMMY_DEP_VERSION, "dummy_placeholder_label")

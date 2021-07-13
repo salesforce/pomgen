@@ -69,5 +69,10 @@ class DependencyMetadata:
         assert not key in self._dep_to_exclusions, "duplicate key [%s] for dependency [%s]" % (key, dependency)
         self._dep_to_exclusions[key] = exclusions
 
+    def clear(self):
+        self._dep_to_transitives.clear()
+        self._dep_to_exclusions.clear()
+        self._dep_key_to_dependency.clear()
+
     def _get_key(self, dependency):
         return dependency.bazel_label_name # the label used in BUILD files
