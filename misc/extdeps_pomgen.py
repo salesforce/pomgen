@@ -6,14 +6,15 @@ All rights reserved.
 SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 
-Generates a single pom, to stdout, that has <dependency/> entries for every
-declared 3rd party dependency.
+Generates a single pom to stdout that has <dependency/> entries for 3rd party
+dependencies.
 """
 
 from common import common
 from common import maveninstallinfo
 from config import config
 from crawl import buildpom
+from crawl import dependency
 from crawl import pom
 from crawl import pomcontent
 from crawl import workspace
@@ -21,12 +22,14 @@ import argparse
 import os
 import sys
 
+
 IGNORED_DEPENDENCY_PREFIXES = ("@bazel_tools",
                                "@local_config",
                                "@local_jdk",
                                "@remote_coverage_tools",
                                "@remote_java_tools",
                               )
+
 
 def _parse_arguments(args):
     parser = argparse.ArgumentParser(description="Third Party Pom Generator. This script generates a single pom file to stdout, containing 3rdparty dependencies. Dependencies are de-duped and sorted alphabetically by their group and artifact ids. If given no input, this script processes all declared 3rd party dependencies.")
@@ -40,8 +43,12 @@ def _parse_arguments(args):
         help="optional - the artifactId to use in the generated pom")
     parser.add_argument("--version", type=str, required=False,
         help="optional - the version to use in the generated pom")
+    parser.add_argument("--exclude_all_transitives", action="store_true",
+                        required=False,
+        help="optional - adds a *:* <exclusion> to all dependencies in the generated pom")
 
     return parser.parse_args(args)
+
 
 class ThirdPartyDepsPomGen(pom.DynamicPomGen):
     def __init__(self, workspace, artifact_def, dependencies, pom_template):
@@ -53,11 +60,13 @@ class ThirdPartyDepsPomGen(pom.DynamicPomGen):
     def _load_additional_dependencies_hook(self):
         return self.dependencies
 
+
 def _starts_with_ignored_prefix(line):
     for prefix in IGNORED_DEPENDENCY_PREFIXES:
         if line.startswith(prefix):
             return True
     return False
+
 
 def main(args):
     args = _parse_arguments(args)
@@ -69,6 +78,7 @@ def main(args):
                              cfg.all_src_exclusions,
                              mvn_install_info,
                              pomcontent.NOOP)
+
     group_id = "all_ext_deps_group" if args.group_id is None else args.group_id
     artifact_id = "all_ext_deps_art" if args.artifact_id is None else args.artifact_id
     version = "0.0.1-SNAPSHOT" if args.version is None else args.version
@@ -78,7 +88,7 @@ def main(args):
                                              version=version)
 
     if args.stdin:
-        dep_labels = []
+        dep_labels = set() # we want to de-dupe labels
         dependencies = []
         for line in sys.stdin:
             line = line.strip()
@@ -88,13 +98,26 @@ def main(args):
                 continue
             if _starts_with_ignored_prefix(line):
                 continue
-            dep_labels.append(line)
-        unique_dependencies = set(ws.parse_dep_labels(dep_labels))
-        dependencies = list(unique_dependencies)
+            dep_labels.add(line)
+        dependencies = ws.parse_dep_labels(dep_labels)
     else:
         dependencies = list(ws.name_to_external_dependencies.values())
 
+    # note that it is possible to end up with duplicate dependencies
+    # because different labels may point to the same dependency (gav)
+    # (for ex: @maven//:org_antlr_ST4 and @antlr//:org_antlr_ST4)
+    # however those indentical gavs may have distinct exclusions
     dependencies.sort()
+
+    if args.exclude_all_transitives:
+        # ignore what was specified in the pinned dependencies files
+        # and add an "exclude all" dependency for all dependencies that
+        # will end up in the generated pom
+        ws.dependency_metadata.clear()
+        for dep in dependencies:
+            ws.dependency_metadata.register_exclusions(
+                dep, [dependency.EXCLUDE_ALL_PLACEHOLDER_DEP])
+
     pomgen = ThirdPartyDepsPomGen(ws, artifact_def, dependencies,
                                   cfg.pom_template)
     pomgen.process_dependencies()
