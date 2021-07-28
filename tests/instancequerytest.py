@@ -82,6 +82,18 @@ class InstanceQueryTest(unittest.TestCase):
 
         self.assertEqual(matching_query([d1, d2, d3]), [d2])
 
+    def test_startswith(self):
+        class Foo:
+            def __init__(self):
+                self.prop = "abc"
+        foo = Foo()
+
+        matching_query = instancequery.InstanceQuery("prop startswith ab")
+        mismatching_query = instancequery.InstanceQuery("prop startswith de")
+
+        self.assertIs(matching_query(foo), foo)
+        self.assertIsNone(mismatching_query(foo))
+
 
 if __name__ == '__main__':
     unittest.main()

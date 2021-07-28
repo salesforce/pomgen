@@ -6,7 +6,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 """
 
 
-SUPPORTED_OPERATORS = ("=", " is ",)
+SUPPORTED_OPERATORS = ("=", " is ", " startswith ")
 
 
 class Predicate:
@@ -26,6 +26,8 @@ class Predicate:
                 return len(value) == 0
             else:
                 return self.rhs == str(value)
+        elif self.op == "startswith":
+            return value.startswith(self.rhs)
         return False
 
     def __str__(self):
