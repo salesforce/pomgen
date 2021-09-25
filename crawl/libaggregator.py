@@ -56,23 +56,27 @@ class LibraryNode:
         """
         output_lines = []
         all_release_reasons = set()
-        self._pretty_print(0, output_lines, all_release_reasons)
+        node_path = []
+        self._pretty_print(0, output_lines, all_release_reasons, node_path)
         pretty_tree = '\n'.join(output_lines)
         legend = ["%s %s" % (LibraryNode._get_rel_indicator(r).rjust(2),
                              r if r is not None else "no changes to release")
                   for r in all_release_reasons]
         return "%s\n\n%s" % (pretty_tree, '\n'.join(legend))
 
-    def _pretty_print(self, indent, output_lines, all_release_reasons):
+    def _pretty_print(self, indent, output_lines, all_release_reasons, node_path):
         release_reason = self.release_reason if self.requires_release else None
         all_release_reasons.add(release_reason)
         indicator = LibraryNode._get_rel_indicator(release_reason)
         output_lines.append("%s%s %s %s" % (' '*indent, self.library_path,
                                             indicator, 
                                             self._get_pretty_print_version()))
-        for child in self.children:
-            child._pretty_print(indent+2, output_lines,
-                                all_release_reasons)
+        if self in node_path:
+            # detected circular reference between library nodes, stop recursing
+            output_lines.append("%s..." % (' '*indent))
+        else:
+            for child in self.children:
+                child._pretty_print(indent+2, output_lines, all_release_reasons, node_path + [self])
 
     def _get_pretty_print_version(self):
         # version can be none for libraries that have no artifact producing

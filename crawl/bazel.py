@@ -72,22 +72,16 @@ def query_all_libraries(repository_root_path, packages):
     Given a list of (BUILD.pom) packages, walks the paths up to find the root
     library directories, and returns those (without duplicates).
     """
-    lib_roots = []
-    for org_package in packages:
-        for lib_root in lib_roots:
-            if org_package.startswith(lib_root):
-                break # we already have the path for this library
-        else:
-            package = org_package
-            while len(package) > 0 and package != '/':
-                abs_package_path = os.path.join(repository_root_path, package)
-                if mdfiles.is_library_package(abs_package_path):
-                    lib_roots.append(package)
-                    break
-                else:
-                    package = os.path.dirname(package)
-
-    return lib_roots
+    lib_roots = set()
+    for package in packages:
+        while len(package) > 0 and package != '/':
+            abs_package_path = os.path.join(repository_root_path, package)
+            if mdfiles.is_library_package(abs_package_path):
+                lib_roots.add(package)
+                break
+            else:
+                package = os.path.dirname(package)
+    return sorted(lib_roots)
 
 
 def parse_maven_install(mvn_install_name, json_file_path):

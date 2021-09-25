@@ -109,6 +109,8 @@ class Crawler:
         # there must be only one java_library target defined in each processed
         # bazel package/BUILD file
         nodes = self._crawl_packages(packages, follow_references)
+        if self.verbose:
+            self._print_debug_output(nodes, "After initial crawl")
 
 
         # a library (LIBRARY.root) may have more than one artifact (Bazel
@@ -119,15 +121,21 @@ class Crawler:
         # are no artifacts left to process
         if follow_references:
             missing_packages = self._get_unprocessed_packages()
-            while len(missing_packages) > 0:
-                logger.info("Discovered additional packages %s" % missing_packages)
-                nodes += self._crawl_packages(missing_packages, follow_references)
-                missing_packages = self._get_unprocessed_packages()
+            if len(missing_packages) > 0:
+                while len(missing_packages) > 0:
+                    if self.verbose:
+                        logger.debug("Discovered additional packages %s" % missing_packages)
+                    nodes += self._crawl_packages(missing_packages, follow_references)
+                    missing_packages = self._get_unprocessed_packages()
 
+                if self.verbose:
+                    self._print_debug_output(nodes, "After adding missing packages")
+            else:
+                if self.verbose:
+                    self._print_debug_banner("No missing packages found")
 
 
         # crawling is complete at this point, now process the nodes
-
         
         # for bazel targets that do not generate a pom 
         # (pom_generation_mode=skip), we still need to handle dependencies;
@@ -255,15 +263,13 @@ class Crawler:
                 previous_pom = pomparser.format_for_comparison(art_def.released_pom_content)
                 pom_changed = current_pom != previous_pom
                 if pom_changed:
-                    logger.debug("pom diff %s %s" % (art_def, art_def.bazel_package))
                     art_def.requires_release = True
                     art_def.release_reason = ReleaseReason.POM
 
-                    # log pom diffs for debugging
-                    diff = difflib.unified_diff(previous_pom.splitlines(True),
-                                                current_pom.splitlines(True))
-                    logger.raw(''.join(diff))
                     if self.verbose:
+                        logger.debug("pom diff %s %s" % (art_def, art_def.bazel_package))
+                        diff = difflib.unified_diff(previous_pom.splitlines(True), current_pom.splitlines(True))
+                        logger.raw(''.join(diff))
                         logger.debug("%s computed pom:" % art_def)
                         logger.raw(current_pom)
                         logger.debug("%s released pom:" % art_def)
@@ -414,13 +420,17 @@ class Crawler:
         """
         # we start with a leafnode, and walk up (the leaf nodes represent
         # packages/maven artifacts, not libraries)
-        logger.info("Processing transitive deps")
+        processed_nodes = set()
         for node in self.leafnodes:
             self._propagate_req_rel(node,
                                     transitive_dep_requires_release=False,
-                                    force_release=force_release)
+                                    force_release=force_release,
+                                    processed_nodes=processed_nodes)
 
-    def _propagate_req_rel(self, node, transitive_dep_requires_release, force_release):
+    def _propagate_req_rel(self, node, transitive_dep_requires_release, force_release, processed_nodes):
+        if node in processed_nodes:
+            return
+        processed_nodes.add(node)
         art_def = node.artifact_def
         library_path = art_def.library_path
         all_artifact_defs = self.library_to_artifact[library_path]
@@ -457,7 +467,8 @@ class Crawler:
                     transitive_dep_requires_release = True
                 self._propagate_req_rel(parent,
                                         transitive_dep_requires_release,
-                                        force_release)
+                                        force_release,
+                                        processed_nodes)
 
     def _crawl_packages(self, packages, follow_references):
         """
@@ -494,20 +505,20 @@ class Crawler:
             # through another path: A -> Z -> B -> C
             # the parent is different, but the children have to be the same
             cached_node = self.target_to_node[target_key]
-            node = Node(parent_node, cached_node.artifact_def, 
-                        cached_node.dependency)
-            node.children = cached_node.children
+            if self.verbose:
+                logger.debug("Skipping re-crawling of artifact [%s] with target key [%s]" % (cached_node.artifact_def, target_key))
             # also add the new parent to the cached_node - this is important
             # because we have logic that traverses the nodes from children to
             # parent nodes
-            cached_node.parents.append(node)
-            self.library_to_nodes[node.artifact_def.library_path].append(node)
-            self._store_if_leafnode(node)
-            if self.verbose:
-                logger.debug("Skipping re-crawling of artifact [%s] with target key [%s] because it has already happened" % (cached_node.artifact_def, target_key))
-            return node
+            if parent_node is not None:
+                assert parent_node not in cached_node.parents
+                cached_node.parents.append(parent_node)
+                if self.verbose:
+                    logger.debug("Adding new parent [%s] to cached node [%s]" % (parent_node.artifact_def.bazel_package, cached_node.artifact_def.bazel_package))
+            return cached_node
         else:
-            logger.info("Processing [%s]" % target_key)
+            if self.verbose:
+                logger.info("Processing [%s]" % target_key)
             artifact_def = self.workspace.parse_maven_artifact_def(package)
 
             if artifact_def is None:
@@ -584,3 +595,43 @@ class Crawler:
             if art_def.requires_release:
                 return (True, art_def.release_reason)
         return (False, None)
+
+    def _print_debug_output(self, nodes, msg):
+        """
+        Debugging only - verbose output about the specified nodes.
+        """
+        self._print_debug_banner(msg)
+        logger.raw("Top level nodes\n")
+        for node in nodes:
+            logger.raw("   %s\n" % node.artifact_def.bazel_package)
+        logger.raw("\nCrawling children\n")
+        leaf_nodes = []
+        for node in nodes:
+            self._debug_crawl_children(node, indent=0, leaf_nodes=leaf_nodes)
+        logger.raw("\nLeaf nodes (without children)\n")
+        for node in leaf_nodes:
+            logger.raw("  %s\n" % node.artifact_def.bazel_package)
+        logger.raw("\nCrawling parents (starting at leaf nodes)\n")
+        for node in leaf_nodes:
+            self._debug_crawl_parents(node, indent=0)
+        logger.raw("\n")
+
+    def _debug_crawl_children(self, node, indent, leaf_nodes):
+        logger.raw("%s%s\n" % ("  "*indent, node.artifact_def.bazel_package))
+        if len(node.children) == 0:
+            if node.artifact_def.bazel_package not in [n.artifact_def.bazel_package for n in leaf_nodes]:
+                leaf_nodes.append(node)
+        else:
+            for child in node.children:
+                self._debug_crawl_children(child, indent+1, leaf_nodes)
+
+    def _debug_crawl_parents(self, node, indent):
+        logger.raw("%s%s\n" % ("  "*indent, node.artifact_def.bazel_package))
+        for parent in node.parents:
+            self._debug_crawl_parents(parent, indent+1)
+
+    def _print_debug_banner(self, msg):
+        sep = "========================================="
+        logger.raw("%s\n" % sep)
+        logger.raw("    %s\n" % msg)
+        logger.raw("%s\n\n" % sep)
