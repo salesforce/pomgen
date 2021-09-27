@@ -101,6 +101,7 @@ class CrawlerTest(unittest.TestCase):
         self.assertEqual("libs/b", node_b_a1.artifact_def.library_path)
         self.assertEqual("libs/b/a1", node_b_a1.artifact_def.bazel_package)
         self.assertEqual("2.0.0", node_b_a1.artifact_def.version)
+        self.assertEqual(1, len(node_b_a1.parents))
         self.assertEqual(node_a_a1, node_b_a1.parents[0])
         self.assertEqual(1, len(node_b_a1.children)) # c_a1
 
@@ -116,7 +117,9 @@ class CrawlerTest(unittest.TestCase):
         self.assertEqual("libs/c", node_c_a1.artifact_def.library_path)
         self.assertEqual("libs/c/a1", node_c_a1.artifact_def.bazel_package)
         self.assertEqual("3.0.0", node_c_a1.artifact_def.version)
+        self.assertEqual(2, len(node_c_a1.parents))
         self.assertEqual(node_b_a1, node_c_a1.parents[0])
+        self.assertEqual(node_a_a1, node_c_a1.parents[1])
         self.assertEqual(0, len(node_c_a1.children))
 
         node_c_a2 = self._get_node_by_bazel_package(result.nodes, "libs/c/a2")
@@ -127,11 +130,9 @@ class CrawlerTest(unittest.TestCase):
         self.assertEqual(0, len(node_c_a2.children))
 
         node_c_a1_from_a_a1 = node_a_a1.children[1]
-        self.assertEqual("libs/c", node_c_a1_from_a_a1.artifact_def.library_path)
-        self.assertEqual("libs/c/a1", node_c_a1_from_a_a1.artifact_def.bazel_package)
-        self.assertEqual("3.0.0", node_c_a1_from_a_a1.artifact_def.version)
-        self.assertEqual(node_a_a1, node_c_a1_from_a_a1.parents[0])
-        self.assertEqual(0, len(node_c_a1_from_a_a1.children))
+        # node c_a1 reachable through a_a1 is the same instance as the node
+        # reachable through node_b_a1_
+        self.assertIs(node_c_a1_from_a_a1, node_c_a1)
 
     def test_no_lib_changed(self):
         """

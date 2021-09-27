@@ -113,7 +113,7 @@ if __name__ == "__main__":
         if args.filter is not None:
             query = instancequery.InstanceQuery(args.filter)
             maven_artifacts = query(maven_artifacts)
-        for maven_artifact in maven_artifacts:
+        for maven_artifact in sorted(maven_artifacts, key=lambda a: a.bazel_package):
             attrs = OrderedDict()
             attrs["artifact_id"] = maven_artifact.artifact_id
             attrs["group_id"] = maven_artifact.group_id
