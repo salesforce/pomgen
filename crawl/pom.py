@@ -376,11 +376,9 @@ class TemplatePomGen(AbstractPomGen):
             version_ref_must_be_fq = False
             if key in key_to_version:
                 conflicting_dep = key_to_dep[key]
-                self._check_for_dep_conflict(dep, conflicting_dep)
-                # check for dep_conflict may have raised - if it didn't,
-                # this conflict is ok but requires references to be fully
-                # qualified, using the maven_install name prefix
-                version_ref_must_be_fq = True
+                # check whether this conflict requires version refs to be fully
+                # qualified or if it is fatal (method below raises)
+                version_ref_must_be_fq = self._check_for_dep_conflict(dep, conflicting_dep)
                 # remove unqualified names added for the conflicting dep
                 del key_to_version[self._get_unqual_label_key(conflicting_dep)]
                 del key_to_version[key]
@@ -446,11 +444,19 @@ class TemplatePomGen(AbstractPomGen):
         return properties
 
     def _check_for_dep_conflict(self, dep1, dep2):
+        """
+        Returns False if there is actually no conflict because versions match,
+        True, if there is a conflict but we can tolerate it, or raises if the
+        conflict is fatal.
+        """
         if dep1.bazel_package is None and dep2.bazel_package is None:
-            # both deps are external, we tolrate different version
-            pass
+            # both deps are external
+            if dep1.version == dep2.version:
+                return False # no problem
+            else:
+                return True # we tolerate diff versions for ext deps
         elif dep1.bazel_package is not None and dep2.bazel_package is not None:
-            # both deps are internal, it deosn't make sense to get here
+            # both deps are internal, it doesn't make sense to get here
             raise Exception("All internal dependencies must always be on the same versions! [%s] vs [%s]" % (dep1, dep2))
         else:
             if dep1.bazel_package is None and dep2.bazel_package is not None:

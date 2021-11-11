@@ -40,11 +40,15 @@ class PomTest(unittest.TestCase):
         self.orig_bazel_parse_maven_install = bazel.parse_maven_install
         query_result = [
             (f("com.google.guava:guava:23.0", "maven"), [t1_dep, t2_dep], [all_excluded_dep]),
-            (f("org.apache.maven:mult-versions:1.0.0", "maven"), [], []),
-            (f("org.apache.maven:mult-versions:2.0.0", "maven2"), [], []),
             (f("ch.qos.logback:logback-classic:1.2.3", "maven"), [], []),
             (f("aopalliance:aopalliance:jar:1.0.0", "maven"), [], [e1_dep]),
             (t2_dep, [], []),
+            # same version, different maven_install rules
+            (f("org.apache.maven:same-version:1.0.0", "maven"), [], []),
+            (f("org.apache.maven:same-version:1.0.0", "maven2"), [], []),
+            # different version, different maven_install rules
+            (f("org.apache.maven:mult-versions:1.0.0", "maven"), [], []),
+            (f("org.apache.maven:mult-versions:2.0.0", "maven2"), [], []),
         ]
         bazel.parse_maven_install = lambda name, path: query_result
     
@@ -319,6 +323,33 @@ monorepo artifact version #{version}
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
         
         self.assertIn("srpc 5.6.7", generated_pom)
+
+    def test_template_var_sub__ext_deps_with_same_versions(self):
+        """
+        Ensures that external dependencies (jars) that have the same gav, but
+        are defined multiple times in different maven_install rules, can
+        be referenced.
+        """
+        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+                                 self._mocked_mvn_install_info("maven"),
+                                 pomcontent.NOOP)
+        artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.4.4")
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        artifact_def.custom_pom_template_content = """
+1 v1 #{@maven//:org_apache_maven_same_version.version}
+2 v2 #{@maven2//:org_apache_maven_same_version.version}
+3 v  #{org_apache_maven_same_version.version}
+4 v  #{org.apache.maven:same-version:version}
+
+"""
+        pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
+
+        generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
+
+        self.assertIn("1 v1 1.0.0", generated_pom)
+        self.assertIn("2 v2 1.0.0", generated_pom)
+        self.assertIn("3 v  1.0.0", generated_pom)
+        self.assertIn("4 v  1.0.0", generated_pom)
 
     def test_template_var_sub__ext_deps_with_diff_versions(self):
         """
