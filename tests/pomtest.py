@@ -40,7 +40,8 @@ class PomTest(unittest.TestCase):
         self.orig_bazel_parse_maven_install = bazel.parse_maven_install
         query_result = [
             (f("com.google.guava:guava:23.0", "maven"), [t1_dep, t2_dep], [all_excluded_dep]),
-            (f("org.apache.maven:maven-artifact:3.3.9", "maven"), [], []),
+            (f("org.apache.maven:mult-versions:1.0.0", "maven"), [], []),
+            (f("org.apache.maven:mult-versions:2.0.0", "maven2"), [], []),
             (f("ch.qos.logback:logback-classic:1.2.3", "maven"), [], []),
             (f("aopalliance:aopalliance:jar:1.0.0", "maven"), [], [e1_dep]),
             (t2_dep, [], []),
@@ -319,6 +320,61 @@ monorepo artifact version #{version}
         
         self.assertIn("srpc 5.6.7", generated_pom)
 
+    def test_template_var_sub__ext_deps_with_diff_versions(self):
+        """
+        Ensures that external dependencies (jars) that have the same ga, but
+        different versions, can be referenced using their "maven install" name.
+        """
+        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+                                 self._mocked_mvn_install_info("maven"),
+                                 pomcontent.NOOP)
+        artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.4.4")
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        artifact_def.custom_pom_template_content = """
+v1 #{@maven//:org_apache_maven_mult_versions.version}
+v2 #{@maven2//:org_apache_maven_mult_versions.version}
+"""
+        pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
+
+        generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
+
+        self.assertIn("v1 1.0.0", generated_pom)
+        self.assertIn("v2 2.0.0", generated_pom)
+
+    def test_template_var_sub__ext_deps_with_diff_versions__no_unqual(self):
+        """
+        Ensures that external dependencies (jars) that have the same ga, but
+        different versions, CANNOT be referenced using unqualified syntax
+        (without maven_install name prefix).
+        """
+        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+                                 self._mocked_mvn_install_info("maven"),
+                                 pomcontent.NOOP)
+        artifact_def = buildpom.maven_artifact("groupId", "artifactId", "1.4.4")
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        artifact_def.custom_pom_template_content = """
+#{org_apache_maven_mult_versions.version}
+"""
+        pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
+
+        with self.assertRaises(Exception) as ctx:
+            pomgen.gen(pom.PomContentType.RELEASE)
+
+        self.assertIn("has unresolvable references", str(ctx.exception))
+        self.assertIn("['org_apache_maven_mult_versions.version']", str(ctx.exception))
+
+        # now try with groupId:artifactId:version syntax
+        artifact_def.custom_pom_template_content = """
+#{org.apache.maven:mult-versions:version}
+"""
+        pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
+
+        with self.assertRaises(Exception) as ctx:
+            pomgen.gen(pom.PomContentType.RELEASE)
+
+        self.assertIn("has unresolvable references", str(ctx.exception))
+        self.assertIn("['org.apache.maven:mult-versions:version']", str(ctx.exception))
+
     def test_template_var_sub__conflicting_gav__ext_and_BUILDpom(self):
         """
         Verifies error handling when gavs are conflicting between external deps
@@ -331,6 +387,7 @@ monorepo artifact version #{version}
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = "srpc #{g:a:version}"
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
+        # this guava dep is conflicting with an external dep
         art = buildpom.MavenArtifactDef("com.google.guava","guava","26.0", bazel_package="a/b/c")
         d = dependency.MonorepoDependency(art, bazel_target=None)
         pomgen.register_dependencies_transitive_closure__library(set([d]))
@@ -338,8 +395,9 @@ monorepo artifact version #{version}
         with self.assertRaises(Exception) as ctx:
             pomgen.gen(pom.PomContentType.RELEASE)
 
-        self.assertIn("Found multiple artifacts with the same groupId:artifactId", str(ctx.exception))
-        self.assertIn("com.google.guava:guava", str(ctx.exception))
+        self.assertIn("The internal dependency at [a/b/c]", str(ctx.exception))
+        self.assertIn("the same artifactId and groupId", str(ctx.exception))
+        self.assertIn("[com.google.guava:guava]", str(ctx.exception))
 
     def test_template_genmode__goldfile(self):
         """
