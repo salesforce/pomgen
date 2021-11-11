@@ -311,7 +311,7 @@ class TemplatePomGen(AbstractPomGen):
 
         bad_refs = [match.group(1) for match in re.finditer(r"""\#\{(.*?)\}""", pom_content) if len(match.groups()) == 1]
         if len(bad_refs) > 0:
-            raise Exception("pom template for [%s] has unresolvable references: %s" % (self._artifact_def, bad_refs))
+            raise Exception("pom template [%s] has unresolvable references: %s" % (self._artifact_def, bad_refs))
         return pom_content
 
     def _process_pom_template_content(self, pom_template_content):
@@ -348,14 +348,16 @@ class TemplatePomGen(AbstractPomGen):
         # Additionally, versions of external dependencies may be referenced
         # using the dependency's "maven install" name, for example:
         # #{@maven//:com_google_guava_guava.version}
+        # This name must be used if there are multiple dependencies,
+        # from different maven_intall rules, that have the same group/artifact
+        # ids but different versions.
         # 
         # For convenience, we also support the unqualified maven install name,
         # without the leading repository name. This is useful when there are
-        # many maven install rules, but they all reference the same maven 
+        # many maven_install rules, but they all reference the same maven 
         # artifact versions.
-
-        #{<groupId>:<artifactId>:[<classifier>:]version} -> version value
-        #{com_google_guava_guava.version} -> version value
+        #
+        # name -> version
         key_to_version = {}
 
         # internal bookeeping for this method
@@ -370,39 +372,42 @@ class TemplatePomGen(AbstractPomGen):
             [d for d in self.dependencies_library_transitive_closure if d.bazel_package is not None]
 
         for dep in all_deps:
-            key = "%s:version" % dep.maven_coordinates_name
+            key = self._get_unqual_ga_key(dep)
+            version_ref_must_be_fq = False
             if key in key_to_version:
-                found_conflicting_deps = True
                 conflicting_dep = key_to_dep[key]
-                if dep.bazel_package is None and conflicting_dep.bazel_package is None:
-                    # both deps are external (Nexus) deps, this is weird, but
-                    # ok, as long as their versions are identical, so check for
-                    # that
-                    if dep.version == conflicting_dep.version:
-                        found_conflicting_deps = False # ok
-
-                if found_conflicting_deps:
-                    msg = "Found multiple artifacts with the same groupId:artifactId: \"%s\". This means that there are multiple BUILD.pom files defining the same artifact, or that a BUILD.pom defined artifact has the same groupId and artifactId as a referenced maven_jar, or that multiple maven_jars reference the same groupId/artifactId but different versions" % dep.maven_coordinates_name
-                    raise Exception(msg)
+                self._check_for_dep_conflict(dep, conflicting_dep)
+                # check for dep_conflict may have raised - if it didn't,
+                # this conflict is ok but requires references to be fully
+                # qualified, using the maven_install name prefix
+                version_ref_must_be_fq = True
+                # remove unqualified names added for the conflicting dep
+                del key_to_version[self._get_unqual_label_key(conflicting_dep)]
+                del key_to_version[key]
             version_from_dep = self._dep_version(pomcontenttype, dep)
-            key_to_version[key] = version_from_dep
+            if not version_ref_must_be_fq:
+                # the key (groupId:artficatId:version) is not fully qualified,
+                # only the name prefixed with the maven_install rule name is
+                key_to_version[key] = version_from_dep
             key_to_dep[key] = dep
             if dep.bazel_label_name is not None:
+                # this is fq name, leading with the maven_install name
                 key = "%s.version" % dep.bazel_label_name
                 if key in key_to_version and version_from_dep != key_to_version[key]:
                     raise Exception("%s version: %s is already in versions, previous: %s" % (key, self._dep_version(pomcontenttype, dep), key_to_version[key]))
                 key_to_version[key] = dep.version
                 key_to_dep[key] = dep
 
-                # we'll also allow usage of the unqualified label as a key
-                # so "com_google_guava_guava" instead of
-                # "@maven//:com_google_guava_guava"
-                # this works well if the repository is setup in such a way
-                # that all Maven artifacts have the same version, regardless
-                # of which maven install rule they are managed by
-                # if the versions differ, then the fully qualified label name
-                # has to be used
-                key_to_version["%s.version" % dep.unqualified_bazel_label_name] = dep.version
+                if not version_ref_must_be_fq:
+                    # we'll also allow usage of the unqualified label as a key
+                    # so "com_google_guava_guava" instead of
+                    # "@maven//:com_google_guava_guava"
+                    # this works well if the repository is setup in such a way
+                    # that all Maven artifacts have the same version, regardless
+                    # of which maven install rule they are managed by
+                    # if the versions differ, then the fully qualified label
+                    # name has to be used
+                    key_to_version[self._get_unqual_label_key(dep)] = dep.version
 
         # the maven coordinates of this artifact can be referenced directly:
         key_to_version["artifact_id"] = self._artifact_def.artifact_id
@@ -410,6 +415,12 @@ class TemplatePomGen(AbstractPomGen):
         key_to_version["version"] = self._artifact_def_version(pomcontenttype)
 
         return key_to_version
+
+    def _get_unqual_ga_key(self, dep):
+        return "%s:version" % dep.maven_coordinates_name
+
+    def _get_unqual_label_key(self, dep):
+        return "%s.version" % dep.unqualified_bazel_label_name
 
     def _get_crawled_dependencies_properties(self, pomcontenttype, pom_template_parsed_deps):
         # this is somewhat lame: an educated guess on where the properties
@@ -433,6 +444,23 @@ class TemplatePomGen(AbstractPomGen):
         properties[TemplatePomGen.UNUSED_CONFIGURED_DEPS_PROP_NAME] = content
 
         return properties
+
+    def _check_for_dep_conflict(self, dep1, dep2):
+        if dep1.bazel_package is None and dep2.bazel_package is None:
+            # both deps are external, we tolrate different version
+            pass
+        elif dep1.bazel_package is not None and dep2.bazel_package is not None:
+            # both deps are internal, it deosn't make sense to get here
+            raise Exception("All internal dependencies must always be on the same versions! [%s] vs [%s]" % (dep1, dep2))
+        else:
+            if dep1.bazel_package is None and dep2.bazel_package is not None:
+                external_dep = dep1
+                internal_dep = dep2
+            else:
+                external_dep = dep2
+                internal_dep = dep1
+
+            raise Exception("The internal dependency at [%s] has the same artifactId and groupId as the external dependency [%s:%s] - this is unsupported" % (internal_dep.bazel_package, external_dep.group_id, external_dep.artifact_id))
 
     def _build_template_only_deps_property_content(self, deps,
                                                    pom_template_parsed_deps,
