@@ -99,12 +99,21 @@ def parse_maven_install(mvn_install_name, json_file_path):
     with open(json_file_path, "r") as f:
         content = f.read()
         install_json = json.loads(content)
-        json_deps = install_json["dependency_tree"]["dependencies"]
+        json_dep_tree = install_json["dependency_tree"]
+        conflict_resolution = _parse_conflict_resolution(json_dep_tree, mvn_install_name)
+        json_deps = json_dep_tree["dependencies"]
         for json_dep in json_deps:
             coord = json_dep["coord"]
             dep = dependency.new_dep_from_maven_art_str(coord, mvn_install_name)
+            if dep in conflict_resolution:
+                dep = conflict_resolution[dep]
             if dep.classifier != "sources":
-                transitives = [dependency.new_dep_from_maven_art_str(d, mvn_install_name) for d in json_dep["dependencies"]]
+                transitives = []
+                for transitive_gav in json_dep["dependencies"]:
+                    transitive_dep = dependency.new_dep_from_maven_art_str(transitive_gav, mvn_install_name)
+                    if transitive_dep in conflict_resolution:
+                        transitive_dep = conflict_resolution[transitive_dep]
+                    transitives.append(transitive_dep)
                 # exclusions only specify group_id:artifact_id - we use
                 # dependency.Dependency instances instead of raw strings for
                 # consistency, but then we need to add a dummy version
@@ -167,3 +176,28 @@ def _ensure_unique_deps(deps):
             updated_deps.append(dep)
             s.add(dep)
     return updated_deps
+
+
+def _parse_conflict_resolution(json_dep_tree, mvn_install_name):
+    conflict_resolution = {}
+    if "conflict_resolution" in json_dep_tree:
+        # if there is a conflict_resolution attribute, we have to honor it
+        # it maps actual gav -> gav used in rest of file, with the only diff
+        # being the version.
+        #
+        # for example:
+        # "conflict_resolution": {
+        #    "com.sun.jersey:jersey-client:1.17-ext": "com.sun.jersey:jersey-client:1.17",
+        #    "com.sun.jersey:jersey-core:1.17-ext": "com.sun.jersey:jersey-core:1.17"
+        # },
+        # above, the dep version we want is "1.17-ext", but rest of the pinned
+        # file uses "1.17"
+        #
+        # we'll store this as a lookup the other way:
+        # dep used in pinned file -> dep we actually want
+        for gav_key, gav_value in json_dep_tree["conflict_resolution"].items():
+            wanted_dep = dependency.new_dep_from_maven_art_str(gav_key, mvn_install_name)
+            actual_dep = dependency.new_dep_from_maven_art_str(gav_value, mvn_install_name)
+            assert actual_dep not in conflict_resolution
+            conflict_resolution[actual_dep] = wanted_dep
+    return conflict_resolution
