@@ -103,20 +103,33 @@ def main(args):
     else:
         dependencies = list(ws.name_to_external_dependencies.values())
 
-    # note that it is possible to end up with duplicate dependencies
-    # because different labels may point to the same dependency (gav)
-    # (for ex: @maven//:org_antlr_ST4 and @antlr//:org_antlr_ST4)
-    # however those indentical gavs may have distinct exclusions
+    # to be nice:
     dependencies.sort()
 
     if args.exclude_all_transitives:
-        # ignore what was specified in the pinned dependencies files
-        # and add an "exclude all" dependency for all dependencies that
-        # will end up in the generated pom
+        # since all dependencies are treated equally (no transitives),
+        # we can dedupe them without losing anything
+        deps_set = set()
+        updated_dependencies = []
+        for dep in dependencies:
+            if dep not in deps_set:
+                deps_set.add(dep)
+                updated_dependencies.append(dep)
+        dependencies = updated_dependencies
+
+        # ignore what was specified in the pinned dependencies files and instead
+        # exclude all transitives: add an "exclude all dependency"
+        # (* exclusions) for all dependencies that end up in the generated pom
         ws.dependency_metadata.clear()
         for dep in dependencies:
             ws.dependency_metadata.register_exclusions(
                 dep, [dependency.EXCLUDE_ALL_PLACEHOLDER_DEP])
+    else:
+        # it is possible to end up with duplicate dependencies
+        # because different labels may point to the same dependency (gav)
+        # (for ex: @maven//:org_antlr_ST4 and @antlr//:org_antlr_ST4)
+        # however those indentical gavs may have distinct exclusions
+        pass
 
     pomgen = ThirdPartyDepsPomGen(ws, artifact_def, dependencies,
                                   cfg.pom_template)
