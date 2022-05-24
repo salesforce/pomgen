@@ -26,7 +26,7 @@ Usage: maven.sh -a action(s) [-t bazel package]
 
   -d enables debug logging
 
-  -f force run pomgen even if no changes to artifacts have been made
+  -f force runs pomgen even if no changes to artifacts have been made
 
 
   Mandatory action:
