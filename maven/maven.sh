@@ -26,7 +26,7 @@ Usage: maven.sh -a action(s) [-t bazel package]
 
   -d enables debug logging
 
-  -f  
+  -f force run pomgen even if no changes to artifacts have been made
 
 
   Mandatory action:
@@ -203,7 +203,7 @@ fi
 for action in $(echo $actions | tr "," "\n")
 do
     if ! [[ "$action" =~ ^(clean|pomgen|install|install_all|deploy_all|deploy_only)$ ]]; then
-        echo "ERROR: action [$action] must be one of [clean|install|install_all|deploy|deploy_all|deploy_only]" && exit 1
+        echo "ERROR: action [$action] must be one of [clean|install|install_all|deploy_all|deploy_only]" && exit 1
     fi
 
     echo ""

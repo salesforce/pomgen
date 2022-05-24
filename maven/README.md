@@ -1,6 +1,8 @@
 # pomgen Wrapper Script
 
-This script conveniently wraps `pomgen` and `mvn` invocations.
+[This script](maven.sh) conveniently wraps `pomgen` and `mvn` invocations.
+
+See the top of the script for usage information or run it without arguments.
 
 ## External Dependencies
 
