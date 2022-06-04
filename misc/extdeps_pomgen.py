@@ -109,11 +109,14 @@ def main(args):
     if args.exclude_all_transitives:
         # since all dependencies are treated equally (no transitives),
         # we can dedupe them without losing anything
+        # we use a representation that includes the version when checking
+        # whether we have already included the dep
         deps_set = set()
         updated_dependencies = []
         for dep in dependencies:
-            if dep not in deps_set:
-                deps_set.add(dep)
+            dedupe_key = dep.maven_coordinates_name + ":" + dep.version
+            if dedupe_key not in deps_set:
+                deps_set.add(dedupe_key)
                 updated_dependencies.append(dep)
         dependencies = updated_dependencies
 
