@@ -4,7 +4,7 @@
 
 This example has 3 libraries. A library is a collection of one or more Bazel Packages that produce Maven Artifacts. A library is defined by the presence of a [LIBRARY.root](healthyfoods/MVN-INF/LIBRARY.root) marker file. In the Maven World, a Library would be a Maven project with one or more modules.
 
-A Bazel Package that produces a Maven Artifact must have a [BUILD.pom](healthyfoods/fruit-api/MVN-INF/BUILD.pom) file that defines Maven specific metadata.
+A Bazel Package that produces a Maven Artifact must have a [BUILD.pom](healthyfoods/fruit-api/MVN-INF/BUILD.pom) file that defines Maven specific metadata. Note that the `java_library` target that builds the jar Maven Artifact must be the default target, ie it must have the same name as the directory its BUILD file lives in.
 
 The libraries in this example are, and reference each other in this order:
 - [juicer](juicer)
