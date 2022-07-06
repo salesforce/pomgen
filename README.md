@@ -18,6 +18,7 @@ pomgen does not run as part of the Bazel build - therefore Bazel BUILD files can
 
 ## Setup
 
+ - Add a `java_library` rule to your Bazel Package as the [default target](https://bazel.build/concepts/labels) (the target has same name as its Bazel Package, ie the directory the BUILD file lives in)
  - For each Maven Artifact producing Bazel Package, a [BUILD.pom](examples/hello-world/healthyfoods/fruit-api/MVN-INF/BUILD.pom) file defines Maven specific metadata
  - A special [marker file](examples/hello-world/healthyfoods/MVN-INF/LIBRARY.root) groups one or more Maven Artifacts into a Library
 
