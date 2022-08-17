@@ -250,7 +250,7 @@ _deploy_artifacts_to_nexus() {
         repository="releases"
     fi
 
-    full_repository_url=${REPOSITORY_URL}/${repository}/content
+    full_repository_url=${REPOSITORY_URL}/${repository}
 
     if [ -z "$artifact_path" ]; then
         artifact_path=$pom_path
