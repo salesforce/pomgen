@@ -57,9 +57,9 @@ Usage: maven.sh -a action(s) [-t bazel package]
     REPOSITORY_URL: for the 2 deploy actions, the environment variable 
       REPOSITORY_URL must be set to the remote artifact repository to upload to.
       For example, when using Nexus:
-          export REPOSITORY_URL=https://nexus.host/nexus/service/local/repositories"
-      Artifacts will either be uploaded to ${REPOSITORY_URL}/snapshots/content
-      or ${REPOSITORY_URL}/releases/content, based on whether the artifact
+          export REPOSITORY_URL=https://nexus.host/nexus/repository"
+      Artifacts will either be uploaded to ${REPOSITORY_URL}/snapshots
+      or ${REPOSITORY_URL}/releases, based on whether the artifact
       version ends in -SNAPTSHOT or not.
 
     REPOSITORY_ID: in settings.xml, the <id> of the <server> entry to use for

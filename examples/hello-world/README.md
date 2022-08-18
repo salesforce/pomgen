@@ -107,10 +107,8 @@ bazel run @pomgen//maven -- -a pomgen,deploy -t examples/hello-world
 Running deploy requires the environment variable `REPOSITORY_URL` to be set. REPOSITORY_URL has only been tested with Nexus endpoints. The format is
 
 ```
-https://hostname/nexus/service/local/repositories
+https://hostname/nexus/repository
 ```
-
-The maven script appends `$repository/content` to the value of REPOSITORY_URL.
 
 `$repository` will be replaced with `snapshots` if the version of the artifact being processed ends with -SNAPSHOT, otherwise `$repository` is replaced with `releases`.
 
