@@ -169,6 +169,21 @@ class BuildPomTest(unittest.TestCase):
         self.assertEqual(None, art_def.version_increment_strategy)
         self.assertFalse(art_def.pom_generation_mode.produces_artifact)
 
+    def test_parse_BUILD_pom__jar_path(self):
+        package_rel_path = "package1/package2"
+        group_id = "group1"
+        artifact_id = "art1"
+        version = "1.2.3"
+        jar_path = "../a-jar.jar"
+        repo_root = tempfile.mkdtemp("monorepo")
+        repo_package = os.path.join(repo_root, package_rel_path)
+        os.makedirs(repo_package)
+        self._write_build_pom_with_jar_path(repo_package, artifact_id, group_id, version, jar_path)
+
+        art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
+
+        self.assertEquals("package1/package2/a-jar.jar", art_def.jar_path)
+
     def test_load_pom_xml_released(self):
         package_rel_path = "package1/package2"
         group_id = "group1"
@@ -184,7 +199,6 @@ class BuildPomTest(unittest.TestCase):
 
         # strip because loading the pom should also strip whitespace
         self.assertEqual(pom_content.strip(), art_def.released_pom_content)
-
 
     def _write_build_pom(self, package_path, artifact_id, group_id, version, pom_gen_mode):
         build_pom = """
@@ -280,6 +294,28 @@ maven_artifact_update(
             os.makedirs(path)
         with open(os.path.join(path, "BUILD.pom"), "w") as f:
            f.write(build_pom % (artifact_id, group_id, version, pom_gen_mode, ",".join(['"%s"' % p for p in additional_change_detected_packages])))
+
+    def _write_build_pom_with_jar_path(self, package_path, artifact_id, group_id, version, jar_path):
+        build_pom = """
+maven_artifact(
+    artifact_id = "%s",
+    group_id = "%s",
+    version = "%s",
+    pom_generation_mode = "dynamic",
+    jar_path = "%s",
+)
+
+maven_artifact_update(
+    version_increment_strategy = "major",
+)
+"""
+
+        path = os.path.join(package_path, "MVN-INF")
+        if not os.path.exists(path):
+            os.makedirs(path)
+        with open(os.path.join(path, "BUILD.pom"), "w") as f:
+           f.write(build_pom % (artifact_id, group_id, version, jar_path))
+
 
     def _write_build_pom_released(self, package_path, released_version, released_artifact_hash):
         build_pom_released = """
