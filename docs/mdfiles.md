@@ -73,6 +73,14 @@ determining whether this artifact needs to be released.
 
 Default value: `[]` (empty list). By default pomgen only checks the package this BUILD.pom file lives in for changes to determine whether this artifact needs to be released.
 
+##### maven_artifact.jar_path
+
+If the jar artifact is not built by bazel (this is unusual), this attribute can be used to point to an alternative jar to use. The path is relative to the location of the `BUILD.pom` file.
+
+Default value: `None`
+
+See the `java_import` [example](../examples/java_import).
+
 ### LIBRARY.root (required)
 
 The LIBRARY.root file is a marker file that is currently empty.  It groups together multiple artifacts, defined by BUILD.pom files, into a single "library". All artifacts that belong to a single library are processed (installed/uploaded) together. Change detection also operates at the library level. If a single artifact in a library has changed, then all artifacts in the library are marked as needing to be released.
