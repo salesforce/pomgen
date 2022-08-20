@@ -26,11 +26,6 @@ import re
 import sys
 
 
-def _write_file(path, content):                    
-    with open(path, "w") as f:
-        f.write(content)
-
-
 def _parse_arguments(args):
     parser = argparse.ArgumentParser(description="Monorepo Pom Generator")
     parser.add_argument("--package", type=str, required=True,
@@ -53,6 +48,11 @@ def _parse_arguments(args):
         help=argparse.SUPPRESS)
 
     return parser.parse_args(args)
+
+
+def _write_file(path, content):                    
+    with open(path, "w") as f:
+        f.write(content)
 
 
 def _get_output_dir(args):
@@ -121,6 +121,17 @@ def main(args):
                     pom_path = os.path.join(pom_dest_dir, "pom_companion%s.xml" % i)
                     _write_file(pom_path, pom_content)
                     logger.info("Wrote companion pom file to [%s]" % pom_path)
+
+                # if jar_path has been set in the BUILD.pom file, we write a
+                # hint file with the path out so we can find it more easily
+                # later when jars are processed
+                # we can generalize this code with a "custom generator" concept
+                # if we have the need for writing more of these one-off files
+                jar_path = pomgen.artifact_def.jar_path
+                if jar_path is not None:
+                    hint_file_path = os.path.join(pom_dest_dir, mdfiles.JAR_LOCATION_HINT_FILE)
+                    _write_file(hint_file_path, jar_path)
+                    logger.info("Wrote jar location hint file [%s] with content [%s]" % (hint_file_path, jar_path))
 
 if __name__ == "__main__":
     main(sys.argv[1:])

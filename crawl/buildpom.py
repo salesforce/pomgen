@@ -17,6 +17,7 @@ import os
 import re
 import sys
 
+
 class MavenArtifactDef(object):
     """
     Represents an instance of a maven_artifact rule defined in BUILD.pom file.
@@ -56,6 +57,11 @@ class MavenArtifactDef(object):
 
     gen_dependency_management_pom: whether to generate an additional pom.xml
        that only contains <dependencyManagement>. Defaults to False.
+
+    jar_path: optional and for supporting the edge-case when the jar artifact
+        already exists: if set, the relative path from this BUILD.pom file to
+        the jar artifact to use. this can be used if bazel doesn't actually
+        build the jar (-> java_import).
 
     version_increment_strategy: specifies how this artifacts version should
         be incremented. Current supported values are: major|minor|patch
@@ -107,6 +113,7 @@ class MavenArtifactDef(object):
                  change_detection=True,
                  additional_change_detected_packages=[],
                  gen_dependency_management_pom=False,
+                 jar_path=None,
                  deps=[],
                  version_increment_strategy=None,
                  released_version=None,
@@ -125,6 +132,7 @@ class MavenArtifactDef(object):
         self._change_detection = change_detection
         self._additional_change_detected_packages = additional_change_detected_packages
         self._gen_dependency_management_pom = gen_dependency_management_pom
+        self._jar_path = jar_path
         self._deps = deps
         self._version_increment_strategy = version_increment_strategy
         self._released_version = released_version
@@ -178,6 +186,10 @@ class MavenArtifactDef(object):
     @property
     def gen_dependency_management_pom(self):
         return self._gen_dependency_management_pom
+
+    @property
+    def jar_path(self):
+        return self._jar_path
 
     @property
     def deps(self):
@@ -259,6 +271,7 @@ def maven_artifact(group_id=None,
                    change_detection=True,
                    additional_change_detected_packages=[],
                    generate_dependency_management_pom=False,
+                   jar_path=None,
                    deps=[]):
     """
     This function is only intended to be called from BUILD.pom files.
@@ -274,6 +287,7 @@ def maven_artifact(group_id=None,
                             change_detection=change_detection,
                             additional_change_detected_packages=additional_change_detected_packages,
                             gen_dependency_management_pom=generate_dependency_management_pom,
+                            jar_path=jar_path,
                             deps=deps)
 
 
@@ -365,6 +379,7 @@ def _augment_art_def_values(user_art_def, rel_art_def, bazel_package,
         change_detection=True if user_art_def.change_detection is None else user_art_def.change_detection,
         additional_change_detected_packages=[] if user_art_def.additional_change_detected_packages is None else user_art_def.additional_change_detected_packages,
         gen_dependency_management_pom=False if user_art_def.gen_dependency_management_pom is None else user_art_def.gen_dependency_management_pom,
+        jar_path=None if user_art_def.jar_path is None else os.path.normpath(os.path.join(bazel_package, mdfiles.MD_DIR_NAME, user_art_def.jar_path)),
         deps=user_art_def.deps,
         released_version=rel_art_def.version if rel_art_def is not None else None,
         released_incremental_version=rel_art_def.incremental_version if rel_art_def is not None else None,

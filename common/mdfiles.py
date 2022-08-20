@@ -13,10 +13,13 @@ It also has methods to read and write those metadata files.
 
 import os
 
+
 BUILD_POM_FILE_NAME = "BUILD.pom"
 BUILD_POM_RELEASED_FILE_NAME = "BUILD.pom.released"
 LIB_ROOT_FILE_NAME = "LIBRARY.root"
 POM_XML_RELEASED_FILE_NAME = "pom.xml.released"
+JAR_LOCATION_HINT_FILE = "pomgen_jar_location_hint"
+
 
 _ALL_MD_FILE_NAMES = [
     BUILD_POM_FILE_NAME,
@@ -25,8 +28,10 @@ _ALL_MD_FILE_NAMES = [
     POM_XML_RELEASED_FILE_NAME,
 ]
 
+
 # relative to bazel package dir
 MD_DIR_NAME = "MVN-INF"
+
 
 def is_library_package(abs_package_path):
     """
@@ -39,6 +44,7 @@ def is_library_package(abs_package_path):
                                               file_name=LIB_ROOT_FILE_NAME)
     return os.path.exists(lib_file_path)
 
+
 def is_artifact_package(abs_package_path):
     """
     Returns True if the specified package is a Maven Artifact package.
@@ -50,6 +56,7 @@ def is_artifact_package(abs_package_path):
                                                     package_path="", 
                                                     file_name=BUILD_POM_FILE_NAME)
     return os.path.exists(build_pom_file_path)
+
 
 def read_file(root_path, package_path, md_file_name):
     """
@@ -67,6 +74,7 @@ def read_file(root_path, package_path, md_file_name):
     path = _build_metadata_file_path(root_path, package_path, md_file_name)
     with open(path, "r") as f:
         return (f.read().strip(), path)
+
 
 def write_file(content, root_path, package_path, md_file_name):
     """
@@ -89,12 +97,14 @@ def write_file(content, root_path, package_path, md_file_name):
 
     return path
 
+
 def move_files(root_path, packages, src_md_dir_name, dest_md_dir_name):
     """
     Moves metadata files to a new location for each specified package.
     """
     for package in packages:
         _move_files_for_package(root_path, package, src_md_dir_name, dest_md_dir_name)
+
 
 def get_package_relative_metadata_directory_paths():
     """
@@ -103,12 +113,14 @@ def get_package_relative_metadata_directory_paths():
     """
     return () if len(MD_DIR_NAME) == 0 else (MD_DIR_NAME,)
 
+
 def get_package_relative_metadata_file_paths():
     """
     Returns a list of relative paths, relative to the package root, that are
     paths to pomgen metadata files.
     """
     return _ALL_MD_FILE_NAMES if len(MD_DIR_NAME) == 0 else ()
+
 
 def _move_files_for_package(root_path, package_path, src_md_dir_name, dest_md_dir_name):
     src_dir_path = os.path.join(root_path, package_path, src_md_dir_name)
@@ -127,8 +139,10 @@ def _move_files_for_package(root_path, package_path, src_md_dir_name, dest_md_di
                     dest_file_path = os.path.join(dest_dir_path, file_name)
                     os.rename(src_file_path, dest_file_path)
 
+
 def _build_metadata_file_path(root_path, package_path, file_name):
     return os.path.join(root_path, package_path, MD_DIR_NAME, file_name)
+
 
 def _validate_paths(root_path, package_path):
     if not os.path.isabs(root_path):
@@ -140,6 +154,7 @@ def _validate_paths(root_path, package_path):
         raise Exception("expected bazel package path to exist: %s" % abs_package_path)
     if not os.path.isdir(abs_package_path):
         raise Exception("expected bazel package path to be a directory: %s" % abs_package_path)
+
 
 def _file_exists(abs_package_path, md_file_name):
     """

@@ -78,40 +78,53 @@ _for_each_pom() {
         echo "INFO: Parsed Maven coordinates ${GROUP_ID}:${ARTIFACT_ID}:${VERSION}"
 
         if [ "$is_pom_only_artifact" == 0 ]; then
-            # determine the jar file name bazel built:
-            # we'll use the package name, which follows our java_library target
-            # naming convention - this could be made configurable in the
-            # BUILD.pom file if necessary
-
-            # the filename of the jar built by Bazel uses this pattern:
-            jar_artifact_path="$build_dir_package_path/lib${package_name}.jar"
-            if [ ! -f "${jar_artifact_path}" ]; then
-                echo "WARN: lib${package_name}.jar not found, looking for alternatives"
-                # we also support executable jars - this is an edge case but
-                # there are use-cases where it is convenient to be able to
-                # upload a "uber jar" to Nexus instead of building a docker
-                # image for it
-
-                # first we look for the special <target-name>_deploy.jar
-                # created by java_binary
-                jar_artifact_path="$build_dir_package_path/${package_name}_deploy.jar"
+            # if we have the special jar location hint file, we just use that
+            # find the jar to use
+            hint_file_path="$build_dir_package_path/pomgen_jar_location_hint"
+            if [ -f "${hint_file_path}" ]; then
+                echo "INFO: Found jar location hint file: [${hint_file_path}]"
+                jar_artifact_path="${repo_root_dir_path}/$(cat ${hint_file_path})"
                 if [ -f "${jar_artifact_path}" ]; then
-                    echo "INFO: Found ${package_name}_deploy.jar"
+                    echo "INFO: Found jar at custom path: [${jar_artifact_path}]"
+                    # disable unjaring to add the generated pom to the jar
+                    # we don't want to mess with jars we didn't build
+                    process_jar_artifact=0
                 else
-                    # last attempt: maybe a jar called <target-name>.jar
-                    # exists
-                    jar_artifact_path="$build_dir_package_path/${package_name}.jar"
-                    if [ -f "${jar_artifact_path}" ]; then
-                        echo "INFO: Found ${package_name}.jar"
-                    fi
+                    echo "ERROR: Did not find jar at custom path [${jar_artifact_path}]."
+                    echo "This is a bug"
+                    exit 1
                 fi
-                # we've seen jar break in weird ways when trying to unjar large
-                # "uber" jars:
-                # java.io.FileNotFoundException: META-INF/LICENSE (Is a directory)
-                # disable unjaring in order to add the generated pom to the jar,
-                # which isn't that important for uber jars (not used as deps)
-                # anyway
-                process_jar_artifact=0
+            else
+                # the filename of the jar built by Bazel uses this pattern:
+                jar_artifact_path="$build_dir_package_path/lib${package_name}.jar"
+                if [ ! -f "${jar_artifact_path}" ]; then
+                    echo "WARN: lib${package_name}.jar not found, looking for alternatives"
+                    # we also support executable jars - this is an edge case but
+                    # there are use-cases where it is convenient to be able to
+                    # upload a "uber jar" to Nexus instead of building a docker
+                    # image for it
+
+                    # first we look for the special <target-name>_deploy.jar
+                    # created by java_binary
+                    jar_artifact_path="$build_dir_package_path/${package_name}_deploy.jar"
+                    if [ -f "${jar_artifact_path}" ]; then
+                        echo "INFO: Found ${package_name}_deploy.jar"
+                    else
+                        # last attempt: maybe a jar called <target-name>.jar
+                        # exists
+                        jar_artifact_path="$build_dir_package_path/${package_name}.jar"
+                        if [ -f "${jar_artifact_path}" ]; then
+                            echo "INFO: Found ${package_name}.jar"
+                        fi
+                    fi
+                    # we've seen jar break in weird ways when trying to unjar
+                    # large "uber" jars:
+                    # java.io.FileNotFoundException: META-INF/LICENSE (Is a directory)
+                    # disable unjaring in order to add the generated pom to
+                    # the jar, which isn't required for uber jars anyway
+                    # (not used to figure out deps, since deps are bundled)
+                    process_jar_artifact=0
+                fi
             fi
             if [ ! -f "${jar_artifact_path}" ]; then
                 echo "ERROR: did not find jar artifact at ${jar_artifact_path}"
