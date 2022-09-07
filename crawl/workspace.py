@@ -66,7 +66,10 @@ class Workspace:
         """
         Check if the dependency is a neverlink dep
         """
-        return if 'lombok' in package
+        if 'lombok' in package
+            return True
+
+        return False
 
     def parse_dep_labels(self, dep_labels):
         """
