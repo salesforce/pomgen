@@ -66,7 +66,7 @@ class Workspace:
         """
         Check if the dependency is a neverlink dep
         """
-        if 'lombok' in package
+        if 'lombok' in package:
             return True
 
         return False
