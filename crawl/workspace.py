@@ -143,8 +143,12 @@ class Workspace:
             for excluded_dependency_path in self.excluded_dependency_paths:
                 if package_path.startswith(excluded_dependency_path):
                     return None
+
+             if self.is_never_link_dep(package_path):
+                return None
+
             maven_artifact_def = self.parse_maven_artifact_def(package_path)
-            if maven_artifact_def is None and not self.is_never_link_dep(package_path):
+            if maven_artifact_def is None:
                 raise Exception("no BUILD.pom file in package [%s]" % package_path)
             else:
                 return dependency.new_dep_from_maven_artifact_def(maven_artifact_def, target_name)
