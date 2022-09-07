@@ -144,7 +144,7 @@ class Workspace:
                 if package_path.startswith(excluded_dependency_path):
                     return None
 
-             if self.is_never_link_dep(package_path):
+            if self.is_never_link_dep(package_path):
                 return None
 
             maven_artifact_def = self.parse_maven_artifact_def(package_path)
