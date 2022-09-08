@@ -205,10 +205,11 @@ def _parse_conflict_resolution(json_dep_tree, mvn_install_name):
 def is_never_link_dep(repository_root_path, package):
     """
     Check if the dependency has neverlink set to 1
+    java_library with neverlink set to 1 should not be considered because required only at compilation time
+    Bazel ref: https://docs.bazel.build/versions/main/be/java.html#java_library.neverlink:~:text=on%20this%20target.-,neverlink,-Boolean%3B%20optional%3B%20default
     """
     query = "bazel query 'attr('neverlink', 1, %s)'" % package
     stdout = run_cmd(query, cwd=repository_root_path)
-    print(stdout)
     if stdout != '' and package in stdout:
         return True
 
