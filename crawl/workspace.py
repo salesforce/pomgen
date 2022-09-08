@@ -135,7 +135,7 @@ class Workspace:
                 if package_path.startswith(excluded_dependency_path):
                     return None
 
-            if bazel.is_never_link_dep(package_path):
+            if bazel.is_never_link_dep(self.repo_root_path, package_path):
                 return None
 
             maven_artifact_def = self.parse_maven_artifact_def(package_path)
