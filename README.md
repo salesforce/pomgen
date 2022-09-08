@@ -5,7 +5,7 @@
 ## Overview
 
 The set of scripts in this repository provides a solution for:
- - Generating pom.xml files for jars built built by Bazel (typically ```java_library``` or ```java_binary``` rules)
+ - Generating pom.xml files for jars built by Bazel (typically ```java_library``` or ```java_binary``` rules)
  - Uploading the pom.xmls and jars to a Maven Artifact Repository such as Nexus (or installing them into the local Maven Repository at ~/.m2/repository)
 
 pomgen does not run as part of the Bazel build - therefore Bazel BUILD files can remain free of pom.xml related metadata.
