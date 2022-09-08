@@ -206,8 +206,9 @@ def is_never_link_dep(repository_root_path, package):
     """
     Check if the dependency has neverlink set to 1
     """
-    query = "bazel query 'attr(\\'neverlink\\', 1, %s)'" % package
-    stdout, _, _ = run_cmd(query, cwd=repository_root_path)
+    query = "bazel query 'attr('neverlink', 1, %s)'" % package
+    stdout = run_cmd(query, cwd=repository_root_path)
+    print(stdout)
     if stdout != '' and package in stdout:
         return True
 
