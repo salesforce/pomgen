@@ -204,9 +204,9 @@ def _parse_conflict_resolution(json_dep_tree, mvn_install_name):
 
 def is_never_link_dep(repository_root_path, package):
     """
-    Check if the dependency is a neverlink dep
+    Check if the dependency has neverlink set to 1
     """
-    query = "bazel query 'attr('neverlink', 1, %s)" % package
+    query = "bazel query 'attr(\\'neverlink\\', 1, %s)'" % package
     stdout, _, _ = run_cmd(query, cwd=repository_root_path)
     if stdout != '' and package in stdout:
         return True
