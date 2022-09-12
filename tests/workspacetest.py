@@ -389,7 +389,7 @@ released_maven_artifact(
         mii.get_maven_install_names_and_paths = lambda r: [(maven_install_name, "some/repo/path",)]
         return mii
 
-    def _write_build_file(self, repo_root_path, package_rel_path, neverlinkAttribute = False):
+    def _write_build_file(self, repo_root_path, package_rel_path, neverlink_attr_enabled = False):
         build_file = """
 java_plugin(
     name = "lombok-plugin",
@@ -406,8 +406,8 @@ java_library(
     exported_plugins = [":lombok-plugin"],
     visibility = ["//visibility:public"],
 )
-""" % (1 if neverlinkAttribute == True else 0)
-        print(build_file)
+""" % (0 if neverlink_attr_enabled == False else 1)
+
         path = os.path.join(repo_root_path, package_rel_path)
         if not os.path.exists(path):
             os.makedirs(path)
