@@ -137,7 +137,7 @@ class Workspace:
 
             maven_artifact_def = self.parse_maven_artifact_def(package_path)
             if maven_artifact_def is None:
-                if bazel.is_never_link_dep(self.repo_root_path, package_path):
+                if bazel.is_never_link_dep(self.repo_root_path, dep_label):
                     return None
 
                 raise Exception("no BUILD.pom file in package [%s]" % package_path)

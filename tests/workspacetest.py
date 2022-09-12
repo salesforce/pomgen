@@ -203,8 +203,10 @@ class WorkspaceTest(unittest.TestCase):
         repo_root = tempfile.mkdtemp("monorepo")
         self._touch_file_at_path(repo_root, "", "MVN-INF", "LIBRARY.root")
         self._write_build_pom(repo_root, package_name, artifact_id, group_id, artifact_version)
-        bad_package_name = "bad_package"
+        bad_package_name = "lombok"
         os.mkdir(os.path.join(repo_root, bad_package_name)) # no BUILD.pom
+        self._write_basic_workspace_file(repo_root)
+        self._write_build_file(repo_root, bad_package_name)
 
         ws = workspace.Workspace(repo_root, [], exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
@@ -212,7 +214,7 @@ class WorkspaceTest(unittest.TestCase):
 
         with self.assertRaises(Exception) as ctx:
             deps = ws.parse_dep_labels(["//%s" % package_name,
-                                        "//%s" % bad_package_name])
+                                        "//%s:%s" % (bad_package_name, bad_package_name)])
 
         self.assertIn("no BUILD.pom", str(ctx.exception))
         self.assertIn(bad_package_name, str(ctx.exception))
@@ -362,6 +364,61 @@ released_maven_artifact(
         mii.get_maven_install_names_and_paths = lambda r: [(maven_install_name, "some/repo/path",)]
         return mii
 
+    def _write_build_file(self, repo_root_path, package_rel_path):
+        build_file = """
+java_plugin(
+    name = "lombok-plugin",
+    generates_api = True,
+    processor_class = "lombok.launch.AnnotationProcessorHider$AnnotationProcessor",
+    visibility = ["//visibility:private"],
+    deps = ["@nexus//:org_projectlombok_lombok"],
+)
+
+java_library(
+    name = "lombok",
+    exports = ["@nexus//:org_projectlombok_lombok"],
+    exported_plugins = [":lombok-plugin"],
+    visibility = ["//visibility:public"],
+)
+"""
+        path = os.path.join(repo_root_path, package_rel_path)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        build_file_path = os.path.join(path, "BUILD")
+        with open(build_file_path, "w") as f:
+           f.write(build_file)
+
+    def _write_basic_workspace_file(self, repo_root_path):
+        workspace_file = """
+workspace(name = "pomgen")
+
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+RULES_JVM_EXTERNAL_TAG = "4.1"
+RULES_JVM_EXTERNAL_SHA = "f36441aa876c4f6427bfb2d1f2d723b48e9d930b62662bf723ddfb8fc80f0140"
+
+http_archive(
+    name = "rules_jvm_external",
+    strip_prefix = "rules_jvm_external-%s" % RULES_JVM_EXTERNAL_TAG,
+    sha256 = RULES_JVM_EXTERNAL_SHA,
+    url = "https://github.com/bazelbuild/rules_jvm_external/archive/%s.zip" % RULES_JVM_EXTERNAL_TAG,
+)
+
+load("@rules_jvm_external//:defs.bzl", "maven_install")
+load("@rules_jvm_external//:specs.bzl", "maven")
+
+
+load("@rules_jvm_external//:repositories.bzl", "rules_jvm_external_deps")
+rules_jvm_external_deps()
+load("@rules_jvm_external//:setup.bzl", "rules_jvm_external_setup")
+rules_jvm_external_setup()
+"""
+        path = os.path.join(repo_root_path)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        workspace_file_path = os.path.join(path, "WORKSPACE")
+        with open(workspace_file_path, "w") as f:
+           f.write(workspace_file)
 
 if __name__ == '__main__':
     unittest.main()

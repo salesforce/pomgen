@@ -209,11 +209,8 @@ def is_never_link_dep(repository_root_path, package):
     Bazel ref: https://docs.bazel.build/versions/main/be/java.html#java_library.neverlink:~:text=on%20this%20target.-,neverlink,-Boolean%3B%20optional%3B%20default
     """
     query = "bazel query 'attr('neverlink', 1, %s)'" % package
-    try:
-        stdout = run_cmd(query, cwd=repository_root_path)
-        if stdout != '' and package in stdout:
-            return True
+    stdout = run_cmd(query, cwd=repository_root_path)
+    if stdout != '' and package in stdout:
+        return True
 
-        return False
-    except Exception as err:
-        return False
+    return False
