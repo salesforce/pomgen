@@ -13,30 +13,7 @@ bazel build examples/dependency-management/...
 ```
 
 ```
-bazel run @pomgen//maven -- -a pomgen,install -t examples/dependency-management
+bazel run @pomgen//maven -- -a pomgen,install -t examples/compile-only-dependencies
 ```
 
-Now look under your `$HOME/.m2/repository`:
-
-The usual `jar` packaging pom is at:
-`com/pomgen/depman/example/juicer/3.0.0-SNAPSHOT/juicer-3.0.0-SNAPSHOT.pom`
-
-The dependency management pom (`pom` packaging) is at:
-`com/pomgen/depman/example/juicer.depmanagement/3.0.0-SNAPSHOT/juicer.depmanagement-3.0.0-SNAPSHOT.pom`
-
-
-The `<dependencyManagement>` in the dependency management pom can be used (imported) the following way:
-
-```
-<dependencyManagement>
-    <dependencies>
-        <dependency>
-            <groupId>com.pomgen.depman.example</groupId>
-            <artifactId>juicer.depmanagement</artifactId>
-            <version>3.0.0-SNAPSHOT</version>
-            <type>pom</type>
-            <scope>import</scope>
-        </dependency>
-    </dependencies>
-<dependencyManagement>
-```
+It should pass even if `examples/compile-only-dependencies/fancy` has no `BUILD.pom` file.
