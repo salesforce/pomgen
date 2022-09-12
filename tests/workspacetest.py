@@ -219,6 +219,31 @@ class WorkspaceTest(unittest.TestCase):
         self.assertIn("no BUILD.pom", str(ctx.exception))
         self.assertIn(bad_package_name, str(ctx.exception))
 
+    def test_src_dep_with_neverlink_enabled(self):
+            """
+            Verifies that no error is triggered when a dep has neverlink enabled and it has no BUILD.pom file.
+            """
+            artifact_version = "1.2.3"
+            package_name = "package"
+            group_id = "group1"
+            artifact_id = "art1"
+            repo_root = tempfile.mkdtemp("monorepo")
+            self._touch_file_at_path(repo_root, "", "MVN-INF", "LIBRARY.root")
+            self._write_build_pom(repo_root, package_name, artifact_id, group_id, artifact_version)
+            bad_package_name = "lombok"
+            os.mkdir(os.path.join(repo_root, bad_package_name)) # no BUILD.pom
+            self._write_basic_workspace_file(repo_root)
+            self._write_build_file(repo_root, bad_package_name, True)
+
+            ws = workspace.Workspace(repo_root, [], exclusions.src_exclusions(),
+                                     maveninstallinfo.NOOP,
+                                     pom_content=pomcontent.NOOP)
+
+            deps = ws.parse_dep_labels(["//%s" % package_name,
+                                        "//%s:%s" % (bad_package_name, bad_package_name)])
+
+            self.assertEqual(1, len(deps))
+
     def test_parse_invalid_dep(self):
         """
         Verifies that parsing of an invalid label behaves as expected.
@@ -364,7 +389,7 @@ released_maven_artifact(
         mii.get_maven_install_names_and_paths = lambda r: [(maven_install_name, "some/repo/path",)]
         return mii
 
-    def _write_build_file(self, repo_root_path, package_rel_path):
+    def _write_build_file(self, repo_root_path, package_rel_path, neverlinkAttribute = False):
         build_file = """
 java_plugin(
     name = "lombok-plugin",
@@ -376,11 +401,13 @@ java_plugin(
 
 java_library(
     name = "lombok",
+    neverlink = %s,
     exports = ["@nexus//:org_projectlombok_lombok"],
     exported_plugins = [":lombok-plugin"],
     visibility = ["//visibility:public"],
 )
-"""
+""" % (1 if neverlinkAttribute == True else 0)
+        print(build_file)
         path = os.path.join(repo_root_path, package_rel_path)
         if not os.path.exists(path):
             os.makedirs(path)
