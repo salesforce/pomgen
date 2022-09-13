@@ -1,0 +1,10 @@
+maven_artifact(
+    group_id = "com.pomgen.cool.example",
+    artifact_id = "coollib",
+    version = "3.0.0-SNAPSHOT",
+    pom_generation_mode = "dynamic",
+)
+
+maven_artifact_update(
+    version_increment_strategy = "minor",
+)
