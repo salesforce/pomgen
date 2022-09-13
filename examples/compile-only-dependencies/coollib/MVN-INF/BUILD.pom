@@ -1,9 +1,8 @@
 maven_artifact(
-    group_id = "com.pomgen.depman.example",
+    group_id = "com.pomgen.cool.example",
     artifact_id = "coollib",
     version = "3.0.0-SNAPSHOT",
     pom_generation_mode = "dynamic",
-    generate_dependency_management_pom = True,
 )
 
 maven_artifact_update(

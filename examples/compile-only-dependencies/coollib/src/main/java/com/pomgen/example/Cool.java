@@ -1,7 +1,7 @@
 package com.pomgen.example;
 
 /**
- * A Juicer produces either Vegetable or Fruit juice.
+ * A very cool library as you can see
  */
 public class Cool {
 

@@ -6,8 +6,3 @@ java_library(
     ]
 )
 
-java_binary(
-    name = "make-coollib",
-    runtime_deps = [":coollib"],
-    main_class = "com.pomgen.example.Main",
-)

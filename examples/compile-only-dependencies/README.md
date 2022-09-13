@@ -9,11 +9,11 @@ Most likely those dependencies won't have a `BUILD.pom` file, so they have to be
 From the root of the repository:
 
 ```
-bazel build examples/dependency-management/...
+bazel build examples/compile-only-dependencies/...
 ```
 
 ```
 bazel run @pomgen//maven -- -a pomgen,install -t examples/compile-only-dependencies
 ```
 
-It should pass even if `examples/compile-only-dependencies/fancy` has no `BUILD.pom` file.
+It should pass even if `examples/compile-only-dependencies/fancy` has no `BUILD.pom` file and the generated pom will not include the `neverlink` dependency.
