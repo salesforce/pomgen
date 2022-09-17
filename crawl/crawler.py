@@ -420,8 +420,10 @@ class Crawler:
         """
         # we start with a leafnode, and walk up (the leaf nodes represent
         # packages/maven artifacts, not libraries)
-        processed_nodes = set()
         for node in self.leafnodes:
+            if self.verbose:
+                print("Propagating release state, starting at leaf node", node.artifact_def.bazel_package)
+            processed_nodes = set()
             self._propagate_req_rel(node,
                                     transitive_dep_requires_release=False,
                                     force_release=force_release,
@@ -439,6 +441,15 @@ class Crawler:
         if (force_release or
             sibling_artifact_requires_release or
             transitive_dep_requires_release):
+            if self.verbose:
+                if force_release:
+                    print("Library", library_path, "requires release because force is enabled")
+                elif sibling_artifact_requires_release:
+                    print("Library", library_path, "requires release because", sibling_release_reason, "propagating to parent lib(s)")
+                elif transitive_dep_requires_release:
+                    print("Library", library_path, "requires release because a child lib requires to be released")
+                else:
+                    assert False, "bug"
             # update all artifacts belonging to the library at once
             updated_artifact_defs = []
             for artifact_def in all_artifact_defs:
@@ -454,7 +465,9 @@ class Crawler:
                             artifact_def.release_reason = ReleaseReason.TRANSITIVE
                         else:
                             raise Exception("release_reason not set on artifact - this is a bug")
-
+        else: # release not required
+            if self.verbose:
+                print("Library", library_path, "does not required to be released")
         # process all artifact nodes belonging to the current library, 
         # otherwise we may miss some references to other libraries
         all_artifact_nodes = self.library_to_nodes[library_path]
