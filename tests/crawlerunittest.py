@@ -14,8 +14,10 @@ from crawl import workspace
 import os
 import unittest
 
+
 GROUP_ID = "group"
 POM_TEMPLATE_FILE = "foo.template"
+
 
 class CrawlerUnitTest(unittest.TestCase):
     """
@@ -451,12 +453,64 @@ class CrawlerUnitTest(unittest.TestCase):
         self.assertEqual(d2, a1_deps[5])
         self.assertEqual(d3, a1_deps[6])
 
+    def test_propagate_requires_release_up__single_child(self):
+        """
+        l1 -> l2, l2 requires release
+        """
+        a1_node = self._build_node("a1", "a/b/c", library_path="l1")
+        a2_node = self._build_node("a2", "d/e/f", parent_node=a1_node, library_path="l2")
+        a1_node.children = (a2_node,)
+        ws = self._get_workspace()
+        crawler = crawlerm.Crawler(workspace=ws, pom_template=None)
+        crawler.library_to_nodes["l1"].append(a1_node)
+        crawler.library_to_nodes["l2"].append(a2_node)
+        crawler.library_to_artifact["l1"].append(a1_node.artifact_def)
+        crawler.library_to_artifact["l2"].append(a2_node.artifact_def)
+
+        crawler.leafnodes = (a2_node,)
+
+        a2_node.artifact_def.requires_release = True
+        a2_node.artifact_def.release_reason = "some reason"
+        crawler._calculate_artifact_release_flag(force_release=False)
+
+        self.assertTrue(a1_node.artifact_def.requires_release)
+        self.assertIn("transitive", a1_node.artifact_def.release_reason)
+
+
+    def test_propagate_requires_release_up__two_children(self):
+        """
+        l1 -> (l2, l3), l3 requires release
+        """
+        a1_node = self._build_node("a1", "a/b/c", library_path="l1")
+        a2_node = self._build_node("a2", "d/e/f", parent_node=a1_node, library_path="l2")
+        a3_node = self._build_node("a3", "g/h/i", parent_node=a1_node, library_path="l3")
+        a1_node.children = (a2_node, a3_node,)
+        ws = self._get_workspace()
+        crawler = crawlerm.Crawler(workspace=ws, pom_template=None)
+        crawler.library_to_nodes["l1"].append(a1_node)
+        crawler.library_to_nodes["l2"].append(a2_node)
+        crawler.library_to_nodes["l3"].append(a3_node)
+        crawler.library_to_artifact["l1"].append(a1_node.artifact_def)
+        crawler.library_to_artifact["l2"].append(a2_node.artifact_def)
+        crawler.library_to_artifact["l3"].append(a3_node.artifact_def)
+
+        crawler.leafnodes = (a2_node, a3_node)
+
+        a3_node.artifact_def.requires_release = True
+        a2_node.artifact_def.release_reason = "some reason"
+        crawler._calculate_artifact_release_flag(force_release=False)
+
+        self.assertTrue(a1_node.artifact_def.requires_release)
+        self.assertIn("transitive", a1_node.artifact_def.release_reason)
+
     def _build_node(self, artifact_id, bazel_package,
                     pom_generation_mode=pomgenmode.DYNAMIC,
-                    parent_node=None):
+                    parent_node=None, library_path=None):
         art_def = buildpom.MavenArtifactDef(
-            "g1", artifact_id, "1.0.0", bazel_package=bazel_package,
-            pom_generation_mode=pom_generation_mode)
+            "g1", artifact_id, "1.0.0",
+            bazel_package=bazel_package,
+            pom_generation_mode=pom_generation_mode,
+            library_path=library_path)
         dep = dependency.new_dep_from_maven_artifact_def(art_def)
         return crawlerm.Node(parent=parent_node, artifact_def=art_def, dependency=dep)
 
