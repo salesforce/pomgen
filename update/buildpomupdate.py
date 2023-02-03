@@ -16,6 +16,7 @@ import os
 import re
 import sys
 
+
 def update_build_pom_file(root_path, 
                           packages,
                           new_version=None,
@@ -23,6 +24,7 @@ def update_build_pom_file(root_path,
                           new_version_incr_strat=None,
                           set_version_to_last_released_version=False,
                           version_qualifier_to_add=None,
+                          version_qualifier_to_remove=None,
                           new_pom_generation_mode=None,
                           add_pom_generation_mode_if_missing=False):
     """
@@ -74,6 +76,11 @@ def update_build_pom_file(root_path,
                 else:
                     updated_version = _append_version_qualifier(current_version, vq)
 
+            # remove version qualifier from current version
+            if updated_version is None and version_qualifier_to_remove is not None:
+                updated_version = _remove_version_qualifier(current_version, version_qualifier_to_remove)
+
+
             if updated_version is not None:
                 build_pom_content = _update_version_in_build_pom_content(build_pom_content, updated_version)
             if new_version_incr_strat is not None:
@@ -87,6 +94,7 @@ def update_build_pom_file(root_path,
         except:
             print("[ERROR] Cannot update BUILD.pom [%s]: %s" % (build_pom_path, sys.exc_info()))
             raise
+
 
 def update_released_artifact(root_path, packages, source_exclusions, new_version=None, new_artifact_hash=None, use_current_artifact_hash=False):
     """
@@ -132,6 +140,7 @@ def update_released_artifact(root_path, packages, source_exclusions, new_version
             print("[ERROR] Cannot update BUILD.pom.released [%s]: %s" % (path, sys.exc_info()))
             raise
 
+
 def _update_version_in_build_pom_content(build_pom_content, new_version):
     m = version.version_re.search(build_pom_content)
     assert m is not None
@@ -153,6 +162,7 @@ maven_artifact_update(
 
 pom_generation_mode_re = re.compile("(^.*pom_generation_mode *= *[\"'])(.*?)([\"'].*)$", re.S)
 
+
 def _update_pom_generation_mode_in_build_pom_content(build_pom_content, new_pom_generation_mode):
     value = new_pom_generation_mode.strip()
     m = pom_generation_mode_re.search(build_pom_content)
@@ -167,6 +177,7 @@ def _update_pom_generation_mode_in_build_pom_content(build_pom_content, new_pom_
                 build_pom_content[insert_at:]
     else:
         return "%s%s%s" % (m.group(1), value, m.group(3))
+
 
 def _add_pom_generation_mode_if_missing_in_build_pom_content(build_pom_content):
     m = pom_generation_mode_re.search(build_pom_content)
@@ -184,12 +195,14 @@ def _update_version_in_build_pom_released_content(build_pom_released_content, ne
 
 artifact_hash_re = re.compile("(^.*artifact_hash.*?=.*?[\"'])(.*?)([\"'].*)$", re.S)
 
+
 def _update_artifact_hash_in_build_pom_released_content(build_pom_released_content, new_artifact_hash):
     m = artifact_hash_re.search(build_pom_released_content)
     if m is None:
         raise Exception("Cannot find artifact_hash in BUILD.pom.released")
     else:
         return "%s%s%s" % (m.group(1), new_artifact_hash.strip(), m.group(3))
+
 
 def _get_build_pom_released_content(version, artifact_hash):
     assert version is not None, "a released version must be specified, use --new_released_version"
@@ -201,6 +214,7 @@ def _get_build_pom_released_content(version, artifact_hash):
 """
     return content % (version.strip(), artifact_hash.strip())
 
+
 def _sanitize_version_qualifier(version_qualifier):
     version_qualifier = version_qualifier.strip()
     if version_qualifier.startswith("-"):
@@ -209,9 +223,28 @@ def _sanitize_version_qualifier(version_qualifier):
         version_qualifier = version_qualifier[:-1]
     return version_qualifier
 
+
 def _append_version_qualifier(current_version, version_qualifier):
     return "%s-%s" % (current_version, version_qualifier)
+
 
 def _insert_version_qualifier(current_version, version_qualifier):
     s = lambda current_version:"%s-%s" % (current_version, version_qualifier)
     return version.version_update_handler(current_version, s)
+
+
+def _remove_version_qualifier(current_version, version_qualifier):
+    if not version_qualifier.startswith("-"):
+        version_qualifier = "-%s" % version_qualifier
+    # the version qualifier must either be the last qualifier in the version
+    # string, or it must be followed by another version qualifier
+    # if the given version qualifier is "foo", it is ok to remove it from these
+    # version strings: 1.0.0-foo, 1.0.0.-foo-SNAPSHOT
+    # not not from this one (where "foo" is just a substring):
+    # 1.0.0-fooblah
+    if current_version.endswith(version_qualifier):
+        return current_version[:-len(version_qualifier)]
+    i = current_version.find(version_qualifier + "-")
+    if i == -1:
+        return current_version
+    return current_version[:i] + current_version[i+len(version_qualifier):]

@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 Copyright (c) 2018, salesforce.com, inc.
 All rights reserved.
@@ -10,7 +8,6 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 Command line utility that updates attributes in BUILD.pom and 
 BUILD.pom.released files.
 """
-
 from common import argsupport
 from common import common
 from common import logger
@@ -22,7 +19,9 @@ import argparse
 import os
 import sys
 
+
 VERSION_INCREMENT_STRATEGIES = ("major", "minor", "patch",)
+
 
 def _parse_arguments(args):
     parser = argparse.ArgumentParser(description="Updates Maven artifact metadata")
@@ -49,6 +48,8 @@ def _parse_arguments(args):
         help="Updates the version in BUILD.pom files, by setting it to the last released version specified in the corresponding BUILD.pom.released files")
     parser.add_argument("--add_version_qualifier", required=False, type=str,
         help="Adds the specified string to the end of the version, using '-' as a separator. If the version ends with \"-SNAPSHOT\", the specified qualifier is added before the snapshot suffix")
+    parser.add_argument("--remove_version_qualifier", required=False, type=str,
+        help="Removes the specified version qualifier from the version")
     parser.add_argument("--new_pom_generation_mode", required=False, type=str,
         help="Adds or updates the value of 'pom_generation_mode' in BUILD.pom files")
     parser.add_argument("--add_missing_pom_generation_mode", required=False, action='store_true',
@@ -57,6 +58,7 @@ def _parse_arguments(args):
     parser.add_argument("--repo_root", type=str, required=False,
         help="the root of the repository")    
     return parser.parse_args(args)
+
 
 if __name__ == "__main__":
     args = _parse_arguments(sys.argv[1:])
@@ -70,16 +72,19 @@ if __name__ == "__main__":
         args.update_version_using_version_increment_strategy or
         args.set_version_to_last_released or
         args.add_version_qualifier is not None or
+        args.remove_version_qualifier is not None or
         args.new_version_increment_strategy is not None or
         args.new_pom_generation_mode is not None or
         args.add_missing_pom_generation_mode):
 
         buildpomupdate.update_build_pom_file(
-            repo_root, packages, args.new_version,
+            repo_root, packages,
+            args.new_version,
             args.update_version_using_version_increment_strategy,
             args.new_version_increment_strategy,
             args.set_version_to_last_released,
             args.add_version_qualifier,
+            args.remove_version_qualifier,
             args.new_pom_generation_mode,
             args.add_missing_pom_generation_mode)
 
