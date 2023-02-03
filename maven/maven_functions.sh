@@ -11,7 +11,7 @@ _for_each_pom() {
     repo_root_dir_path=$2
     pom_root_path=$3
 
-    if ! [[ "$action" =~ ^(install_main_artifact|build_sources_and_javadoc_jars|install_sources_and_javadoc_jars|upload_all_artifacts|clean_source_tree)$ ]]; then
+    if ! [[ "$action" =~ ^(install_main_artifact|build_javadoc_jar|install_sources_and_javadoc_jars|upload_all_artifacts|clean_source_tree)$ ]]; then
         echo "ERROR: Unknown action $action" && exit 1
     fi
 
@@ -34,7 +34,7 @@ _for_each_pom() {
         src_dir_package_path=$repo_root_dir_path$src_dir_rel_path
         package_name=$(basename "$src_dir_package_path")
 
-        # the location of javadoc and sources jars
+        # the location of javadoc jars
         target_dir_path="$src_dir_package_path/target"
 
         # run clean early, before any validation logic may cause an error
@@ -97,6 +97,12 @@ _for_each_pom() {
             else
                 # the filename of the jar built by Bazel uses this pattern:
                 jar_artifact_path="$build_dir_package_path/lib${package_name}.jar"
+                # bazel's java_library rule has an implicit target that builds
+                # a jar containing the sources, see
+                # https://bazel.build/reference/be/java#java_library:
+                # lib<name>-src.jar: An archive containing the sources
+                # note that this file only exists if that implicit target ran!
+                sources_jar_path="$build_dir_package_path/lib${package_name}-src.jar"
                 if [ ! -f "${jar_artifact_path}" ]; then
                     echo "WARN: lib${package_name}.jar not found, looking for alternatives"
                     # we also support executable jars - this is an edge case but
@@ -120,9 +126,10 @@ _for_each_pom() {
                     # we've seen jar break in weird ways when trying to unjar
                     # large "uber" jars:
                     # java.io.FileNotFoundException: META-INF/LICENSE (Is a directory)
-                    # disable unjaring in order to add the generated pom to
-                    # the jar, which isn't required for uber jars anyway
-                    # (not used to figure out deps, since deps are bundled)
+                    # so do not attempt to add the generated pom.xml to uber
+                    # jars, since the pom isn't required for uber jars anyway:
+                    # uber jars are self contained and therefore do not
+                    # reference other jars
                     process_jar_artifact=0
                 fi
             fi
@@ -133,7 +140,6 @@ _for_each_pom() {
             fi
 
             if [ -d "$target_dir_path" ]; then
-                sources_jar_path=$(find "$target_dir_path" -name "*$VERSION-sources.jar"||true)
                 javadoc_jar_path=$(find "$target_dir_path" -name "*$VERSION-javadoc.jar"||true)
             fi
         fi
@@ -147,11 +153,11 @@ _for_each_pom() {
         if [ "$action" == "install_main_artifact" ]; then
             _install_artifact $pom_path $jar_artifact_path
 
-        elif [ "$action" == "build_sources_and_javadoc_jars" ]; then
+        elif [ "$action" == "build_javadoc_jar" ]; then
             if [ "$is_pom_only_artifact" == 1 ]; then
                 echo "INFO: Skipping sources/javadoc building for pom-only artifact"
             else
-                _build_source_and_javadoc_jars $pom_path $src_dir_package_path
+                _build_javadoc_jar $pom_path $src_dir_package_path
             fi
 
         elif [ "$action" == "install_sources_and_javadoc_jars" ]; then
@@ -199,8 +205,9 @@ _install_artifact() {
         echo "INFO: Installing pom only to local repository: $pom_path"
         artifact_path=$pom_path
     else
-        # it is possible (though rare) that jar artifacts do not contain Java
-        # source code, in which case they don't have srcs/javadoc jars either
+        # for various reasons, the artifact may not exist
+        # (sources jar may not have been built, building the javadoc jar may
+        #  have failed ... )
         if [ ! -f "$artifact_path" ]; then
             echo "INFO: Artifact not found, skipping \"$artifact_path\" for pom $pom_path"
             return
@@ -222,17 +229,17 @@ _install_artifact() {
 # copies pom into the src tree (because that's where the sources happen to be)
 # 1st arg: path to pom
 # 2nd arg: path to Bazel package to copy the pom into
-_build_source_and_javadoc_jars() {
+_build_javadoc_jar() {
     pom_path=$1
     src_dir_package_path=$2
 
     src_dir_pom_path="$src_dir_package_path/pom.xml"
-    echo "INFO: Generating javadoc and sources jars at $src_dir_package_path"
+    echo "INFO: Building javadoc jar at $src_dir_package_path"
     cp -f $pom_path $src_dir_pom_path
     # we run with -Dmaven.javadoc.failOnError=false because javadoc errros
     # are not a big deal, in the grand scheme of things - and lets be honest
     # nobody actually ever looks at javadoc anyway
-    mvn ${MVN_ARGS} -Dmaven.javadoc.failOnError=false -f $src_dir_pom_path source:jar javadoc:jar
+    mvn ${MVN_ARGS} -Dmaven.javadoc.failOnError=false -f $src_dir_pom_path javadoc:jar
     rm -f $src_dir_pom_path
 }
 

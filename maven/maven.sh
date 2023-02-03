@@ -38,9 +38,15 @@ Usage: maven.sh -a action(s) [-t bazel package]
       Maven repository.
     install_all: installs binary, sources, javadoc and pom artifacts into the
       local Maven repository.
+      The sources jar is built by Bazel's java_library implicit
+      lib<name>-src.jar target - if that target did not run and the sources
+      jar does not exist, pomgen skips it.
 
     deploy_all: deploys binary, sources, javadoc and pom artifacts to Nexus.
       Uses credentials from ~/.m2/settings.xml's "default" server entry.
+      The sources jar is built by Bazel's java_library implicit
+      lib<name>-src.jar target - if that target did not run and the sources
+      jar does not exist, pomgen skips it.
     deploy_only: re-attempts upload of all artifacts to Nexus.  Assumes
       "deploy_all" has run once.  This is useful for debugging upload issues.
       Uses credentials from ~/.m2/settings.xml's "default" server entry.
@@ -236,7 +242,7 @@ do
     elif [ "$action" == "install_all" ]; then
         # no filter below because the javadoc maven plugin looks for dependencies
         _for_each_pom "install_main_artifact" $repo_root_path
-        _for_each_pom "build_sources_and_javadoc_jars" $repo_root_path $target
+        _for_each_pom "build_javadoc_jar" $repo_root_path $target
         _for_each_pom "install_sources_and_javadoc_jars" $repo_root_path $target
 
     elif [ "$action" == "deploy_all" ]; then
@@ -247,7 +253,7 @@ do
 
         # no filter below because the javadoc maven plugin looks for dependencies
         _for_each_pom "install_main_artifact" $repo_root_path
-        _for_each_pom "build_sources_and_javadoc_jars" $repo_root_path $target
+        _for_each_pom "build_javadoc_jar" $repo_root_path $target
         _for_each_pom "upload_all_artifacts" $repo_root_path $target
 
 

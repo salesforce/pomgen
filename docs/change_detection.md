@@ -150,6 +150,22 @@ bazel run //maven -- -a install
 bazel run //maven -- -a install_all
 ```
 
+### Sources
+
+pomgen looks for the sources jar built by bazel's `java_library` rule, which has an [implicit target](https://bazel.build/reference/be/java#java_library_implicit_outputs) that builds the sources jar: `lib<name>-src.jar`. Bazel does not build this target by default when using the `...` wildcard pattern. It has to be built explicitly, or the special wilcard `...:all-targets` has to be used.
+
+For example:
+
+```
+bazel build examples/hello-world/juicer:libjuicer-src.jar
+```
+or
+```
+bazel build examples/hello-world/juicer/...:all-targets
+```
+
+If pomgen cannot find the sources jar, it skips it.
+
 ## Disabling Change Detection
 
 Change detection is enabled by default. It can be disabled:
