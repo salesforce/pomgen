@@ -507,7 +507,7 @@ maven_artifact_update(
             self.assertIn('version = "3.2.1"', content)
             self.assertIn(')', content)
 
-    def test_update_version_in_BUILD_pom__rm_version_qualifier__substr(self):
+    def test_update_version_in_BUILD_pom__rm_version_qualifier__substr1(self):
         pack1 = "somedir/p1"
         repo_root = tempfile.mkdtemp("monorepo")
         pack1_path = os.path.join(repo_root, pack1)
@@ -525,7 +525,49 @@ maven_artifact_update(
             self.assertIn('maven_artifact(', content)
             self.assertIn('group_id = "p1g"', content)
             self.assertIn('artifact_id = "p1a"', content)
-            self.assertIn('version = "3.2.1-SNAPSHOT"', content)
+            self.assertIn('version = "3.2.1"', content)
+            self.assertIn(')', content)
+
+    def test_update_version_in_BUILD_pom__rm_version_qualifier__substr2(self):
+        pack1 = "somedir/p1"
+        repo_root = tempfile.mkdtemp("monorepo")
+        pack1_path = os.path.join(repo_root, pack1)
+        os.makedirs(pack1_path)
+        self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-foo-blah",
+                              version_increment_strategy="major")
+
+        # not actually removed, since "SNAP" is a substring, but not a full
+        # version qualifier
+        buildpomupdate.update_build_pom_file(
+            repo_root, [pack1], version_qualifier_to_remove="fo")
+
+        with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
+            content = f.read()
+            self.assertIn('maven_artifact(', content)
+            self.assertIn('group_id = "p1g"', content)
+            self.assertIn('artifact_id = "p1a"', content)
+            self.assertIn('version = "3.2.1-blah"', content)
+            self.assertIn(')', content)
+
+    def test_update_version_in_BUILD_pom__rm_version_qualifier__substr3(self):
+        pack1 = "somedir/p1"
+        repo_root = tempfile.mkdtemp("monorepo")
+        pack1_path = os.path.join(repo_root, pack1)
+        os.makedirs(pack1_path)
+        self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-foo-blah",
+                              version_increment_strategy="major")
+
+        # not actually removed, since "SNAP" is a substring, but not a full
+        # version qualifier
+        buildpomupdate.update_build_pom_file(
+            repo_root, [pack1], version_qualifier_to_remove="bl")
+
+        with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
+            content = f.read()
+            self.assertIn('maven_artifact(', content)
+            self.assertIn('group_id = "p1g"', content)
+            self.assertIn('artifact_id = "p1a"', content)
+            self.assertIn('version = "3.2.1-foo"', content)
             self.assertIn(')', content)
 
     def test_update_version_in_BUILD_pom__add_version_qualifier__slashes_are_removed(self):

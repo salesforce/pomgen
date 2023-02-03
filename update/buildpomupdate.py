@@ -236,15 +236,19 @@ def _insert_version_qualifier(current_version, version_qualifier):
 def _remove_version_qualifier(current_version, version_qualifier):
     if not version_qualifier.startswith("-"):
         version_qualifier = "-%s" % version_qualifier
-    # the version qualifier must either be the last qualifier in the version
-    # string, or it must be followed by another version qualifier
-    # if the given version qualifier is "foo", it is ok to remove it from these
-    # version strings: 1.0.0-foo, 1.0.0.-foo-SNAPSHOT
-    # not not from this one (where "foo" is just a substring):
-    # 1.0.0-fooblah
-    if current_version.endswith(version_qualifier):
-        return current_version[:-len(version_qualifier)]
-    i = current_version.find(version_qualifier + "-")
+    # if the given version qualifier (vq) is a prefix of an existing vq in
+    # the version string, the entire matching vq will be removed
+    i = current_version.find(version_qualifier)
     if i == -1:
         return current_version
-    return current_version[:i] + current_version[i+len(version_qualifier):]
+    end_index = i + len(version_qualifier)
+    if end_index == len(current_version) - 1 or current_version[end_index-1] == "-":
+        # the given version_qualifier matches a vq in the current version
+        pass
+    else:
+        # the given version_qualifier matches the beginning of a vq in the
+        # current version - find the end_index
+        end_index = current_version.find("-", end_index)
+        if end_index == -1:
+            end_index = len(current_version)
+    return current_version[:i] + current_version[end_index:]
