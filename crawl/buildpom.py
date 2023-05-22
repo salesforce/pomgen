@@ -12,10 +12,8 @@ from collections import namedtuple
 from common import code
 from common import mdfiles
 from common import pomgenmode
-from common import version
+from common import version as versionm
 import os
-import re
-import sys
 
 
 class MavenArtifactDef(object):
@@ -70,8 +68,6 @@ class MavenArtifactDef(object):
 
     released_version: the previously released version to Nexus
 
-    released_incremental_version:
-
     released_artifact_hash: the hash of the artifact at the time it was 
         previously released to Nexus
 
@@ -117,7 +113,6 @@ class MavenArtifactDef(object):
                  deps=[],
                  version_increment_strategy=None,
                  released_version=None,
-                 released_incremental_version=None,
                  released_artifact_hash=None,
                  bazel_package=None,
                  library_path=None,
@@ -259,43 +254,7 @@ class MavenArtifactDef(object):
 
 
 # only used internally for parsing
-ReleasedMavenArtifactDef = namedtuple("ReleasedMavenArtifactDef", "version artifact_hash incremental_version")
-
-
-def maven_artifact(group_id=None,
-                   artifact_id=None,
-                   version=None,
-                   pom_generation_mode=None,
-                   pom_template_file=None,
-                   include_deps=True,
-                   change_detection=True,
-                   additional_change_detected_packages=[],
-                   generate_dependency_management_pom=False,
-                   jar_path=None,
-                   deps=[]):
-    """
-    This function is only intended to be called from BUILD.pom files.
-    """
-    return MavenArtifactDef(group_id=group_id,
-                            artifact_id=artifact_id,
-                            version=version,
-                            pom_generation_mode=pom_generation_mode,
-                            # on purpose, the content starts out with only the
-                            # path to the file that has the content
-                            custom_pom_template_content=pom_template_file,
-                            include_deps=include_deps,
-                            change_detection=change_detection,
-                            additional_change_detected_packages=additional_change_detected_packages,
-                            gen_dependency_management_pom=generate_dependency_management_pom,
-                            jar_path=jar_path,
-                            deps=deps)
-
-
-def released_maven_artifact(version, artifact_hash, incremental_version=-1):
-    """
-    This function is only intended to be called from BUILD.pom.released files.
-    """
-    return ReleasedMavenArtifactDef(version, artifact_hash, incremental_version)
+ReleasedMavenArtifactDef = namedtuple("ReleasedMavenArtifactDef", "version artifact_hash")
 
 
 def parse_maven_artifact_def(root_path, package):
@@ -308,25 +267,31 @@ def parse_maven_artifact_def(root_path, package):
     content, path = mdfiles.read_file(root_path, package, mdfiles.BUILD_POM_FILE_NAME)
     if content is None:
         return None
-    maven_artifact_func = code.get_function_block(content, "maven_artifact")
-    try:
-        art_def = eval(maven_artifact_func)
-        pom_generation_mode = pomgenmode.from_string(art_def.pom_generation_mode)
-        if art_def.custom_pom_template_content is not None:
-            # load the template right away
-            template_path = art_def.custom_pom_template_content
-            template_content, _ = mdfiles.read_file(root_path, package, template_path)
-            art_def.custom_pom_template_content = template_content
+    ma = code.get_function_block(content, "maven_artifact")
+    art_def =  MavenArtifactDef(
+        group_id=code.get_attr_value("group_id", str, None, ma),
+        artifact_id=code.get_attr_value("artifact_id", str, None, ma),
+        version=code.get_attr_value("version", str, None, ma),
+        pom_generation_mode=code.get_attr_value("pom_generation_mode", str, None, ma),
+        include_deps=code.get_attr_value("include_deps", bool, True, ma),
+        change_detection=code.get_attr_value("change_detection", bool, True, ma),
+        additional_change_detected_packages=code.get_attr_value("additional_change_detected_packages", list, [], ma),
+        gen_dependency_management_pom=code.get_attr_value("generate_dependency_management_pom", bool, False, ma),
+        jar_path=code.get_attr_value("jar_path", str, None, ma),
+        deps=code.get_attr_value("deps", list, [], ma))
 
-    except:
-        print("[ERROR] Cannot parse [%s]: %s" % (path, sys.exc_info()))
-        raise
+    template_path = code.get_attr_value("pom_template_file", str, None, ma)
+    if template_path is not None:
+        template_content, _ = mdfiles.read_file(root_path, package, template_path)
+        art_def.custom_pom_template_content = template_content
+    
+    pom_generation_mode = pomgenmode.from_string(art_def.pom_generation_mode)
 
     if pom_generation_mode.produces_artifact:
         rel_art_def = _parse_released_maven_artifact_def(root_path, package)
         released_pom_content = _read_released_pom(root_path, package)
 
-        vers_incr_strat = version.get_version_increment_strategy(content, path)
+        vers_incr_strat = versionm.get_version_increment_strategy(content)
 
         return _augment_art_def_values(art_def, rel_art_def, package,
                                        released_pom_content,
@@ -349,19 +314,17 @@ def _read_released_pom(root_path, package):
 def _parse_released_maven_artifact_def(root_path, package):
     """
     Parses the BUILD.pom.released file at the specified path and returns a 
-    MavenArtifactDef instance.
+    ReleasedMavenArtifactDef instance.
 
     Returns None if there is no BUILD.pom.released file at the specified path.
     """
-    content, path = mdfiles.read_file(root_path, package, mdfiles.BUILD_POM_RELEASED_FILE_NAME)
+    content, _ = mdfiles.read_file(root_path, package, mdfiles.BUILD_POM_RELEASED_FILE_NAME)
     if content is None:
         return None
-    try:
-        return eval(content)
-    except:
-        print("[ERROR] Cannot parse [%s]: %s" % (path, sys.exc_info()))
-        raise
-
+    return ReleasedMavenArtifactDef(
+        version=code.get_attr_value("version", str, None, content),
+        artifact_hash=code.get_attr_value("artifact_hash", str, None, content))
+    
 
 def _augment_art_def_values(user_art_def, rel_art_def, bazel_package,
                             released_pom_content, version_increment_strategy,
@@ -382,7 +345,6 @@ def _augment_art_def_values(user_art_def, rel_art_def, bazel_package,
         jar_path=None if user_art_def.jar_path is None else os.path.normpath(os.path.join(bazel_package, mdfiles.MD_DIR_NAME, user_art_def.jar_path)),
         deps=user_art_def.deps,
         released_version=rel_art_def.version if rel_art_def is not None else None,
-        released_incremental_version=rel_art_def.incremental_version if rel_art_def is not None else None,
         released_artifact_hash=rel_art_def.artifact_hash if rel_art_def is not None else None,
         bazel_package=bazel_package,
         released_pom_content=released_pom_content,

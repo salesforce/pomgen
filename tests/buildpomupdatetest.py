@@ -664,7 +664,7 @@ maven_artifact(
         build_pom = build_pom % (artifact_id, group_id, version)
 
         if pom_generation_mode is not None:
-            build_pom += "    pom_generation_mode = \"%s\"," % pom_generation_mode
+            build_pom += "    pom_generation_mode = \"%s\",\n" % pom_generation_mode
 
         if additional_change_detected_packages is not None:
               build_pom += "    additional_change_detected_packages = [%s]," % ",".join(["'%s'" % p for p in additional_change_detected_packages])

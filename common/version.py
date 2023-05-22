@@ -5,7 +5,7 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 
 
-version related shared code.
+This module contains code related to version string processing.
 """
 
 from . import code
@@ -16,7 +16,7 @@ import re
 version_re = re.compile("(^.*version *= *[\"'])(.*?)([\"'].*)$", re.S)
 
 
-def get_version_increment_strategy(build_pom_content, path):
+def get_version_increment_strategy(build_pom_content):
     """
     Returns a version increment strategy instance based on the value of
     maven_artifact_update.version_increment_strategy in the specified
@@ -33,7 +33,7 @@ def get_version_increment_strategy(build_pom_content, path):
         "1.0.0-scone_70x" -> "2.0.0-scone_70x"
         "1.0.0-scone_70x-SNAPSHOT" -> "2.0.0-scone_70x-SNAPSHOT"
     """
-    maven_art_up = _parse_maven_artifact_update(build_pom_content, path)
+    maven_art_up = _parse_maven_artifact_update(build_pom_content)
     if maven_art_up.version_increment_strategy == "major":
         incr_strat = _get_major_version_increment_strategy()
     elif maven_art_up.version_increment_strategy == "minor":
@@ -113,12 +113,6 @@ def get_next_dev_version(current_version, version_increment_strategy, incrementa
 # only used internally for parsing
 MavenArtifactUpdate = namedtuple("MavenArtifactUpdate", "version_increment_strategy")
 
-def maven_artifact_update(version_increment_strategy):    
-    """
-    This function is only intended to be called from BUILD.pom files.
-    """
-    return MavenArtifactUpdate(version_increment_strategy)
-
 
 def version_update_handler(version, version_update_strategy):
     """
@@ -173,14 +167,11 @@ def _incr_rel_qualifier(version):
                          version[end_rel_qual_i:])
 
 
-def _parse_maven_artifact_update(build_pom_content, path):
-    maven_art_up_func = code.get_function_block(build_pom_content,
-                                                "maven_artifact_update")
-    try:
-        return eval(maven_art_up_func)
-    except:
-        print("[ERROR] Cannot parse [%s]: %s" % (path, sys.exc_info()))
-        raise
+def _parse_maven_artifact_update(build_pom_content):
+    content = code.get_function_block(build_pom_content, "maven_artifact_update")
+    return MavenArtifactUpdate(
+        version_increment_strategy=code.get_attr_value(
+            "version_increment_strategy", str, None, content))
 
 
 def _get_major_version_increment_strategy():

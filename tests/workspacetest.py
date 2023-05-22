@@ -20,6 +20,7 @@ import os
 import tempfile
 import unittest
 
+
 class WorkspaceTest(unittest.TestCase):
 
     def setUp(self):
@@ -446,6 +447,7 @@ rules_jvm_external_setup()
         workspace_file_path = os.path.join(path, "WORKSPACE")
         with open(workspace_file_path, "w") as f:
            f.write(workspace_file)
+
 
 if __name__ == '__main__':
     unittest.main()
