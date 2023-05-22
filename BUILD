@@ -115,6 +115,15 @@ py_test(
 )
 
 py_test(
+    name = "codetest",
+    srcs = ["common/code.py",
+            "tests/codetest.py"],
+    imports = ["."],
+    size = "small",
+    python_version = python_version,
+)
+
+py_test(
     name = "configtest",
     srcs = ["common/logger.py",
             "config/config.py",

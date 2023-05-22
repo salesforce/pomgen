@@ -184,7 +184,7 @@ class DependencyTest(unittest.TestCase):
         artifact_id = "a1"
         version = "1.1.0"
         package = "pack1"
-        art_def = buildpom.maven_artifact(group_id, artifact_id, version)
+        art_def = buildpom.MavenArtifactDef(group_id, artifact_id, version)
         art_def = buildpom._augment_art_def_values(art_def, None, package, None, None, pomgenmode.DYNAMIC)
 
         dep = dependency.new_dep_from_maven_artifact_def(art_def, None)
@@ -200,7 +200,7 @@ class DependencyTest(unittest.TestCase):
         artifact_id = "a1"
         version = "1.1.0"
         package = "pack1"
-        art_def = buildpom.maven_artifact(group_id, artifact_id, version)
+        art_def = buildpom.MavenArtifactDef(group_id, artifact_id, version)
         art_def = buildpom._augment_art_def_values(art_def, None, package, None, None, pomgenmode.DYNAMIC)
 
         dep = dependency.new_dep_from_maven_artifact_def(art_def, None)
@@ -360,10 +360,10 @@ class DependencyTest(unittest.TestCase):
         """
         dep1 = dependency.new_dep_from_maven_art_str("com.google.guava:guava:20.0", "name")
         dep2 = dependency.new_dep_from_maven_art_str("com.google.guava:zoouava:20.0", "name")
-        art_def = buildpom.maven_artifact("com.zoogle.guava", "art1", "1.0")
+        art_def = buildpom.MavenArtifactDef("com.zoogle.guava", "art1", "1.0")
         art_def = buildpom._augment_art_def_values(art_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
         dep3 = dependency.new_dep_from_maven_artifact_def(art_def, None)
-        art_def = buildpom.maven_artifact("com.google.guava", "art1", "1.0")
+        art_def = buildpom.MavenArtifactDef("com.google.guava", "art1", "1.0")
         art_def = buildpom._augment_art_def_values(art_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
         dep4 = dependency.new_dep_from_maven_artifact_def(art_def, None)
         
@@ -528,7 +528,7 @@ class DependencyTest(unittest.TestCase):
         self.assertFalse(dep.bazel_buildable)
 
     def test_bazel_buildable__source_dep__skip_pom_gen(self):
-        art_def = buildpom.maven_artifact("g1", "a1", "1.0")
+        art_def = buildpom.MavenArtifactDef("g1", "a1", "1.0")
         art_def = buildpom._augment_art_def_values(art_def, None, "pack1", None, None, pomgenmode.SKIP)
 
         dep = dependency.new_dep_from_maven_artifact_def(art_def, None)
@@ -536,7 +536,7 @@ class DependencyTest(unittest.TestCase):
         self.assertFalse(dep.bazel_buildable)
 
     def test_bazel_buildable__source_dep__dynamic_pom_gen(self):
-        art_def = buildpom.maven_artifact("g1", "a1", "1.0")
+        art_def = buildpom.MavenArtifactDef("g1", "a1", "1.0")
         art_def = buildpom._augment_art_def_values(art_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
 
         dep = dependency.new_dep_from_maven_artifact_def(art_def, None)
@@ -544,7 +544,7 @@ class DependencyTest(unittest.TestCase):
         self.assertTrue(dep.bazel_buildable)
 
     def test_bazel_buildable__source_dep__template_pom_gen__pom_packaging(self):
-        art_def = buildpom.maven_artifact("g1", "a1", "1.0")
+        art_def = buildpom.MavenArtifactDef("g1", "a1", "1.0")
         art_def = buildpom._augment_art_def_values(art_def, None, "pack1", None, None, pomgenmode.TEMPLATE)
         art_def.custom_pom_template_content = "<packaging>pom</packaging>"
 
@@ -553,7 +553,7 @@ class DependencyTest(unittest.TestCase):
         self.assertFalse(dep.bazel_buildable)
 
     def test_bazel_buildable__source_dep__template_pom_gen__other_packaging(self):
-        art_def = buildpom.maven_artifact("g1", "a1", "1.0")
+        art_def = buildpom.MavenArtifactDef("g1", "a1", "1.0")
         art_def = buildpom._augment_art_def_values(art_def, None, "pack1", None, None, pomgenmode.TEMPLATE)
         art_def.custom_pom_template_content = "<packaging>maven-plugin</packaging>"
 
