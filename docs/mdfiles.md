@@ -40,7 +40,7 @@ The `<version>` for the generated pom.xml.
 
 - dynamic:  The pom is generated based on the `BUILD` file dependencies [example](../examples/hello-world/juicer/MVN-INF/BUILD.pom)
 - template: The pom uses a custom template [example](../examples/hello-world/healthyfoods/parentpom/MVN-INF/pom.template)
-- skip: No pom is generated for this bazel package [see](../examples/skip-artifact-generation/README.md)
+- skip: No pom is generated for this bazel package [example](../examples/skip-artifact-generation/README.md)
 
 ##### maven_artifact_update.version_increment_strategy
 
