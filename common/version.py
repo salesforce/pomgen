@@ -10,6 +10,7 @@ This module contains code related to version string processing.
 
 from . import code
 from collections import namedtuple
+from datetime import datetime, timezone
 import re
 
 
@@ -40,6 +41,8 @@ def get_version_increment_strategy(build_pom_content):
         incr_strat = _get_minor_version_increment_strategy()
     elif maven_art_up.version_increment_strategy == "patch":
         incr_strat = _get_patch_version_increment_strategy()
+    elif maven_art_up.version_increment_strategy == "calver":
+        incr_strat = _get_calver_version_increment_strategy()
     else:
         raise Exception("Unknown version increment strategy: %s" % maven_art_up.version_increment_strategy)
     return lambda version: version_update_handler(version, incr_strat)
@@ -196,3 +199,14 @@ def _get_patch_version_increment_strategy():
         patch_version = int(pieces[2])
         return "%s.%s.%i" % (pieces[0], pieces[1], patch_version + 1)
     return increment_patch
+
+def _get_calver_version_increment_strategy():
+    def increment_calver(version):
+        pieces = version.split(".")
+        today = datetime.now(timezone.utc).strftime('%Y%m%d')
+        if today != pieces[0]:
+            return "%s.1" % today
+        else:
+            daily_version = int(pieces[1])
+            return "%s.%i" % (today, daily_version + 1)
+    return increment_calver
