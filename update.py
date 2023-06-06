@@ -12,6 +12,7 @@ from common import argsupport
 from common import common
 from common import logger
 from common import mdfiles
+from common import version
 from config import config
 from crawl import bazel
 from update import buildpomupdate
@@ -20,7 +21,6 @@ import os
 import sys
 
 
-VERSION_INCREMENT_STRATEGIES = ("major", "minor", "patch",)
 
 
 def _parse_arguments(args):
@@ -31,7 +31,7 @@ def _parse_arguments(args):
     parser.add_argument("--new_version", type=str, required=False,
         help="The value of the version to write into BUILD.pom files")
     parser.add_argument("--new_version_increment_strategy", type=str,
-        required=False, choices = VERSION_INCREMENT_STRATEGIES,
+        required=False, choices = version.VERSION_INCREMENT_STRATEGIES,
         help="The value of the version_increment_strategy to write into BUILD.pom files")
     parser.add_argument("--new_released_version", type=str, required=False,
         help="The value of the version to write into BUILD.pom.released files")

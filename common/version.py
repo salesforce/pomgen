@@ -15,7 +15,7 @@ import re
 
 
 version_re = re.compile("(^.*version *= *[\"'])(.*?)([\"'].*)$", re.S)
-
+VERSION_INCREMENT_STRATEGIES = ("major", "minor", "patch", "calver", )
 
 def get_version_increment_strategy(build_pom_content):
     """
