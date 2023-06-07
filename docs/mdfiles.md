@@ -44,7 +44,11 @@ The `<version>` for the generated pom.xml.
 
 ##### maven_artifact_update.version_increment_strategy
 
-Controls how the version attribute is incremented, possible values are `major|minor|patch` [see CI setup](ci.md).
+Controls how the version attribute is incremented, possible values are `major|minor|patch|calver` [see CI setup](ci.md).
+
+Given a current version of `1.2.3`, the `major`, `minor`, and `patch` incrementing strategies would produce versions `2.2.3`, `1.3.3`, and `1.2.4` respectively.
+
+Given a current version of `20230605.1`, the `calver` incrementing strategy would produce `<todaydate>.1` (or `<todaydate>.2` if the current version is already `<todaydate>.1`).
 
 #### Optional Attributes
 

@@ -7,6 +7,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 
 import unittest
 from common import version
+from datetime import datetime, timezone
 
 
 class VersionTest(unittest.TestCase):
@@ -174,6 +175,26 @@ released_maven_artifact(
         s = version.get_version_increment_strategy(build_pom_content)
         self.assertEqual("1.1.1-scone_70x-SNAPSHOT", s("1.1.0-scone_70x-SNAPSHOT"))
 
+    def test_get_next_version__calver_new_day(self):
+        build_pom_content = self._get_build_pom("calver")
+        s = version.get_version_increment_strategy(build_pom_content)
+        self.assertEqual("%s.1-whatever-this-is" % self._today(), s("3.2.0-whatever-this-is"))
+
+    def test_get_next_version__calver_new_day_take_two(self):
+        build_pom_content = self._get_build_pom("calver")
+        s = version.get_version_increment_strategy(build_pom_content)
+        self.assertEqual("%s.1-whatever-this-is" % self._today(), s("20200320.1-whatever-this-is"))
+
+    def test_get_next_version__calver_same_day(self):
+        build_pom_content = self._get_build_pom("calver")
+        s = version.get_version_increment_strategy(build_pom_content)
+        self.assertEqual("%s.2-whatever-this-is" % self._today(), s("%s.1-whatever-this-is" % self._today()))
+
+    def test_get_next_version__calver_same_day_with_lots_of_updates(self):
+        build_pom_content = self._get_build_pom("calver")
+        s = version.get_version_increment_strategy(build_pom_content)
+        self.assertEqual("%s.10-whatever-this-is" % self._today(), s("%s.9-whatever-this-is" % self._today()))
+
     def test_unknown_version_increment_strategy(self):
         build_pom_content = self._get_build_pom("lucy in the sky with diamonds")
         with self.assertRaises(Exception) as ctx:
@@ -194,6 +215,9 @@ maven_artifact_update(
 )
 """
         return build_pom % version_increment_strategy
+
+    def _today(self):
+        return datetime.now(timezone.utc).strftime('%Y%m%d')
 
 
 if __name__ == '__main__':
