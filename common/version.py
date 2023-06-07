@@ -14,8 +14,12 @@ from datetime import datetime, timezone
 import re
 
 
-version_re = re.compile("(^.*version *= *[\"'])(.*?)([\"'].*)$", re.S)
+# valid version increment strategies are:
 VERSION_INCREMENT_STRATEGIES = ("major", "minor", "patch", "calver", )
+
+
+version_re = re.compile("(^.*version *= *[\"'])(.*?)([\"'].*)$", re.S)
+
 
 def get_version_increment_strategy(build_pom_content):
     """
@@ -35,16 +39,18 @@ def get_version_increment_strategy(build_pom_content):
         "1.0.0-scone_70x-SNAPSHOT" -> "2.0.0-scone_70x-SNAPSHOT"
     """
     maven_art_up = _parse_maven_artifact_update(build_pom_content)
-    if maven_art_up.version_increment_strategy == "major":
+    strategy = maven_art_up.version_increment_strategy.strip()
+    assert strategy in VERSION_INCREMENT_STRATEGIES, "Unknown version increment strategy [%s], valid strategies are %s" % (strategy, VERSION_INCREMENT_STRATEGIES)
+    if strategy == "major":
         incr_strat = _get_major_version_increment_strategy()
-    elif maven_art_up.version_increment_strategy == "minor":
+    elif strategy == "minor":
         incr_strat = _get_minor_version_increment_strategy()
-    elif maven_art_up.version_increment_strategy == "patch":
+    elif strategy == "patch":
         incr_strat = _get_patch_version_increment_strategy()
-    elif maven_art_up.version_increment_strategy == "calver":
+    elif strategy == "calver":
         incr_strat = _get_calver_version_increment_strategy()
     else:
-        raise Exception("Unknown version increment strategy: %s" % maven_art_up.version_increment_strategy)
+        raise Exception("Bug! Bad version increment strategy: %s" % strategy)
     return lambda version: version_update_handler(version, incr_strat)
 
 

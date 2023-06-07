@@ -202,6 +202,8 @@ released_maven_artifact(
 
         self.assertIn("Unknown version increment strategy", str(ctx.exception))
         self.assertIn("lucy in the sky with diamonds", str(ctx.exception))
+        self.assertIn("valid strategies are", str(ctx.exception))
+        self.assertIn("('major', 'minor', 'patch', 'calver')", str(ctx.exception))
 
     def _get_build_pom(self, version_increment_strategy):
         build_pom = """
