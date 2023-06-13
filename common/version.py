@@ -19,15 +19,17 @@ VERSION_INCREMENT_STRATEGIES = ("major", "minor", "patch", "calver", )
 
 
 version_re = re.compile("(^.*version *= *[\"'])(.*?)([\"'].*)$", re.S)
+VersionIncrement = namedtuple("VersionIncrement", ["strategy", "increment"])
 
 
 def get_version_increment_strategy(build_pom_content):
     """
-    Returns a version increment strategy instance based on the value of
+    Returns a VersionIncrement object containing the strategy found in
     maven_artifact_update.version_increment_strategy in the specified
-    BUILD.pom content.
-   
-    The version increment strategy is a function that takes a single (version)
+    BUILD.pom content, and the increment method used to increment the
+    version according to the strategy.
+
+    The version increment method is a function that takes a single (version)
     string as argument, and that returns another string, the next version.
 
     Examples:
@@ -51,7 +53,10 @@ def get_version_increment_strategy(build_pom_content):
         incr_strat = _get_calver_version_increment_strategy()
     else:
         raise Exception("Bug! Bad version increment strategy: %s" % strategy)
-    return lambda version: version_update_handler(version, incr_strat)
+    return VersionIncrement(
+        strategy=strategy,
+        increment=(lambda version: version_update_handler(version, incr_strat))
+        )
 
 
 def parse_build_pom_version(build_pom_content):
@@ -73,7 +78,7 @@ def parse_build_pom_released_version(build_pom_released_content):
     return parse_build_pom_version(build_pom_released_content)
 
 
-def get_release_version(current_version, last_released_version=None, incremental_release=False):
+def get_release_version(current_version, last_released_version=None, version_increment=None, incremental_release=False):
     """
     If incremental_release is False:
         If current_version ends with "-SNAPSHOT", removes that, otherwise
@@ -90,13 +95,17 @@ def get_release_version(current_version, last_released_version=None, incremental
     else:
         if current_version is None:
             return None
+        # If the version increment strategy is "calver", we actually want to release the "next"
+        # version (AKA today's date, rather than the date we last released).
+        if version_increment is not None and version_increment.strategy == "calver":
+            current_version = version_increment.increment(current_version)
         elif current_version.endswith("-SNAPSHOT"):
             return current_version[0:-len("-SNAPSHOT")]
         else:
             return current_version
 
 
-def get_next_dev_version(current_version, version_increment_strategy, incremental_release=False):
+def get_next_dev_version(current_version, version_increment, incremental_release=False):
     """
     Returns the next development version to use. The development version
     always ends with "-SNAPSHOT".
@@ -113,7 +122,7 @@ def get_next_dev_version(current_version, version_increment_strategy, incrementa
     if incremental_release:
         next_version = current_version
     else:
-        next_version = version_increment_strategy(current_version)
+        next_version = version_increment.increment(current_version)
     if not next_version.endswith("-SNAPSHOT"):
         next_version += "-SNAPSHOT"
     return next_version
