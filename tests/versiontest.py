@@ -88,117 +88,121 @@ released_maven_artifact(
     def test_get_next_version__major(self):
         build_pom_content = self._get_build_pom("major")
         s = version.get_version_increment_strategy(build_pom_content)
-        self.assertEqual("2.0.0", s("1.0.0"))
+        self.assertEqual("major", s.strategy)
+        self.assertEqual("2.0.0", s.increment("1.0.0"))
 
     def test_get_next_version__major__reset_minor(self):
         build_pom_content = self._get_build_pom("major")
         s = version.get_version_increment_strategy(build_pom_content)
-        self.assertEqual("2.0.0", s("1.2.0"))
+        self.assertEqual("2.0.0", s.increment("1.2.0"))
 
     def test_get_next_version__major__reset_patch(self):
         build_pom_content = self._get_build_pom("major")
         s = version.get_version_increment_strategy(build_pom_content)
-        self.assertEqual("2.0.0", s("1.0.5"))
+        self.assertEqual("2.0.0", s.increment("1.0.5"))
 
     def test_get_next_version__major_snap(self):
         build_pom_content = self._get_build_pom("major")
         s = version.get_version_increment_strategy(build_pom_content)
-        self.assertEqual("2.0.0-SNAPSHOT", s("1.0.0-SNAPSHOT"))
+        self.assertEqual("2.0.0-SNAPSHOT", s.increment("1.0.0-SNAPSHOT"))
 
     def test_get_next_version__major_snap__reset_minor(self):
         build_pom_content = self._get_build_pom("major")
         s = version.get_version_increment_strategy(build_pom_content)
-        self.assertEqual("2.0.0-SNAPSHOT", s("1.2.0-SNAPSHOT"))
+        self.assertEqual("2.0.0-SNAPSHOT", s.increment("1.2.0-SNAPSHOT"))
 
     def test_get_next_version__major_snap__reset_patch(self):
         build_pom_content = self._get_build_pom("major")
         s = version.get_version_increment_strategy(build_pom_content)
-        self.assertEqual("2.0.0-SNAPSHOT", s("1.2.5-SNAPSHOT"))
+        self.assertEqual("2.0.0-SNAPSHOT", s.increment("1.2.5-SNAPSHOT"))
 
     def test_get_next_version__major_qual(self):
         build_pom_content = self._get_build_pom("major")
         s = version.get_version_increment_strategy(build_pom_content)
-        self.assertEqual("2.0.0-scone_60x", s("1.0.0-scone_60x"))
+        self.assertEqual("2.0.0-scone_60x", s.increment("1.0.0-scone_60x"))
 
     def test_get_next_version__major_snap_and_qual(self):
         build_pom_content = self._get_build_pom("major")
         s = version.get_version_increment_strategy(build_pom_content)
-        self.assertEqual("2.0.0-scone_60x-SNAPSHOT", s("1.0.0-scone_60x-SNAPSHOT"))
+        self.assertEqual("2.0.0-scone_60x-SNAPSHOT", s.increment("1.0.0-scone_60x-SNAPSHOT"))
 
     def test_get_next_version__minor(self):
         build_pom_content = self._get_build_pom("minor")
         s = version.get_version_increment_strategy(build_pom_content)
-        self.assertEqual("1.1.0", s("1.0.0"))
+        self.assertEqual("minor", s.strategy)
+        self.assertEqual("1.1.0", s.increment("1.0.0"))
 
     def test_get_next_version__minor__reset_patch(self):
         build_pom_content = self._get_build_pom("minor")
         s = version.get_version_increment_strategy(build_pom_content)
-        self.assertEqual("2.1.0", s("2.0.1"))
+        self.assertEqual("2.1.0", s.increment("2.0.1"))
 
     def test_get_next_version__minor_snap(self):
         build_pom_content = self._get_build_pom("minor")
         s = version.get_version_increment_strategy(build_pom_content)
-        self.assertEqual("1.1.0-SNAPSHOT", s("1.0.0-SNAPSHOT"))
+        self.assertEqual("1.1.0-SNAPSHOT", s.increment("1.0.0-SNAPSHOT"))
 
     def test_get_next_version__minor_qual(self):
         build_pom_content = self._get_build_pom("minor")
         s = version.get_version_increment_strategy(build_pom_content)
-        self.assertEqual("1.1.0-scone_60x", s("1.0.0-scone_60x"))
+        self.assertEqual("1.1.0-scone_60x", s.increment("1.0.0-scone_60x"))
 
     def test_get_next_version__minor_snap_and_qual(self):
         build_pom_content = self._get_build_pom("minor")
         s = version.get_version_increment_strategy(build_pom_content)
-        self.assertEqual("1.1.0-scone_60x-SNAPSHOT", s("1.0.0-scone_60x-SNAPSHOT"))
+        self.assertEqual("1.1.0-scone_60x-SNAPSHOT", s.increment("1.0.0-scone_60x-SNAPSHOT"))
 
     def test_get_next_version__minor_snap__reset_patch(self):
         build_pom_content = self._get_build_pom("minor")
         s = version.get_version_increment_strategy(build_pom_content)
-        self.assertEqual("2.1.0-SNAPSHOT", s("2.0.5-SNAPSHOT"))
+        self.assertEqual("2.1.0-SNAPSHOT", s.increment("2.0.5-SNAPSHOT"))
 
     def test_get_next_version__patch(self):
         build_pom_content = self._get_build_pom("patch")
         s = version.get_version_increment_strategy(build_pom_content)
-        self.assertEqual("5.3.1", s("5.3.0"))
+        self.assertEqual("patch", s.strategy)
+        self.assertEqual("5.3.1", s.increment("5.3.0"))
 
     def test_get_next_version__patch_snap(self):
         build_pom_content = self._get_build_pom("patch")
         s = version.get_version_increment_strategy(build_pom_content)
-        self.assertEqual("1.1.1-SNAPSHOT", s("1.1.0-SNAPSHOT"))
+        self.assertEqual("1.1.1-SNAPSHOT", s.increment("1.1.0-SNAPSHOT"))
 
     def test_get_next_version__patch_qual(self):
         build_pom_content = self._get_build_pom("patch")
         s = version.get_version_increment_strategy(build_pom_content)
-        self.assertEqual("1.1.1-scone_70x", s("1.1.0-scone_70x"))
+        self.assertEqual("1.1.1-scone_70x", s.increment("1.1.0-scone_70x"))
 
     def test_get_next_version__patch_snap_and_qual(self):
         build_pom_content = self._get_build_pom("patch")
         s = version.get_version_increment_strategy(build_pom_content)
-        self.assertEqual("1.1.1-scone_70x-SNAPSHOT", s("1.1.0-scone_70x-SNAPSHOT"))
+        self.assertEqual("1.1.1-scone_70x-SNAPSHOT", s.increment("1.1.0-scone_70x-SNAPSHOT"))
 
     def test_get_next_version__calver_new_day(self):
         build_pom_content = self._get_build_pom("calver")
         s = version.get_version_increment_strategy(build_pom_content)
-        self.assertEqual("%s.1-whatever-this-is" % self._today(), s("3.2.0-whatever-this-is"))
+        self.assertEqual("calver", s.strategy)
+        self.assertEqual("%s.1-whatever-this-is" % self._today(), s.increment("3.2.0-whatever-this-is"))
 
     def test_get_next_version__calver_new_day_take_two(self):
         build_pom_content = self._get_build_pom("calver")
         s = version.get_version_increment_strategy(build_pom_content)
-        self.assertEqual("%s.1-whatever-this-is" % self._today(), s("20200320.1-whatever-this-is"))
+        self.assertEqual("%s.1-whatever-this-is" % self._today(), s.increment("20200320.1-whatever-this-is"))
 
     def test_get_next_version__calver_same_day(self):
         build_pom_content = self._get_build_pom("calver")
         s = version.get_version_increment_strategy(build_pom_content)
-        self.assertEqual("%s.2-whatever-this-is" % self._today(), s("%s.1-whatever-this-is" % self._today()))
+        self.assertEqual("%s.2-whatever-this-is" % self._today(), s.increment("%s.1-whatever-this-is" % self._today()))
 
     def test_get_next_version__calver_same_day_with_lots_of_updates(self):
         build_pom_content = self._get_build_pom("calver")
         s = version.get_version_increment_strategy(build_pom_content)
-        self.assertEqual("%s.10-whatever-this-is" % self._today(), s("%s.9-whatever-this-is" % self._today()))
+        self.assertEqual("%s.10-whatever-this-is" % self._today(), s.increment("%s.9-whatever-this-is" % self._today()))
 
     def test_unknown_version_increment_strategy(self):
         build_pom_content = self._get_build_pom("lucy in the sky with diamonds")
         with self.assertRaises(Exception) as ctx:
-            version.get_version_increment_strategy(build_pom_content)
+            version.get_version_increment_strategy(build_pom_content).increment
 
         self.assertIn("Unknown version increment strategy", str(ctx.exception))
         self.assertIn("lucy in the sky with diamonds", str(ctx.exception))

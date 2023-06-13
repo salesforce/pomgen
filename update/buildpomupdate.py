@@ -53,7 +53,7 @@ def update_build_pom_file(root_path,
             # increment current version using version increment strategy
             if updated_version is None and update_version_using_version_incr_strat:
                 vers_incr_strat = version.get_version_increment_strategy(build_pom_content)
-                updated_version = vers_incr_strat(current_version)
+                updated_version = vers_incr_strat.increment(current_version)
 
             # set version back to previously released version
             if updated_version is None and set_version_to_last_released_version:
