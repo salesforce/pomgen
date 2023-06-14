@@ -27,16 +27,16 @@ maven_install(
         maven.artifact(group = "com.google.guava", artifact = "guava", version = "23.0", exclusions = ["*:*"]),
         maven.artifact(group = "org.apache.commons", artifact = "commons-lang3", version = "3.9", exclusions = ["*:*"]),
         maven.artifact(group = "org.apache.commons", artifact = "commons-math3", version = "3.6.1", exclusions = ["*:*"]),
-        maven.artifact(group = "org.antlr", artifact = "stringtemplate", version = "3.2.1",),
         maven.artifact(group = "org.antlr", artifact = "ST4", version = "4.0.7",exclusions = ["antlr:antlr"]),
     ],
     repositories = [
         "https://repo1.maven.org/maven2",
     ],
     version_conflict_policy = "pinned",
-    strict_visibility = True,
+    strict_visibility = False,
     generate_compat_repositories = False,
-    maven_install_json = "//:maven_install.json",  # regenerate: bazel run @unpinned_maven//:pin
+    # to regenerate the pinned file: bazel run @unpinned_maven//:pin
+    maven_install_json = "//:maven_install.json",
     resolve_timeout = 1800,
 )
 
@@ -48,6 +48,10 @@ maven_install(
     name = "antlr",
     artifacts = [
         maven.artifact(group = "org.antlr", artifact = "ST4", version = "4.0.7",),
+        # org.antlr:ST4:4.0.7 brings in antlr:antr:2.7.7 - we override
+        # the version here to 2.7.6 to test how version overrides of transitives
+        # carry over into the generate pom files
+        maven.artifact(group = "antlr", artifact = "antlr", version = "2.7.6",),
     ],
     repositories = [
         "https://repo1.maven.org/maven2",
@@ -55,7 +59,8 @@ maven_install(
     version_conflict_policy = "pinned",
     strict_visibility = True,
     generate_compat_repositories = False,
-    maven_install_json = "//:antlr_install.json",  # regenerate: bazel run @unpinned_antlr//:pin
+    # to regenerate the pinned file: bazel run @unpinned_antlr//:pin
+    maven_install_json = "//:antlr_install.json",
     resolve_timeout = 1800,
 )
 
