@@ -204,9 +204,15 @@ class AbstractPomGen(object):
         else:
             return "%s%s<%s>%s</%s>%s" % (content, ' '*indent, element, value, element, os.linesep), indent
 
+    def _xml_comment(self, comment, indent):
+        """
+        Returns a single line <!-- xml comment -->.
+        """
+        return "\n%s<!-- %s -->\n" % (' '*indent, comment)
+
     def _gen_dependency_element(self, pomcontenttype, dep, content, indent, close_element):
         """
-        Generates a pomx.xml <dependency> element.
+        Generates a <dependency> element.
 
         Returns the generated content and the current identation level as a 
         tuple: (content, indent)
@@ -493,7 +499,7 @@ class TemplatePomGen(AbstractPomGen):
                 exclusions.sort()
                 group_and_artifact_ids = [(d.group_id, d.artifact_id) for d in exclusions]
                 content, indent = self._gen_exclusions(content, indent, group_and_artifact_ids)
-                content, indent = self._xml(content, "dependency", indent, close_element=True)         
+                content, indent = self._xml(content, "dependency", indent, close_element=True)
 
         content = content.rstrip()
         return content
@@ -515,9 +521,6 @@ class TemplatePomGen(AbstractPomGen):
 
 class DynamicPomGen(AbstractPomGen):
     """
-    A non-generic, non-reusable, specialized pom.xml generator, targeted 
-    for the "monorepo pom generation" use-case.
-
     Generates a pom.xm file based on the specified singleton (shared) template.
 
     The following placesholders must exist in the specified template:
@@ -543,27 +546,34 @@ class DynamicPomGen(AbstractPomGen):
         if len(self.dependencies) == 0:
             content = self._remove_token(content, "#{dependencies}")
         else:
-            content = content.replace("#{dependencies}", self._gen_all_dependencies_sections(pomcontenttype))
+            content = content.replace(
+                "#{dependencies}", self._gen_dependencies(pomcontenttype))
         return content
 
     def _load_additional_dependencies_hook(self):
         return _query_dependencies(self._workspace, self._artifact_def,
                                    self._dependency)
 
-    def _gen_all_dependencies_sections(self, pomcontenttype):
-        dep_section = self._gen_dependencies(pomcontenttype)
-        depman_section = self._gen_dep_management(pomcontenttype)
-        return dep_section if depman_section is None else "%s\n%s" % (dep_section, depman_section)
-
     def _gen_dependencies(self, pomcontenttype):
-        deps = self.dependencies
-        if pomcontenttype == PomContentType.GOLDFILE:
-            deps = list(deps)
-            deps.sort()
-
         content = ""
         content, indent = self._xml(content, "dependencies", indent=_INDENT)
-        for dep in deps:
+        content += self._gen_dependencies_xml(pomcontenttype, self.dependencies, indent)
+
+        # we also add the transitives of the deps to dependencies - this is to
+        # account for any version overrides that need to carry over to the
+        # Maven build.
+        transitives = self._get_transitive_deps(self.dependencies)
+        content += self._xml_comment("The transitives of the dependencies above", indent)
+        content += self._gen_dependencies_xml(pomcontenttype, transitives, indent)
+
+        content, indent = self._xml(content, "dependencies", indent, close_element=True)
+        return content
+
+    def _gen_dependencies_xml(self, pomcontenttype, dependencies, indent):
+        if pomcontenttype == PomContentType.GOLDFILE:
+            dependencies = sorted(dependencies)
+        content = ""
+        for dep in dependencies:
             content, indent = self._gen_dependency_element(pomcontenttype, dep, content, indent, close_element=False)
             # handle <exclusions>
             excluded_group_and_artifact_ids = [(d.group_id, d.artifact_id) for d in self._workspace.dependency_metadata.get_transitive_exclusions(dep)]
@@ -572,41 +582,29 @@ class DynamicPomGen(AbstractPomGen):
                 content, indent = self._gen_exclusions(content, indent, excluded_group_and_artifact_ids)
 
             content, indent = self._xml(content, "dependency", indent, close_element=True)
-        content, indent = self._xml(content, "dependencies", indent, close_element=True)
         return content
 
-    def _gen_dep_management(self, pomcontenttype):
+    def _get_transitive_deps(self, dependencies):
         """
-        The transitives of the deps listed in the pom are added to
-        to dependency management - this is to account for any version overrides
-        that need to carry over to the Maven build.
+        Returns all transitive deps of the deps this pom references directly.
         """
-        deps = set(self.dependencies)
-        transitives = set()
-        for dep in deps:
+        transitives = []
+        transitives_set = set()
+        dependencies_set = set(dependencies)
+        for dep in dependencies:
             for transitive in self._workspace.dependency_metadata.get_transitive_closure(dep):
-                if transitive in deps:
-                    # if a dep is listed as <dependency> in the <dependencies>
-                    # section, we won't add it also to <dependencyManagement>
+                if transitive in transitives_set:
+                    # avoid duplication
+                    pass
+                elif transitive in dependencies_set:
+                    # if a transitive is already listed as <dependency> in the
+                    # <dependencies> section, we don't need to include it again
                     pass
                 else:
-                    transitives.add(transitive)
+                    transitives.append(transitive)
+                    transitives_set.add(transitive)
 
-        if len(transitives) == 0:
-            return None
-
-        sorted_transitives = sorted(transitives)
-
-        content = ""
-        content, indent = self._xml(content, "dependencyManagement", indent=_INDENT)
-        content, indent = self._xml(content, "dependencies", indent, close_element=False)
-        for dep in sorted_transitives:
-            content, indent = self._gen_dependency_element(pomcontenttype, dep, content, indent, close_element=False)
-            content, indent = self._xml(content, "dependency", indent, close_element=True)
-        content, indent = self._xml(content, "dependencies", indent, close_element=True)
-        content, indent = self._xml(content, "dependencyManagement", indent, close_element=True)
-
-        return content
+        return transitives
 
     def _get_hardcoded_exclusions_for_dep(self, dep):
         """

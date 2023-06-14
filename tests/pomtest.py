@@ -105,24 +105,36 @@ class PomTest(unittest.TestCase):
             <version>1.2.3</version>
         </dependency>""", generated_pom)
 
-            self.assertIn("""    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>gt1</groupId>
-                <artifactId>t1</artifactId>
-                <version>1.0.0</version>
-            </dependency>""", generated_pom)
+            # transitive of guava, but also top-level
+            self.assertIn("""<dependency>
+            <groupId>gt2</groupId>
+            <artifactId>t2</artifactId>
+            <version>1.0.0</version>
+        </dependency>""", generated_pom)
+
+            # transitive of guava
+            self.assertIn("""<dependency>
+            <groupId>gt1</groupId>
+            <artifactId>t1</artifactId>
+            <version>1.0.0</version>
+        </dependency>""", generated_pom)
 
             # deps are BUILD file order
             aop_index = generated_pom.index("<artifactId>aopalliance</artifactId>")
             guava_index = generated_pom.index("<artifactId>guava</artifactId>")
             self.assertTrue(guava_index < aop_index)
 
-            # gt2:t2 is a transitive to guava, but because it is also
-            # referenced explicitly, it is excluded from <dependencyManagement>
-            depman_index = generated_pom.index("<dependencyManagement>")
+            transitives_start_index = generated_pom.index("<!-- The transitives of the dependencies above -->")
+            # gt1:t1 is a transitive of guava and not top level, it should be
+            # in the transitives section
+            t1_index = generated_pom.index("<artifactId>t1</artifactId>")
+            self.assertTrue(t1_index > transitives_start_index)
+            self.assertEqual(1, generated_pom.count("<artifactId>t1</artifactId>"))
+
+            # gt2:t2 is a transitive of guava but because it is also top-level
+            # it does not appear in the transitives section
             t2_index = generated_pom.index("<artifactId>t2</artifactId>")
-            self.assertTrue(t2_index < depman_index) # t2 is not managed
+            self.assertTrue(t2_index < transitives_start_index)
             self.assertEqual(1, generated_pom.count("<artifactId>t2</artifactId>"))
         finally:
             bazel.query_java_library_deps_attributes = org_function
