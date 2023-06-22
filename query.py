@@ -170,7 +170,7 @@ if __name__ == "__main__":
                     attrs["released_version"] = node.released_version
                     attrs["requires_release"] = node.requires_release
                     attrs["release_reason"] = node.release_reason
-                    attrs["proposed_release_version"] = version.get_release_version(node.version, node.released_version, node.version_increment_strategy, incremental_release=incremental_rel)
+                    attrs["proposed_release_version"] = version.get_release_version(node.version, node.released_version, incremental_release=incremental_rel)
                     attrs["proposed_next_dev_version"] = version.get_next_dev_version(node.version, node.version_increment_strategy, incremental_release=incremental_rel)
                     all_libs_json.append(attrs)
                 print(_to_json(all_libs_json))
