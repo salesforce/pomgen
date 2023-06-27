@@ -15,7 +15,7 @@ from common import argsupport
 from common import common
 from common import instancequery
 from common import maveninstallinfo
-from common import version
+from common import version_increment_strategy as vis
 from config import config
 from crawl import bazel
 from crawl import buildpom
@@ -68,6 +68,16 @@ def _parse_arguments(args):
         help="Simulates release information when --force option is used")
 
     return parser.parse_args(args)
+
+
+def _get_version_increment_strategy(node, increment_rel_qualifier):
+    if node.version is None:
+        # edge case when uncommon (never used?) pom_generation_mode is "skip"
+        return None
+    if increment_rel_qualifier:
+        return vis.get_rel_qualifier_increment_strategy(node.released_version)
+    else:
+        return vis.get_version_increment_strategy(node.version_increment_strategy_name)
 
 
 def _to_json(thing):
@@ -163,15 +173,24 @@ if __name__ == "__main__":
                 incremental_rel_enabled = cfg.transitives_versioning_mode == "counter"
                 for node in libaggregator.LibraryNode.ALL_LIBRARY_NODES:
                     transitive = node not in root_library_nodes
-                    incremental_rel = incremental_rel_enabled and transitive
+                    increment_rel_qualifier = incremental_rel_enabled and transitive
+                    version_strat = _get_version_increment_strategy(
+                        node, increment_rel_qualifier)
                     attrs = OrderedDict()
                     attrs["library_path"] = node.library_path
                     attrs["version"] = node.version
                     attrs["released_version"] = node.released_version
                     attrs["requires_release"] = node.requires_release
                     attrs["release_reason"] = node.release_reason
-                    attrs["proposed_release_version"] = version.get_release_version(node.version, node.released_version, incremental_release=incremental_rel)
-                    attrs["proposed_next_dev_version"] = version.get_next_dev_version(node.version, node.version_increment_strategy, incremental_release=incremental_rel)
+
+                    next_release_version = None
+                    next_dev_version = None
+                    if version_strat is not None:
+                        next_release_version = version_strat.get_next_release_version(node.version)
+                        next_dev_version = version_strat.get_next_development_version(node.version)
+                    attrs["proposed_release_version"] = next_release_version
+                    attrs["proposed_next_dev_version"] = next_dev_version
+
                     all_libs_json.append(attrs)
                 print(_to_json(all_libs_json))
             

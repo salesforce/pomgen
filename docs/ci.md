@@ -64,12 +64,15 @@ bazel run @pomgen//:update -- --package <bazel package> --new_released_version <
 
 ### Update Artifact versions for development
 
-Increment the Artifact versions based on the specified increment strategy, and re-add the "-SNAPSHOT" version qualifier:
+Use `pomgen query` to get the value of the `proposed_next_dev_version` attribute:
 
 ```
-bazel run @pomgen//:update -- --package <bazel package> --update_version_using_version_increment_strategy
+bazel run //:query -- --package <bazel package> --library_release_plan_json
+```
 
-bazel run @pomgen//:update -- --package <bazel package> --add_version_qualifier SNAPSHOT
+Then increment the artifact version:
+```
+bazel run @pomgen//:update -- --package <bazel package> --new_version <proposed dev version from above>
 ```
 
 ### Commit metadata changes back to the repository

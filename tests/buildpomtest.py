@@ -40,7 +40,7 @@ class BuildPomTest(unittest.TestCase):
         self.assertEqual(package_rel_path, art_def.bazel_package)
         self.assertEqual(None, art_def.released_version)
         self.assertEqual(None, art_def.released_artifact_hash)
-        self.assertIsNotNone(art_def.version_increment_strategy)
+        self.assertEqual("major", art_def.version_increment_strategy_name)
         self.assertEqual(None, art_def.jar_path)
         self.assertFalse(art_def.gen_dependency_management_pom)
 
@@ -237,7 +237,7 @@ class BuildPomTest(unittest.TestCase):
         self.assertEqual(package_rel_path, art_def.bazel_package)
         self.assertEqual(None, art_def.released_version)
         self.assertEqual(None, art_def.released_artifact_hash)
-        self.assertEqual(None, art_def.version_increment_strategy)
+        self.assertEqual(None, art_def.version_increment_strategy_name)
         self.assertFalse(art_def.pom_generation_mode.produces_artifact)
 
     def test_parse_BUILD_pom__jar_path(self):

@@ -61,8 +61,8 @@ class MavenArtifactDef(object):
         the jar artifact to use. this can be used if bazel doesn't actually
         build the jar (-> java_import).
 
-    version_increment_strategy: specifies how this artifacts version should
-        be incremented. Current supported values are: major|minor|patch
+    version_increment_strategy_name: specifies how this artifacts version should
+        be incremented.
 
     ==== Read out of the optional BUILD.pom.released file ====
 
@@ -111,7 +111,7 @@ class MavenArtifactDef(object):
                  gen_dependency_management_pom=False,
                  jar_path=None,
                  deps=[],
-                 version_increment_strategy=None,
+                 version_increment_strategy_name=None,
                  released_version=None,
                  released_artifact_hash=None,
                  bazel_package=None,
@@ -129,7 +129,7 @@ class MavenArtifactDef(object):
         self._gen_dependency_management_pom = gen_dependency_management_pom
         self._jar_path = jar_path
         self._deps = deps
-        self._version_increment_strategy = version_increment_strategy
+        self._version_increment_strategy_name = version_increment_strategy_name
         self._released_version = released_version
         self._released_artifact_hash = released_artifact_hash
         self._bazel_package = bazel_package
@@ -238,8 +238,8 @@ class MavenArtifactDef(object):
         return self._released_pom_content
 
     @property
-    def version_increment_strategy(self):
-        return self._version_increment_strategy
+    def version_increment_strategy_name(self):
+        return self._version_increment_strategy_name
 
     def __str__(self):
         return "%s:%s" % (self._group_id, self._artifact_id)
@@ -291,18 +291,19 @@ def parse_maven_artifact_def(root_path, package):
         rel_art_def = _parse_released_maven_artifact_def(root_path, package)
         released_pom_content = _read_released_pom(root_path, package)
 
-        vers_incr_strat = versionm.get_version_increment_strategy(content)
+        maup = code.get_function_block(content, "maven_artifact_update")
+        vers_incr_strat_name = code.get_attr_value("version_increment_strategy", str, None, maup)
 
         return _augment_art_def_values(art_def, rel_art_def, package,
                                        released_pom_content,
-                                       vers_incr_strat,
+                                       vers_incr_strat_name,
                                        pom_generation_mode)
     else:
         return _augment_art_def_values(art_def, 
                                        rel_art_def=None,
                                        bazel_package=package,
                                        released_pom_content=None,
-                                       version_increment_strategy=None,
+                                       version_increment_strategy_name=None,
                                        pom_generation_mode=pom_generation_mode)
 
 
@@ -327,7 +328,8 @@ def _parse_released_maven_artifact_def(root_path, package):
     
 
 def _augment_art_def_values(user_art_def, rel_art_def, bazel_package,
-                            released_pom_content, version_increment_strategy,
+                            released_pom_content,
+                            version_increment_strategy_name,
                             pom_generation_mode):
     """
     Defaults values that have not been provided in the BUILD.pom file.
@@ -348,4 +350,4 @@ def _augment_art_def_values(user_art_def, rel_art_def, bazel_package,
         released_artifact_hash=rel_art_def.artifact_hash if rel_art_def is not None else None,
         bazel_package=bazel_package,
         released_pom_content=released_pom_content,
-        version_increment_strategy=version_increment_strategy)
+        version_increment_strategy_name=version_increment_strategy_name)

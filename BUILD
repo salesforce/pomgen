@@ -101,12 +101,13 @@ py_test(
     name = "buildpomupdatetest",
     srcs = ["common/code.py",
             "common/mdfiles.py",
+            "common/os_util.py",
             "common/pomgenmode.py",
             "common/version.py",
+            "common/version_increment_strategy.py",
             "config/exclusions.py",
             "crawl/buildpom.py",
             "crawl/git.py",
-            "common/os_util.py",
             "tests/buildpomupdatetest.py",
             "update/buildpomupdate.py"],
     imports = ["."],
@@ -257,6 +258,15 @@ py_test(
 py_test(
     name = "versiontest",
     srcs = ["common/code.py", "common/version.py", "tests/versiontest.py"],
+    imports = ["."],
+    size = "small",
+    python_version = python_version,
+)
+
+py_test(
+    name = "version_increment_strategy_test",
+    srcs = ["common/version_increment_strategy.py", 
+            "tests/version_increment_strategy_test.py"],
     imports = ["."],
     size = "small",
     python_version = python_version,

@@ -28,13 +28,13 @@ class LibraryNode:
     ALL_LIBRARY_NODES = []
 
     def __init__(self, library_path, requires_release, release_reason, version,
-                 released_version, version_increment_strategy):
+                 released_version, version_increment_strategy_name):
         self.library_path = library_path
         self.requires_release = requires_release
         self.release_reason = release_reason
         self.version = version
         self.released_version = released_version
-        self.version_increment_strategy = version_increment_strategy
+        self.version_increment_strategy_name = version_increment_strategy_name
         self._library_path_to_child_node = {}
         LibraryNode.ALL_LIBRARY_NODES.append(self)
 
@@ -128,7 +128,7 @@ def _walk(artifact_node, library_path_to_library_node):
         library_node = LibraryNode(library_path, artifact_def.requires_release,
                                    artifact_def.release_reason, version,
                                    artifact_def.released_version,
-                                   artifact_def.version_increment_strategy)
+                                   artifact_def.version_increment_strategy_name)
         library_path_to_library_node[library_path] = library_node
         
     for artifact_child_node in artifact_node.children:
