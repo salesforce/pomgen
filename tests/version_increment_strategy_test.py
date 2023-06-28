@@ -59,9 +59,11 @@ class VersionIncrementStrategyTest(unittest.TestCase):
     def test_calver_version(self):
         s = vis.get_version_increment_strategy("calver")
 
-        self.assertEqual("3.2.0", s.get_next_release_version("3.2.0-SNAPSHOT"))
-        self.assertEqual("20200320.1", s.get_next_release_version("20200320.1"))
-        self.assertEqual("20200320.1", s.get_next_release_version("20200320.1-SNAPSHOT"))
+        self.assertEqual("%s.1" % _today(), s.get_next_release_version("0-SNAPSHOT"))
+        self.assertEqual("%s.1" % _today(), s.get_next_release_version("0"))
+        self.assertEqual("%s.1-qual" % _today(), s.get_next_release_version("0-qual-SNAPSHOT"))
+        self.assertEqual("%s.1-qual" % _today(), s.get_next_release_version("0-qual"))
+        self.assertEqual("%s.3" % _today(), s.get_next_release_version("%s.2-SNAPSHOT" % _today()))
 
         self.assertEqual("%s.1-SNAPSHOT" % _today(), s.get_next_development_version("3.2.0"))
         self.assertEqual("%s.1-SNAPSHOT" % _today(), s.get_next_development_version("20200320.1"))

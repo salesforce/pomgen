@@ -150,6 +150,20 @@ class PatchVersionIncrementStrategy(DefaultVersionIncrementStrategy):
 
 class CalverVersionIncrementStrategy(DefaultVersionIncrementStrategy):
 
+    def get_next_release_version(self, current_version):
+        """
+        The next release version for Calver re-computes the version instead of
+        only removing the -SNAPSHOT qualifier, because we want to use the
+        current date in the version string (the date when the release
+        actually happened).
+
+        For simplicity sake, we just get next dev version (which already
+        recomputes the version) and remove the -SNAPSHOT qualifier.
+        """
+        release_version = self.get_next_development_version(current_version)
+        i = release_version.index(SNAPSHOT_QUAL)
+        return release_version[0:i]
+
     def get_next_version__hook(self, current_version):
         """
         Given a current version of `20230605.1`, produces <todaydate>.1
