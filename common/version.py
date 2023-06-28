@@ -32,3 +32,9 @@ def parse_build_pom_released_version(build_pom_released_content):
     Returns the value of released_maven_artifact.version.
     """
     return parse_build_pom_version(build_pom_released_content)
+
+
+def parse_version_increment_strategy_name(build_pom_content):
+    n = code.get_attr_value("version_increment_strategy", str, None, build_pom_content)
+    assert n is not None
+    return n

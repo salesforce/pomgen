@@ -40,6 +40,9 @@ def _parse_arguments(args):
     parser.add_argument("--update_released_artifact_hash_to_current", required=False,
                         action='store_true',
         help="Writes the value of the current artifact hash under the specified package into the BUILD.pom.released file")
+    parser.add_argument("--update_version_using_version_increment_strategy", required=False,
+                        action='store_true',
+        help="Updates the version in BUILD.pom files, by incrementing it using the version_increment_strategy specified in the same file")
     parser.add_argument("--set_version_to_last_released", required=False,
                         action='store_true',
         help="Updates the version in BUILD.pom files, by setting it to the last released version specified in the corresponding BUILD.pom.released files")
@@ -66,6 +69,7 @@ if __name__ == "__main__":
         raise Exception("Did not find any BUILD.pom packages at [%s]" % args.package)
 
     if (args.new_version is not None or
+        args.update_version_using_version_increment_strategy or
         args.set_version_to_last_released or
         args.add_version_qualifier is not None or
         args.remove_version_qualifier is not None or
@@ -76,6 +80,7 @@ if __name__ == "__main__":
         buildpomupdate.update_build_pom_file(
             repo_root, packages,
             args.new_version,
+            args.update_version_using_version_increment_strategy,
             args.new_version_increment_strategy,
             args.set_version_to_last_released,
             args.add_version_qualifier,

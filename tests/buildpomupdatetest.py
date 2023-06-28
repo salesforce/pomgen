@@ -339,6 +339,46 @@ maven_artifact_update(
             self.assertIn('version = "4.5.6"', content)
             self.assertIn(')', content)
 
+    def test_update_version_in_BUILD_pom__use_version_increment_strategy(self):
+        package_rel_path = "package1/package2"
+        repo_root = tempfile.mkdtemp("monorepo")
+        repo_package = os.path.join(repo_root, package_rel_path)
+        os.makedirs(repo_package)
+        self._write_build_pom(repo_package, "a1", "g1", "1.2.3",
+                              version_increment_strategy="major")
+
+        buildpomupdate.update_build_pom_file(
+            repo_root, [package_rel_path], new_version=None,
+            update_version_using_version_incr_strat=True)
+
+        with open(os.path.join(repo_package, "MVN-INF", "BUILD.pom"), "r") as f:
+            content = f.read()
+            self.assertIn('maven_artifact(', content)
+            self.assertIn('group_id = "g1"', content)
+            self.assertIn('artifact_id = "a1"', content)
+            self.assertIn('version = "2.0.0"', content)
+            self.assertIn(')', content)
+
+    def test_update_version_in_BUILD_pom__use_version_increment_strategy__snap(self):
+        package_rel_path = "package1/package2"
+        repo_root = tempfile.mkdtemp("monorepo")
+        repo_package = os.path.join(repo_root, package_rel_path)
+        os.makedirs(repo_package)
+        self._write_build_pom(repo_package, "a1", "g1", "1.2.3-SNAPSHOT",
+                              version_increment_strategy="patch")
+
+        buildpomupdate.update_build_pom_file(
+            repo_root, [package_rel_path], new_version=None,
+            update_version_using_version_incr_strat=True)
+
+        with open(os.path.join(repo_package, "MVN-INF", "BUILD.pom"), "r") as f:
+            content = f.read()
+            self.assertIn('maven_artifact(', content)
+            self.assertIn('group_id = "g1"', content)
+            self.assertIn('artifact_id = "a1"', content)
+            self.assertIn('version = "1.2.4-SNAPSHOT"', content)
+            self.assertIn(')', content)
+
     def test_update_version_in_BUILD_pom__set_to_last_released_version(self):
         package_rel_path = "package1/package2"
         repo_root = tempfile.mkdtemp("monorepo")
