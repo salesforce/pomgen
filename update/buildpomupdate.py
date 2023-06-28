@@ -10,6 +10,7 @@ This module is responsible for updating BUILD.pom and BUILD.pom.released files.
 from common import mdfiles
 from common import pomgenmode
 from common import version
+from common import version_increment_strategy as vis
 from crawl import buildpom
 from crawl import git
 import os
@@ -20,7 +21,6 @@ import sys
 def update_build_pom_file(root_path, 
                           packages,
                           new_version=None,
-                          update_version_using_version_incr_strat=False,
                           new_version_incr_strat=None,
                           set_version_to_last_released_version=False,
                           version_qualifier_to_add=None,
@@ -50,11 +50,6 @@ def update_build_pom_file(root_path,
 
             updated_version = new_version
 
-            # increment current version using version increment strategy
-            if updated_version is None and update_version_using_version_incr_strat:
-                vers_incr_strat = version.get_version_increment_strategy(build_pom_content)
-                updated_version = vers_incr_strat(current_version)
-
             # set version back to previously released version
             if updated_version is None and set_version_to_last_released_version:
                 build_pom_released_content, _ = mdfiles.read_file(root_path, package, "BUILD.pom.released")
@@ -70,7 +65,7 @@ def update_build_pom_file(root_path,
             # add version qualifier to current version
             if updated_version is None and version_qualifier_to_add is not None:
                 vq = _sanitize_version_qualifier(version_qualifier_to_add)
-                if current_version.upper().endswith("-SNAPSHOT"):
+                if current_version.upper().endswith(vis.SNAPSHOT_QUAL):
                     # special case - we insert the new qualifer BEFORE -SNAPSHOT
                     updated_version = _insert_version_qualifier(current_version, vq)
                 else:
@@ -228,9 +223,9 @@ def _append_version_qualifier(current_version, version_qualifier):
     return "%s-%s" % (current_version, version_qualifier)
 
 
-def _insert_version_qualifier(current_version, version_qualifier):
-    s = lambda current_version:"%s-%s" % (current_version, version_qualifier)
-    return version.version_update_handler(current_version, s)
+def _insert_version_qualifier(version, version_qualifier):
+    i = version.rfind("-")
+    return "%s-%s-%s" % (version[0:i], version_qualifier, version[i+1:])
 
 
 def _remove_version_qualifier(current_version, version_qualifier):
