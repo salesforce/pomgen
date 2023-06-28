@@ -21,6 +21,7 @@ import sys
 def update_build_pom_file(root_path, 
                           packages,
                           new_version=None,
+                          update_version_using_version_incr_strat=False,
                           new_version_incr_strat=None,
                           set_version_to_last_released_version=False,
                           version_qualifier_to_add=None,
@@ -49,6 +50,21 @@ def update_build_pom_file(root_path,
                 continue
 
             updated_version = new_version
+
+
+            # increment current version using version increment strategy
+            if updated_version is None and update_version_using_version_incr_strat:
+                is_snapshot_version = current_version.upper().endswith(vis.SNAPSHOT_QUAL)
+                incr_strat_name = version.parse_version_increment_strategy_name(
+                    build_pom_content)
+                incr_strat = vis.get_version_increment_strategy(incr_strat_name)
+                updated_version = incr_strat.get_next_development_version(current_version)
+                if not is_snapshot_version:
+                    # get_next_development_version re-adds -SNAPSHOT, but this
+                    # wasn't a SNAPSHOT version to begin with, so remove that
+                    # qualifier for consistency
+                    updated_version = _remove_version_qualifier(updated_version, vis.SNAPSHOT_QUAL)
+
 
             # set version back to previously released version
             if updated_version is None and set_version_to_last_released_version:
