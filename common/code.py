@@ -5,10 +5,10 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 
 
-Helper functions used for parsing Python code (BUILD.pom[.released] files)
+Helper functions used for parsing BUILD.pom[.released] files.
 """
 
-import re
+import ast
 
 
 def get_function_block(code, function_name):
@@ -30,40 +30,113 @@ def get_function_block(code, function_name):
     return code[start:end+1]
 
 
-def get_attr_value(attr_name, the_type, dflt, content):
+def parse_attributes(content):
     """
-    Given a string of "key = value" pair(s), specified as content, returns
-    the value of the specified attr_name as the specified type (the_type).
+    Given a str of content like this:
 
-    If the given attr_name is not found, returns the specified default (dflt).
+    some_rule_name(
+        a = True,
+        b = ["my things"],
+        c = 1,
+        d = "value"
+    )
+
+    Returns a dict of attr_name -> value, so for the example above:
+    {"a": True,
+     "b": ["my_things"],
+     "c": 1,
+     "d": "value"}
     """
-    if the_type is str:
-        # uses " or ' as value anchors
-        attr_expr = re.compile("""\s*%s\s*=\s*["'](.*)["']\s*""" % attr_name, re.MULTILINE)
-    elif the_type is list:
-        # uses [] or () as value anchors
-        attr_expr = re.compile("""\s*%s\s*=\s*[\[\(](.*)[\]\)]\s*""" % attr_name, re.MULTILINE)
-    elif the_type is bool:
-        # since bool, we can just check for the exepcted values
-        attr_expr = re.compile("""\s*%s\s*=\s*([Tt]rue|[Ff]alse)\s*""" % attr_name, re.MULTILINE)
-    else:
-        raise Exception("Unhandled type %s, type must be one of %s" % (the_type, (str, list, bool)))
-    m = re.search(attr_expr, content)
-    if m is None:
-        return dflt
-    value = m.group(1).strip()
-    if the_type is str:
-        return value
-    elif the_type is list:
-        l = []
-        if len(value) > 0:
-            for item in value.split(","):
-                item = item.strip()
-                if item.startswith("'") or item.startswith('"'):
-                    item = item[1:]
-                if item.endswith("'") or item.endswith('"'):
-                    item = item[0:-1]
-                l.append(item)
-        return l
-    else: # bool
-        return True if value.lower() == "true" else False
+    attributes = {}
+    equals_index = content.find("=")
+    while equals_index != -1:
+        name_start_index = _find_name_start_index(content, equals_index)
+        name = content[name_start_index:equals_index].strip()
+        value_start_index, value_end_index =\
+            _find_value_start_and_end_index(content[equals_index:])
+        value_start_index += equals_index
+        value_end_index += equals_index
+        value = ast.literal_eval(content[value_start_index:value_end_index])
+        attributes[name] = value
+        equals_index = content.find("=", value_end_index)
+    return attributes
+
+
+def _find_value_start_and_end_index(content):
+    assert content[0] == "="
+    within_string = False
+    list_level = 0 # counter for nested lists
+    function_level = 0 # counter for nested functions
+    dict_level = 0 # counter for nested dictionaries: {}
+    is_target_end = False
+    value_start_index = -1
+    for i in range(1, len(content)):
+        if value_start_index == -1:
+            if content[i] in (" ", "\t",):
+                continue
+            else:
+                value_start_index = i
+
+        if content[i] in ("'", '"',):
+            if list_level + function_level == 0 + dict_level == 0:
+                within_string = not within_string
+        if content[i] == "[":
+            if not within_string and function_level + dict_level  == 0:
+                list_level += 1
+        elif content[i] == "]":
+            if not within_string and function_level + dict_level == 0:
+                assert list_level > 0, content
+                list_level -= 1
+        elif content[i] == "{":
+            if not within_string and function_level + list_level == 0:
+                dict_level += 1
+        elif content[i] == "}":
+            if not within_string and function_level + list_level == 0:
+                assert dict_level > 0, content
+                dict_level -= 1
+        elif content[i] == "(":
+            if not within_string and list_level + dict_level == 0:
+                function_level += 1
+        elif content[i] == ")":
+            if not within_string and list_level + dict_level == 0:
+                if function_level > 0:
+                    function_level -= 1
+                else:
+                    is_target_end = True # the paren that closes the target
+        if content[i] == "," or is_target_end:
+            if (not within_string and 
+                list_level == 0 + function_level == 0 + dict_level == 0):
+                # check for closing char
+                for j in range(i-1, 0, -1):
+                    if content[j] in ("'", '"',):
+                        # include ending quote
+                        return value_start_index, j+1
+                    if content[j] in ("]", ")", "}",):
+                        # include function/list closing char
+                        return value_start_index, j+1
+                # the value is an identifer, for example: deps = deps
+                return value_start_index, i
+    return value_start_index, i
+
+
+def _find_target_end(content, start_target_index):
+    paren_nesting_level = 1
+    i = start_target_index
+    while paren_nesting_level != 0:
+        if content[i] == "(":
+            paren_nesting_level += 1
+        elif content[i] == ")":
+            paren_nesting_level -=1
+        i += 1
+    return i
+
+
+def _find_name_start_index(content, equals_index):
+    within_name = False
+    for i in range(equals_index-1, 0, -1):
+        if content[i] in (" ", "\t", "\n"):
+            if within_name:
+                return i + 1
+        else:
+            if not within_name:
+                within_name = True

@@ -268,19 +268,20 @@ def parse_maven_artifact_def(root_path, package):
     if content is None:
         return None
     ma = code.get_function_block(content, "maven_artifact")
+    ma_attrs = code.parse_attributes(ma)
     art_def =  MavenArtifactDef(
-        group_id=code.get_attr_value("group_id", str, None, ma),
-        artifact_id=code.get_attr_value("artifact_id", str, None, ma),
-        version=code.get_attr_value("version", str, None, ma),
-        pom_generation_mode=code.get_attr_value("pom_generation_mode", str, None, ma),
-        include_deps=code.get_attr_value("include_deps", bool, True, ma),
-        change_detection=code.get_attr_value("change_detection", bool, True, ma),
-        additional_change_detected_packages=code.get_attr_value("additional_change_detected_packages", list, [], ma),
-        gen_dependency_management_pom=code.get_attr_value("generate_dependency_management_pom", bool, False, ma),
-        jar_path=code.get_attr_value("jar_path", str, None, ma),
-        deps=code.get_attr_value("deps", list, [], ma))
+        group_id=ma_attrs.get("group_id", None),
+        artifact_id=ma_attrs.get("artifact_id", None),
+        version=ma_attrs.get("version", None),
+        pom_generation_mode=ma_attrs.get("pom_generation_mode", None),
+        include_deps=ma_attrs.get("include_deps", True),
+        change_detection=ma_attrs.get("change_detection", True),
+        additional_change_detected_packages=ma_attrs.get("additional_change_detected_packages", []),
+        gen_dependency_management_pom=ma_attrs.get("generate_dependency_management_pom", False),
+        jar_path=ma_attrs.get("jar_path", None),
+        deps=ma_attrs.get("deps", []))
 
-    template_path = code.get_attr_value("pom_template_file", str, None, ma)
+    template_path = ma_attrs.get("pom_template_file", None)
     if template_path is not None:
         template_content, _ = mdfiles.read_file(root_path, package, template_path)
         art_def.custom_pom_template_content = template_content
@@ -292,11 +293,11 @@ def parse_maven_artifact_def(root_path, package):
         released_pom_content = _read_released_pom(root_path, package)
 
         maup = code.get_function_block(content, "maven_artifact_update")
-        vers_incr_strat_name = code.get_attr_value("version_increment_strategy", str, None, maup)
-
+        maup_attrs = code.parse_attributes(maup)
+        vers_inc_strat_name = maup_attrs.get("version_increment_strategy", None)
         return _augment_art_def_values(art_def, rel_art_def, package,
                                        released_pom_content,
-                                       vers_incr_strat_name,
+                                       vers_inc_strat_name,
                                        pom_generation_mode)
     else:
         return _augment_art_def_values(art_def, 
@@ -322,9 +323,10 @@ def _parse_released_maven_artifact_def(root_path, package):
     content, _ = mdfiles.read_file(root_path, package, mdfiles.BUILD_POM_RELEASED_FILE_NAME)
     if content is None:
         return None
+    attrs = code.parse_attributes(content)
     return ReleasedMavenArtifactDef(
-        version=code.get_attr_value("version", str, None, content),
-        artifact_hash=code.get_attr_value("artifact_hash", str, None, content))
+        version=attrs.get("version", None),
+        artifact_hash=attrs.get("artifact_hash", None))
     
 
 def _augment_art_def_values(user_art_def, rel_art_def, bazel_package,

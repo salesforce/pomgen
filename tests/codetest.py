@@ -42,16 +42,41 @@ f2(
 """.strip())
 
 
-    def test_get_attr_value(self):
+    def test_parse_attributes(self):
         content = """
-a = "string",
-b = True,
-c = ["a", "b", "c"]
-something = else
+foo(
+    a_string = "my = string",
+    bool_True = True,
+    bool_False  = False,
+    an_int =   68,
+    a_list =  ["a", "b", "c"],
+    a_dict = {"one":  2},
+    a_tuple = (1, 2, "sn")
+)
 """
-        self.assertEqual("string", code.get_attr_value("a", str, None, content))
-        self.assertEqual(True, code.get_attr_value("b", bool, None, content))
-        self.assertEqual(["a", "b", "c"], code.get_attr_value("c", list, None, content))
+        self.assertEqual({"a_string": "my = string",
+                          "bool_True": True,
+                          "bool_False": False,
+                          "an_int": 68,
+                          "a_list": ["a", "b", "c"],
+                          "a_dict": {"one": 2},
+                          "a_tuple": (1, 2, "sn")},
+                         code.parse_attributes(content))
+
+    def test_parse_attributes__linebreaks(self):
+        content = """
+foo(
+    a_list =  [
+   "something"   ,  "here",
+   "is",
+   "[GOING ON]",
+   ],
+   a_string = "forever",
+)
+"""
+        self.assertEqual({"a_string": "forever",
+                          "a_list": ["something", "here", "is", "[GOING ON]"]},
+                         code.parse_attributes(content))
         
 
 if __name__ == '__main__':
