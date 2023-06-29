@@ -67,16 +67,20 @@ def query_all_artifact_packages(repository_root_path, target_pattern):
     return maven_artifact_packages
 
 
-def query_all_libraries(repository_root_path, packages):
+def query_all_libraries(repository_root_path, packages, verbose=False):
     """
-    Given a list of (BUILD.pom) packages, walks the paths up to find the root
+    Given a list of packages (directories), walks the paths up to find the root
     library directories, and returns those (without duplicates).
     """
     lib_roots = set()
     for package in packages:
         while len(package) > 0 and package != '/':
             abs_package_path = os.path.join(repository_root_path, package)
+            if verbose:
+                logger.debug("Checking path for library [%s]" % abs_package_path)
             if mdfiles.is_library_package(abs_package_path):
+                if verbose:
+                    logger.debug("Found library [%s]" % package)
                 lib_roots.add(package)
                 break
             else:
