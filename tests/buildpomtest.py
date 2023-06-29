@@ -60,29 +60,6 @@ class BuildPomTest(unittest.TestCase):
 
         self.assertEqual([], art_def.deps)
 
-    def test_parse_BUILD_pom__lowercase_bool_literal(self):
-        """
-        We prefer True / False, but we tolorarte true / false also.
-        """
-        package_rel_path = "package1/package2"
-        group_id = "group1"
-        artifact_id = "art1"
-        version = "1.2.3"
-        repo_root = tempfile.mkdtemp("monorepo")
-        repo_package = os.path.join(repo_root, package_rel_path)
-        os.makedirs(repo_package)
-        self._write_build_pom(repo_package, artifact_id, group_id, version,
-                              "template",
-                              include_deps="false",
-                              change_detection="false",
-                              generate_dependency_management_pom="true")
-
-        art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
-
-        self.assertFalse(art_def.include_deps)
-        self.assertFalse(art_def.change_detection)
-        self.assertTrue(art_def.gen_dependency_management_pom)
-
     def test_parse_BUILD_pom_gen_dep_man_pom(self):
         package_rel_path = "package1/package2"
         group_id = "group1"

@@ -35,6 +35,8 @@ def parse_build_pom_released_version(build_pom_released_content):
 
 
 def parse_version_increment_strategy_name(build_pom_content):
-    n = code.get_attr_value("version_increment_strategy", str, None, build_pom_content)
-    assert n is not None
-    return n
+    maup = code.get_function_block(build_pom_content, "maven_artifact_update")
+    maup_attrs = code.parse_attributes(maup)
+    version_incr_strat_name = maup_attrs.get("version_increment_strategy", None)
+    assert  version_incr_strat_name is not None
+    return version_incr_strat_name
