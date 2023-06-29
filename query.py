@@ -14,6 +14,7 @@ from collections import OrderedDict
 from common import argsupport
 from common import common
 from common import instancequery
+from common import logger
 from common import maveninstallinfo
 from common import version_increment_strategy as vis
 from config import config
@@ -103,14 +104,20 @@ if __name__ == "__main__":
                                      args.artifact_release_plan)
 
     if determine_packages_to_process:
+        if args.verbose:
+            logger.debug("Starting with package [%s]" % args.package)
         packages = argsupport.get_all_packages(repo_root, args.package)
+        if args.verbose:
+            logger.debug("Expanded initial package to %s" % packages)
         packages = ws.filter_artifact_producing_packages(packages)
+        if args.verbose:
+            logger.debug("Filtered packages down to %s" % packages)
         if len(packages) == 0:
             raise Exception("Did not find any BUILD.pom packages at [%s]" % args.package)
 
     if args.list_libraries:
         all_libs = []
-        for lib_path in bazel.query_all_libraries(repo_root, packages):
+        for lib_path in bazel.query_all_libraries(repo_root, packages, args.verbose):
             attrs = OrderedDict()
             attrs["name"] = os.path.basename(lib_path)
             attrs["path"] = lib_path
