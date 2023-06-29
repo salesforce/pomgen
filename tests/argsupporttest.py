@@ -26,7 +26,7 @@ ALL_PACKAGES_DICT = {"projects/libs" : PASTRY_PACKAGES + ZK_CONNECT_PACKAGES + G
 class ArgSupportTest(unittest.TestCase):
 
     def setUp(self):
-        bazel.query_all_artifact_packages = lambda root, target_pattern: ALL_PACKAGES_DICT[target_pattern]
+        bazel.query_all_artifact_packages = lambda root, target_pattern, verbose: ALL_PACKAGES_DICT[target_pattern]
 
     def test_get_all_packages__single_package(self):
         packages = argsupport.get_all_packages("root", "projects/libs/pastry")

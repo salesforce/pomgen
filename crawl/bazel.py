@@ -53,7 +53,7 @@ def query_java_library_deps_attributes(repository_root_path, target_pattern):
     return reversed(deps)
 
 
-def query_all_artifact_packages(repository_root_path, target_pattern):
+def query_all_artifact_packages(repository_root_path, target_pattern, verbose=False):
     """
     Returns all packages in the specified target pattern, as a list of strings,
     that are "maven aware" packages.
@@ -62,8 +62,13 @@ def query_all_artifact_packages(repository_root_path, target_pattern):
 
     maven_artifact_packages = []
     for rootdir, dirs, files in os.walk(path):
+        if verbose:
+            logger.debug("Checking for artifact package at [%s]" % rootdir)
         if mdfiles.is_artifact_package(rootdir):
-            maven_artifact_packages.append(os.path.relpath(rootdir, repository_root_path))
+            relpath = os.path.relpath(rootdir, repository_root_path)
+            if verbose:
+                logger.debug("Found artifact package [%s]" % relpath)
+            maven_artifact_packages.append(relpath)
     return maven_artifact_packages
 
 
