@@ -15,7 +15,7 @@ def get_package_doc():
     """
     return "Multiple comma-separated paths are supported. Each path is crawled, looking for packages. If a path starts with  '-', packages starting with that path are excluded. If not specified, defaults to the repository root."
 
-def get_all_packages(repository_root_path, packages_str):
+def get_all_packages(repository_root_path, packages_str, verbose=False):
     """
     Handles the common --package argument.
 
@@ -43,7 +43,7 @@ def get_all_packages(repository_root_path, packages_str):
     all_packages = set()
 
     for p in inclusion_paths:
-        packages = bazel.query_all_artifact_packages(repository_root_path, p)
+        packages = bazel.query_all_artifact_packages(repository_root_path, p, verbose)
         for package in packages:
             for exclusion_path in exclusion_paths:
                 if package.startswith(exclusion_path):

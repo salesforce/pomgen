@@ -106,7 +106,7 @@ if __name__ == "__main__":
     if determine_packages_to_process:
         if args.verbose:
             logger.debug("Starting with package [%s]" % args.package)
-        packages = argsupport.get_all_packages(repo_root, args.package)
+        packages = argsupport.get_all_packages(repo_root, args.package, args.verbose)
         if args.verbose:
             logger.debug("Expanded initial package to %s" % packages)
         packages = ws.filter_artifact_producing_packages(packages)
