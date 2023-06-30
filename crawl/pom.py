@@ -563,8 +563,9 @@ class DynamicPomGen(AbstractPomGen):
         # account for any version overrides that need to carry over to the
         # Maven build.
         transitives = self._get_transitive_deps(self.dependencies)
-        content += self._xml_comment("The transitives of the dependencies above", indent)
-        content += self._gen_dependencies_xml(pomcontenttype, transitives, indent)
+        if len(transitives) > 0:
+            content += self._xml_comment("The transitives of the dependencies above", indent)
+            content += self._gen_dependencies_xml(pomcontenttype, transitives, indent)
 
         content, indent = self._xml(content, "dependencies", indent, close_element=True)
         return content
@@ -586,7 +587,8 @@ class DynamicPomGen(AbstractPomGen):
 
     def _get_transitive_deps(self, dependencies):
         """
-        Returns all transitive deps of the deps this pom references directly.
+        Given an iterable of dependency instances, returns all transitive
+        dependencies.
         """
         transitives = []
         transitives_set = set()
