@@ -176,7 +176,12 @@ py_test(
 
 py_test(
     name = "dependencymdtest",
-    srcs = ["crawl/dependency.py",
+    srcs = ["common/code.py",
+            "common/mdfiles.py",
+            "common/pomgenmode.py",
+            "common/version.py",
+            "crawl/buildpom.py",
+            "crawl/dependency.py",
             "crawl/dependencymd.py",
             "tests/dependencymdtest.py"],
     imports = ["."],

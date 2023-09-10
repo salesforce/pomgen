@@ -195,7 +195,8 @@ fi
 if [ -f "WORKSPACE" ]; then
     repo_root_path=`pwd`
 else
-    # only necessary when running using "bazel run"
+    # "bazel run" sets the env var BUILD_WORKING_DIRECTORY, which points
+    # to the root of the repository
     if [ -f "$BUILD_WORKING_DIRECTORY/WORKSPACE" ]; then
         # $BUILD_WORKING_DIRECTORY is set by "bazel run"
         repo_root_path=$BUILD_WORKING_DIRECTORY
@@ -205,6 +206,13 @@ else
         exit 1
     fi
 fi
+
+
+# load the configured classifier to use for jar artifacts, this classifier is
+# be used for jars processed below by this script, and it is added to generated
+# pom.xml files referencing those jars
+jar_artifact_classifier=$(bazel run //misc:configvalueloader -- --key artifact.jar_classifier --default None)
+
 
 for action in $(echo $actions | tr "," "\n")
 do
@@ -217,7 +225,7 @@ do
     echo ""
 
     if [ "$action" == "clean" ]; then
-        _for_each_pom "clean_source_tree" $repo_root_path $target
+        _for_each_pom "clean_source_tree" $repo_root_path $jar_artifact_classifier $target
 
     elif [ "$action" == "pomgen" ]; then
         extra_args=""
@@ -237,13 +245,13 @@ do
 
 
     elif [ "$action" == "install" ]; then
-        _for_each_pom "install_main_artifact" $repo_root_path $target
+        _for_each_pom "install_main_artifact" $repo_root_path $jar_artifact_classifier $target
 
     elif [ "$action" == "install_all" ]; then
         # no filter below because the javadoc maven plugin looks for dependencies
-        _for_each_pom "install_main_artifact" $repo_root_path
-        _for_each_pom "build_javadoc_jar" $repo_root_path $target
-        _for_each_pom "install_sources_and_javadoc_jars" $repo_root_path $target
+        _for_each_pom "install_main_artifact" $repo_root_path $jar_artifact_classifier
+        _for_each_pom "build_javadoc_jar" $repo_root_path $jar_artifact_classifier $target
+        _for_each_pom "install_sources_and_javadoc_jars" $repo_root_path $jar_artifact_classifier $target
 
     elif [ "$action" == "deploy_all" ]; then
         if [ -z "$REPOSITORY_URL" ]; then
@@ -252,9 +260,9 @@ do
         fi
 
         # no filter below because the javadoc maven plugin looks for dependencies
-        _for_each_pom "install_main_artifact" $repo_root_path
-        _for_each_pom "build_javadoc_jar" $repo_root_path $target
-        _for_each_pom "upload_all_artifacts" $repo_root_path $target
+        _for_each_pom "install_main_artifact" $repo_root_path $jar_artifact_classifier
+        _for_each_pom "build_javadoc_jar" $repo_root_path $jar_artifact_classifier $target
+        _for_each_pom "upload_all_artifacts" $repo_root_path $jar_artifact_classifier $target
 
 
     elif [ "$action" == "deploy_only" ]; then
@@ -262,7 +270,7 @@ do
             echo "ERROR: REPOSITORY_URL must be set"
             exit 1
         fi
-        _for_each_pom "upload_all_artifacts" $repo_root_path $target
+        _for_each_pom "upload_all_artifacts" $repo_root_path $jar_artifact_classifier $target
     fi
     
 done

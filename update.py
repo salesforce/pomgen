@@ -8,6 +8,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 Command line utility that updates attributes in BUILD.pom and 
 BUILD.pom.released files.
 """
+
 from common import argsupport
 from common import common
 from common import logger

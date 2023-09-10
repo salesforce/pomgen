@@ -13,7 +13,7 @@ from crawl import artifactprocessor
 from crawl import bazel
 from crawl import buildpom
 from crawl import dependency
-from crawl import dependencymd
+
 
 class Workspace:
     """
@@ -25,13 +25,14 @@ class Workspace:
                  source_exclusions, 
                  maven_install_info,
                  pom_content,
+                 dependency_metadata,
                  verbose=False):
         self.repo_root_path = repo_root_path
         self.excluded_dependency_paths = excluded_dependency_paths
         self.source_exclusions = source_exclusions
         self.pom_content = pom_content
         self.verbose = verbose
-        self.dependency_metadata = dependencymd.DependencyMetadata()
+        self.dependency_metadata = dependency_metadata
         self._name_to_ext_deps = self._parse_maven_install(maven_install_info, repo_root_path)
         self._package_to_artifact_def = {} # cache for artifact_def instances
 

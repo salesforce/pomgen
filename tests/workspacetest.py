@@ -12,6 +12,7 @@ from config import exclusions
 from crawl import bazel
 from crawl import buildpom
 from crawl import dependency
+from crawl import dependencymd as dependencym
 from crawl import git
 from crawl import pomcontent
 from crawl import workspace
@@ -37,9 +38,11 @@ class WorkspaceTest(unittest.TestCase):
         bazel.parse_maven_install = self.orig_bazel_parse_maven_install
 
     def test_normalize_deps__default_removes_refs_to_same_package(self):
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("so/path", [], exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP, 
-                                 pom_content=pomcontent.NOOP)
+                                 pom_content=pomcontent.NOOP,
+                                 dependency_metadata=depmd)
         package = "a/b/c"
         art1 = buildpom.MavenArtifactDef("g1", "a1", "1", bazel_package=package,
                                          pom_generation_mode=pomgenmode.DYNAMIC)
@@ -56,9 +59,11 @@ class WorkspaceTest(unittest.TestCase):
         self.assertEqual([dep3, dep4], deps)
 
     def test_normalize_deps__skip_pomgen_mode_allows_refs_to_same_package(self):
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("so/path", [], exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
-                                 pom_content=pomcontent.NOOP)
+                                 pom_content=pomcontent.NOOP,
+                                 dependency_metadata=depmd)
         package = "a/b/c"
         art1 = buildpom.MavenArtifactDef("g1", "a1", "1", bazel_package=package,
                                          pom_generation_mode=pomgenmode.SKIP)
@@ -79,9 +84,11 @@ class WorkspaceTest(unittest.TestCase):
         Verifies that an external dependency label is correctly parsed into a 
         Dependency instance.
         """
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
                                  maven_install_info=self._mocked_mvn_install_info("maven"),
-                                 pom_content=pomcontent.NOOP)
+                                 pom_content=pomcontent.NOOP,
+                                 dependency_metadata=depmd)
 
         deps = ws.parse_dep_labels(["@maven//:ch_qos_logback_logback_classic"])
 
@@ -96,9 +103,11 @@ class WorkspaceTest(unittest.TestCase):
         """
         Verifies the error that is thrown when an unknown dep is encountered.
         """
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
                                  maven_install_info=self._mocked_mvn_install_info("maven"),
-                                 pom_content=pomcontent.NOOP)
+                                 pom_content=pomcontent.NOOP,
+                                 dependency_metadata=depmd)
 
         with self.assertRaises(Exception) as ctx:
             deps = ws.parse_dep_labels(["@maven//:bad_qos_logback_logback_classic"])
@@ -110,11 +119,13 @@ class WorkspaceTest(unittest.TestCase):
         Verifies that excluded dependency paths are not added to the list of 
         dependencies.
         """
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path",
             excluded_dependency_paths=["projects/protos/",], 
             source_exclusions=exclusions.src_exclusions(),
             maven_install_info=self._mocked_mvn_install_info("maven"),
-            pom_content=pomcontent.NOOP)
+            pom_content=pomcontent.NOOP,
+            dependency_metadata=depmd)
 
         deps = ws.parse_dep_labels(["@maven//:ch_qos_logback_logback_classic", "//projects/protos/grail:java_protos"])
 
@@ -130,9 +141,11 @@ class WorkspaceTest(unittest.TestCase):
         Dependency instance when the strings being parsed contain reserved words
         such as "artifact".
         """
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
                                  maven_install_info=self._mocked_mvn_install_info("maven"),
-                                 pom_content=pomcontent.NOOP)
+                                 pom_content=pomcontent.NOOP,
+                                 dependency_metadata=depmd)
 
         deps = ws.parse_dep_labels(["@maven//:org_apache_maven_maven_artifact"])
 
@@ -146,6 +159,7 @@ class WorkspaceTest(unittest.TestCase):
         Verifies that a source dependency label is correctly parsed into a 
         Dependency instance.
         """
+        depmd = dependencym.DependencyMetadata(None)
         artifact_version = "1.2.3"
         package_name = "package1"
         group_id = "group1"
@@ -155,7 +169,8 @@ class WorkspaceTest(unittest.TestCase):
         self._write_build_pom(repo_root, package_name, artifact_id, group_id, artifact_version)
         ws = workspace.Workspace(repo_root, [], exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
-                                 pom_content=pomcontent.NOOP)
+                                 pom_content=pomcontent.NOOP,
+                                 dependency_metadata=depmd)
 
         deps = ws.parse_dep_labels(["//%s" % package_name])
 
@@ -171,6 +186,7 @@ class WorkspaceTest(unittest.TestCase):
         Verifies that a source dependency label is correctly parsed into a 
         Dependency instance, when the source dependency includes a target
         """
+        depmd = dependencym.DependencyMetadata(None)
         artifact_version = "1.2.3"
         package_name = "package1"
         group_id = "group1"
@@ -180,7 +196,8 @@ class WorkspaceTest(unittest.TestCase):
         self._write_build_pom(repo_root, package_name, artifact_id, group_id, artifact_version)
         ws = workspace.Workspace(repo_root, [], exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
-                                 pom_content=pomcontent.NOOP)
+                                 pom_content=pomcontent.NOOP,
+                                 dependency_metadata=depmd)
 
         deps = ws.parse_dep_labels(["//%s:my_cool_target" % package_name])
 
@@ -191,12 +208,14 @@ class WorkspaceTest(unittest.TestCase):
         self.assertFalse(deps[0].external)
         self.assertEqual(package_name, deps[0].bazel_package)
         self.assertEqual("my_cool_target", deps[0].bazel_target)
+        self.assertIsNone(deps[0].classifier)
 
     def test_src_dep_without_build_pom(self):
         """
         Verifies we correctly produce an error when a monorepo src ref is 
         missing a BUILD.pom file.
         """
+        depmd = dependencym.DependencyMetadata(None)
         artifact_version = "1.2.3"
         package_name = "package"
         group_id = "group1"
@@ -211,7 +230,8 @@ class WorkspaceTest(unittest.TestCase):
 
         ws = workspace.Workspace(repo_root, [], exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
-                                 pom_content=pomcontent.NOOP)
+                                 pom_content=pomcontent.NOOP,
+                                 dependency_metadata=depmd)
 
         with self.assertRaises(Exception) as ctx:
             deps = ws.parse_dep_labels(["//%s" % package_name,
@@ -221,37 +241,41 @@ class WorkspaceTest(unittest.TestCase):
         self.assertIn(bad_package_name, str(ctx.exception))
 
     def test_src_dep_with_neverlink_enabled(self):
-            """
-            Verifies that no error is triggered when a dep has neverlink enabled and it has no BUILD.pom file.
-            """
-            artifact_version = "1.2.3"
-            package_name = "package"
-            group_id = "group1"
-            artifact_id = "art1"
-            repo_root = tempfile.mkdtemp("monorepo")
-            self._touch_file_at_path(repo_root, "", "MVN-INF", "LIBRARY.root")
-            self._write_build_pom(repo_root, package_name, artifact_id, group_id, artifact_version)
-            bad_package_name = "lombok"
-            os.mkdir(os.path.join(repo_root, bad_package_name)) # no BUILD.pom
-            self._write_basic_workspace_file(repo_root)
-            self._write_build_file(repo_root, bad_package_name, True)
+        """
+        Verifies that no error is triggered when a dep has neverlink enabled and it has no BUILD.pom file.
+        """
+        depmd = dependencym.DependencyMetadata(None)
+        artifact_version = "1.2.3"
+        package_name = "package"
+        group_id = "group1"
+        artifact_id = "art1"
+        repo_root = tempfile.mkdtemp("monorepo")
+        self._touch_file_at_path(repo_root, "", "MVN-INF", "LIBRARY.root")
+        self._write_build_pom(repo_root, package_name, artifact_id, group_id, artifact_version)
+        bad_package_name = "lombok"
+        os.mkdir(os.path.join(repo_root, bad_package_name)) # no BUILD.pom
+        self._write_basic_workspace_file(repo_root)
+        self._write_build_file(repo_root, bad_package_name, True)
 
-            ws = workspace.Workspace(repo_root, [], exclusions.src_exclusions(),
-                                     maveninstallinfo.NOOP,
-                                     pom_content=pomcontent.NOOP)
+        ws = workspace.Workspace(repo_root, [], exclusions.src_exclusions(),
+                                 maveninstallinfo.NOOP,
+                                 pom_content=pomcontent.NOOP,
+                                 dependency_metadata=depmd)
 
-            deps = ws.parse_dep_labels(["//%s" % package_name,
-                                        "//%s:%s" % (bad_package_name, bad_package_name)])
+        deps = ws.parse_dep_labels(["//%s" % package_name,
+                                    "//%s:%s" % (bad_package_name, bad_package_name)])
 
-            self.assertEqual(1, len(deps))
+        self.assertEqual(1, len(deps))
 
     def test_parse_invalid_dep(self):
         """
         Verifies that parsing of an invalid label behaves as expected.
         """
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
-                                 pom_content=pomcontent.NOOP)
+                                 pom_content=pomcontent.NOOP,
+                                 dependency_metadata=depmd)
 
         with self.assertRaises(Exception) as ctx:
             deps = ws.parse_dep_labels(["this is a label"])
@@ -269,6 +293,7 @@ class WorkspaceTest(unittest.TestCase):
         the dependency instance should point to the previously released 
         artifact.
         """
+        depmd = dependencym.DependencyMetadata(None)
         version = "1.2.3"
         released_version = "1.2.0"
         package_name = "package1"
@@ -282,7 +307,8 @@ class WorkspaceTest(unittest.TestCase):
         self._write_build_pom_released(repo_root, package_name, released_version, package_hash)
         ws = workspace.Workspace(repo_root, [], exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
-                                 pom_content=pomcontent.NOOP)
+                                 pom_content=pomcontent.NOOP,
+                                 dependency_metadata=depmd)
 
         deps = ws.parse_dep_labels(["//%s" % package_name])
 
@@ -302,6 +328,7 @@ class WorkspaceTest(unittest.TestCase):
         that changes have been made since the last release; therefore
         the dependency instance should point to the monorepo source artifact.
         """
+        depmd = dependencym.DependencyMetadata(None)
         version = "1.2.3"
         released_version = "1.2.0"
         package_name = "package1"
@@ -317,7 +344,8 @@ class WorkspaceTest(unittest.TestCase):
         self._commit(repo_root)
         ws = workspace.Workspace(repo_root, [], exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
-                                 pom_content=pomcontent.NOOP)
+                                 pom_content=pomcontent.NOOP,
+                                 dependency_metadata=depmd)
 
         deps = ws.parse_dep_labels(["//%s" % package_name])
 

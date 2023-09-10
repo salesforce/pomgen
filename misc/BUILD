@@ -7,6 +7,13 @@ py_binary(
     python_version = python_version,
 )
 
+py_binary(
+    name = "configvalueloader",
+    srcs = ["//:pomgen_files", "configvalueloader.py"],
+    main = "configvalueloader.py",
+    python_version = python_version,
+)
+
 py_test(
     name = "extdeps_pomgentest",
     srcs = ["//:pomgen_files",

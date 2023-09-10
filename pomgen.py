@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 Copyright (c) 2018, salesforce.com, inc.
 All rights reserved.
@@ -16,7 +14,8 @@ from common import logger
 from common import maveninstallinfo
 from common import mdfiles
 from config import config
-from crawl import crawler as crawlermod
+from crawl import crawler as crawlerm
+from crawl import dependencymd as dependencym
 from crawl import pom
 from crawl import pomcontent as pomcontentm
 from crawl import workspace
@@ -76,6 +75,7 @@ def main(args):
     repo_root = common.get_repo_root(args.repo_root)
     cfg = config.load(repo_root, args.verbose)
     pom_content = pomcontentm.PomContent()
+    dependencymd = dependencym.DependencyMetadata(cfg.jar_artifact_classifier)
     if args.pom_description is not None:
         pom_content.description = args.pom_description
     if args.verbose:
@@ -86,12 +86,13 @@ def main(args):
                              cfg.excluded_dependency_paths,
                              cfg.all_src_exclusions,
                              mvn_install_info,
-                             pom_content)
+                             pom_content,
+                             dependencymd)
     packages = argsupport.get_all_packages(repo_root, args.package)
     packages = ws.filter_artifact_producing_packages(packages)
     if len(packages) == 0:
         raise Exception("Did not find any artifact producing BUILD.pom packages at [%s]" % args.package)
-    crawler = crawlermod.Crawler(ws, cfg.pom_template, args.verbose)
+    crawler = crawlerm.Crawler(ws, cfg.pom_template, args.verbose)
     result = crawler.crawl(packages, follow_references=True, force_release=args.force)
 
     if len(result.pomgens) == 0:

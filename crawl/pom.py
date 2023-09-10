@@ -223,8 +223,9 @@ class AbstractPomGen(object):
         content, indent = self._xml(content, "groupId", indent, dep.group_id)
         content, indent = self._xml(content, "artifactId", indent, dep.artifact_id)
         content, indent = self._xml(content, "version", indent, self._dep_version(pomcontenttype, dep))
-        if dep.classifier is not None:
-            content, indent = self._xml(content, "classifier", indent, dep.classifier)
+        classifier = self._workspace.dependency_metadata.get_classifier(dep)
+        if classifier is not None:
+            content, indent = self._xml(content, "classifier", indent, classifier)
         if dep.scope is not None:
             content, indent = self._xml(content, "scope", indent, dep.scope)
         if close_element:
@@ -626,7 +627,7 @@ class DynamicPomGen(AbstractPomGen):
 
 class DependencyManagementPomGen(AbstractPomGen):
     """
-    Generates a dependency management" only pom, containing a
+    Generates a dependency management only pom, containing a
     <dependencyManagement> section with the transitive closure of all
     dependencies of the backing artifact.
 

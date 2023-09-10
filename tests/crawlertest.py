@@ -9,6 +9,7 @@ from common.os_util import run_cmd
 from common import maveninstallinfo
 from config import exclusions
 from crawl import crawler
+from crawl import dependencymd as dependencymdm
 from crawl import git
 from crawl import pom as pomm
 from crawl import pomcontent
@@ -56,10 +57,12 @@ class CrawlerTest(unittest.TestCase):
         self._write_all_build_pom_released(self.repo_root_path)
         self.cwd = os.getcwd()
         os.chdir(self.repo_root_path)
+        depmd = dependencymdm.DependencyMetadata(None)
         ws = workspace.Workspace(self.repo_root_path,
                                  [], exclusions.src_exclusions(),
                                  maven_install_info=maveninstallinfo.NOOP,
-                                 pom_content=pomcontent.NOOP)
+                                 pom_content=pomcontent.NOOP,
+                                 dependency_metadata=depmd)
         self.crawler = crawler.Crawler(ws, pom_template="")
 
     def tearDown(self):

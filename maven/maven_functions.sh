@@ -5,11 +5,14 @@
 
 # 1st arg: action to run for each pom found in the build directory
 # 2nd arg: path to root of repo
-# 3rd arg: optional relative repo path for a more targeted pom search, must start with a '/'
+# 3rd arg: custom classifier for jar artifacts, uses the placeholder "None" to 
+#          mean string 
+# 4th arg: optional relative repo path for a more targeted pom search, must start with a '/'
 _for_each_pom() {
     action=$1
     repo_root_dir_path=$2
-    pom_root_path=$3
+    custom_jar_classifier=$3
+    pom_root_path=$4
 
     if ! [[ "$action" =~ ^(install_main_artifact|build_javadoc_jar|install_sources_and_javadoc_jars|upload_all_artifacts|clean_source_tree)$ ]]; then
         echo "ERROR: Unknown action $action" && exit 1
@@ -150,8 +153,14 @@ _for_each_pom() {
             jar_artifact_path=$UPDATED_JAR_ARTIFACT_PATH
         fi
 
+        jar_artifact_classifier=$custom_jar_classifier
+        if [ "$is_pom_only_artifact" == 1 ]; then
+            # for pom artifacts, we don't set the classifier
+            jar_artifact_classifier="None"
+        fi
+
         if [ "$action" == "install_main_artifact" ]; then
-            _install_artifact $pom_path $jar_artifact_path
+            _install_artifact $pom_path $jar_artifact_classifier $jar_artifact_path
 
         elif [ "$action" == "build_javadoc_jar" ]; then
             if [ "$is_pom_only_artifact" == 1 ]; then
@@ -164,14 +173,15 @@ _for_each_pom() {
             if [ "$is_pom_only_artifact" == 1 ]; then
                 echo "INFO: Skipping sources/javadoc installing for pom-only artifact"
             else
-                _install_artifact $pom_path $sources_jar_path "sources"
-                _install_artifact $pom_path $javadoc_jar_path "javadoc"
+                _install_artifact $pom_path "sources" $sources_jar_path
+                _install_artifact $pom_path "javadoc" $javadoc_jar_path
             fi
 
         elif [ "$action" == "upload_all_artifacts" ]; then
             _deploy_artifacts_to_nexus \
                 $pom_path \
                 $VERSION \
+                $jar_artifact_classifier \
                 $jar_artifact_path \
                 $sources_jar_path \
                 $javadoc_jar_path
@@ -194,12 +204,18 @@ _for_each_pom() {
 }
 
 # 1st arg: path to pom file
-# 2nd arg: path to jar artifact (optional if pom only)
-# 3rd arg: classifier (optional)
+# 2nd arg: classifier
+# 3rd arg: path to jar artifact (empty if pom only)
 _install_artifact() {
     pom_path=$1
-    artifact_path=$2
-    classifier=$3
+    classifier=$2
+    artifact_path=$3
+
+    # a "None" value is a placeholder for "not set"
+    # (passing empty string arguments to bash functions is problematic)
+    if [ "$classifier" = "None" ]; then
+        classifier=""
+    fi
 
     if [ -z "$artifact_path" ]; then
         echo "INFO: Installing pom only to local repository: $pom_path"
@@ -245,15 +261,17 @@ _build_javadoc_jar() {
 
 # 1st arg: path to pom file
 # 2nd arg: the artifact version to deploy
-# 3rd arg: path to artifact to deploy (optional)
-# 4rd arg: javadoc artifact path (optional)
-# 5rd arg: sources artifact path (optional)
+# 3rd arg: classifier
+# 4th arg: path to artifact to deploy (empty if pom only)
+# 5rd arg: javadoc artifact path (optional)
+# 6rd arg: sources artifact path (optional)
 _deploy_artifacts_to_nexus() {
     pom_path=$1
     version=$2
-    artifact_path=$3
-    sources_artifact_path=$4
-    javadoc_artifact_path=$5
+    classifier=$3
+    artifact_path=$4
+    sources_artifact_path=$5
+    javadoc_artifact_path=$6
 
     if [ -z "$REPOSITORY_URL" ]; then
         echo "ERROR: REPOSITORY_URL must be set"
@@ -272,38 +290,50 @@ _deploy_artifacts_to_nexus() {
 
     full_repository_url=${REPOSITORY_URL}/${repository}
 
-    if [ -z "$artifact_path" ]; then
-        artifact_path=$pom_path
-        unset file_arg
-        unset type_arg
+    # a "None" value is a placeholder for "not set"
+    # (passing empty string arguments to bash functions is problematic)
+    if [ "$classifier" = "None" ]; then
         unset classifier_arg
     else
+        classifier_arg="-Dclassifier=${classifier}"
+    fi
+
+    if [ -z "$artifact_path" ]; then
+        artifact_path=$pom_path
+        unset files_arg
+        unset types_arg
+        unset classifier_arg
+        unset classifiers_arg
+    else
+        # we are deploying a jar artifact, check whether we should also
+        # push sources and javadoc jars at the same time
         if [ -f "${sources_artifact_path}" ] && [ -f "${javadoc_artifact_path}" ]; then
-            file_arg="-Dfiles=${sources_artifact_path},${javadoc_artifact_path}"
-            type_arg="-Dtypes=jar,jar"
-            classifier_arg="-Dclassifiers=sources,javadoc"
+            files_arg="-Dfiles=${sources_artifact_path},${javadoc_artifact_path}"
+            types_arg="-Dtypes=jar,jar"
+            classifiers_arg="-Dclassifiers=sources,javadoc"
 
         # it is possible (though rare) that jar artifacts do not contain
         # Java source code, in which case they don't have srcs/javadoc
         # jars either
         elif [ -f "${sources_artifact_path}" ]; then
-            file_arg="-Dfiles=${sources_artifact_path}"
-            type_arg="-Dtypes=jar"
-            classifier_arg="-Dclassifiers=sources"
+            files_arg="-Dfiles=${sources_artifact_path}"
+            types_arg="-Dtypes=jar"
+            classifiers_arg="-Dclassifiers=sources"
         elif [ -f "${javadoc_artifact_path}" ]; then
-            file_arg="-Dfiles=${javadoc_artifact_path}"
-            type_arg="-Dtypes=jar"
-            classifier_arg="-Dclassifiers=javadoc"
+            files_arg="-Dfiles=${javadoc_artifact_path}"
+            types_arg="-Dtypes=jar"
+            classifiers_arg="-Dclassifiers=javadoc"
         else
-            unset file_arg
-            unset type_arg
-            unset classifier_arg
+            unset files_arg
+            unset types_arg
+            unset classifiers_arg
         fi
     fi
 
     echo "INFO: Uploading to repository: $full_repository_url"
     echo "INFO: Uploading pom: $pom_path"
     echo "INFO: Uploading main artifact: $artifact_path"
+    echo "INFO: Using main artifact classifier: $classifier"
     echo "INFO: Uploading other artifacts: ${sources_artifact_path} ${javadoc_artifact_path}"
 
     mvn ${MVN_ARGS} org.apache.maven.plugins:maven-deploy-plugin:2.8.2:deploy-file \
@@ -311,7 +341,7 @@ _deploy_artifacts_to_nexus() {
         -Dfile=$artifact_path \
         -DrepositoryId=${REPOSITORY_ID} \
         -Durl=$full_repository_url \
-        $file_arg $type_arg $classifier_arg
+        $classifier_arg $files_arg $types_arg $classifiers_arg
 }
 
 # parses artifactId, groupId and version out of the specified pom file
