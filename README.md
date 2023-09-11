@@ -113,6 +113,13 @@ excluded_extensions=
 # Default value: semver
 # Possible values: semver|counter
 transitives_versioning_mode=
+
+# The classifier used for all jars artifacts assembled by pomgen
+# By default, no classifier is set
+# The same value can also be specified by setting the environment variable
+# POMGEN_JAR_CLASSIFIER - the environment variable takes precedence over the
+# value set in this cfg file
+jar_classifier=
 ```
 
 (See [more information about transitives versioning](docs/ci.md#using-a-different-version-increment-mode-for-transitives))

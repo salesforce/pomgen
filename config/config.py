@@ -35,6 +35,13 @@ excluded_extensions=.md,
 
 # query versioning mode for proposed next versions
 transitives_versioning_mode=semver|counter
+
+# The classifier used for all jars artifacts assembled by pomgen
+# By default, no classifier is set
+# The same value can also be specified by setting the environment variable
+# POMGEN_JAR_CLASSIFIER - the environment variable takes precedence over the
+# value set in this cfg file
+jar_classifier=javax
 """
 
 try:
@@ -42,9 +49,9 @@ try:
 except ImportError:
     import configparser
 
-from . import exclusions
-import os
+from config import exclusions
 from common import logger
+import os
 
 
 def load(repo_root, verbose=False):
@@ -85,6 +92,7 @@ def load(repo_root, verbose=False):
         excluded_src_file_names=artifact("excluded_filenames", (".gitignore",)),
         excluded_src_file_extensions=artifact("excluded_extensions", (".md",)),
         transitives_versioning_mode=artifact("transitives_versioning_mode", "semver", valid_values=("semver", "counter")),
+        jar_artifact_classifier=artifact("jar_classifier", None),
     )
 
     if verbose:
@@ -114,7 +122,8 @@ class Config:
                  excluded_src_relpaths=(),
                  excluded_src_file_names=(),
                  excluded_src_file_extensions=(),
-                 transitives_versioning_mode="semver"):
+                 transitives_versioning_mode="semver",
+                 jar_artifact_classifier=None):
 
         # general
         self.pom_template_path_and_content=pom_template_path_and_content
@@ -128,10 +137,19 @@ class Config:
         self.excluded_src_file_names = _to_tuple(excluded_src_file_names)
         self.excluded_src_file_extensions = _to_tuple(excluded_src_file_extensions)
         self.transitives_versioning_mode = transitives_versioning_mode
+        self._jar_artifact_classifier = jar_artifact_classifier
 
     @property
     def pom_template(self):
         return self.pom_template_path_and_content[1]
+
+    @property
+    def jar_artifact_classifier(self):
+        env_var_name = "POMGEN_JAR_CLASSIFIER"
+        classifier = os.getenv(env_var_name)
+        if classifier is None:
+            classifier = self._jar_artifact_classifier
+        return classifier
 
     @property
     def all_src_exclusions(self):
@@ -155,13 +173,15 @@ excluded_relative_paths=%s
 excluded_filenames=%s
 excluded_extensions=%s
 transitives_versioning_mode=%s
+jar_artifact_classifier=%s
 """ % (self.pom_template_path_and_content[0],
        self.maven_install_paths,
        self.excluded_dependency_paths,
        self.excluded_src_relpaths,
        self.excluded_src_file_names,
        self.excluded_src_file_extensions,
-       self.transitives_versioning_mode)
+       self.transitives_versioning_mode,
+       self.jar_artifact_classifier)
 
 
 def _to_tuple(thing):

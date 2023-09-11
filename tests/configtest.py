@@ -83,6 +83,49 @@ transitives_versioning_mode=foo
         self.assertIn("Invalid value", str(ctx.exception))
         self.assertIn("valid values are: ('semver', 'counter')", str(ctx.exception))
 
+    def test_classifier__unset(self):
+        repo_root = tempfile.mkdtemp("root")
+        os.mkdir(os.path.join(repo_root, "config"))
+        pom_template_path = self._write_file(repo_root, "WORKSPACE", "foo")
+        pom_template_path = self._write_file(repo_root, "config/pom_template.xml", "foo")
+        self._write_file(repo_root, ".pomgenrc", "")
+
+        cfg = config.load(repo_root)
+
+        self.assertIsNone(cfg.jar_artifact_classifier)
+
+    def test_classifier__set_in_config(self):
+        repo_root = tempfile.mkdtemp("root")
+        os.mkdir(os.path.join(repo_root, "config"))
+        pom_template_path = self._write_file(repo_root, "WORKSPACE", "foo")
+        pom_template_path = self._write_file(repo_root, "config/pom_template.xml", "foo")
+        self._write_file(repo_root, ".pomgenrc", """
+[artifact]
+jar_classifier=jdk8
+""")
+
+        cfg = config.load(repo_root)
+
+        self.assertEqual("jdk8", cfg.jar_artifact_classifier)
+
+    def test_classifier__set_in_config__env_var_takes_precedence(self):
+        repo_root = tempfile.mkdtemp("root")
+        os.mkdir(os.path.join(repo_root, "config"))
+        pom_template_path = self._write_file(repo_root, "WORKSPACE", "foo")
+        pom_template_path = self._write_file(repo_root, "config/pom_template.xml", "foo")
+        self._write_file(repo_root, ".pomgenrc", """
+[artifact]
+jar_classifier=jdk8
+""")
+        os.environ["POMGEN_JAR_CLASSIFIER"] = "foo"
+        
+        try:
+            cfg = config.load(repo_root)
+
+            self.assertEqual("foo", cfg.jar_artifact_classifier)
+        finally:
+            del os.environ["POMGEN_JAR_CLASSIFIER"]
+
     def test_str(self):
         repo_root = tempfile.mkdtemp("root")
         pom_template_path = self._write_file(repo_root, "pom_template", "foo")

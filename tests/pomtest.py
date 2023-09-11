@@ -10,6 +10,7 @@ from config import exclusions
 from crawl import bazel
 from crawl import buildpom
 from crawl import dependency
+from crawl import dependencymd as dependencym
 from crawl import pom
 from crawl import pomcontent
 from crawl import workspace
@@ -59,9 +60,11 @@ class PomTest(unittest.TestCase):
         """
         Ensures that dynamic pom generation isn't totally broken.
         """
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
                                  self._mocked_mvn_install_info("maven"),
-                                 pomcontent.NOOP)
+                                 pomcontent.NOOP,
+                                 dependency_metadata=depmd)
         artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3")
         artifact_def = buildpom._augment_art_def_values(artifact_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
@@ -155,7 +158,8 @@ class PomTest(unittest.TestCase):
         ws = workspace.Workspace("some/path", [], 
                                  exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
-                                 pc)
+                                 pc,
+                                 None)
         pom_template = """<project>
 #{description}
 </project>
@@ -176,10 +180,12 @@ class PomTest(unittest.TestCase):
 """
         pc = pomcontent.PomContent()
         # pc.description IS NOT set here - that's the point of this test
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path", [],
                                  exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
-                                 pc)
+                                 pc,
+                                 depmd)
         pom_template = """<project>
 #{description}
 </project>
@@ -192,10 +198,10 @@ class PomTest(unittest.TestCase):
 
         self.assertEqual(exepcted_pom, generated_pom)
 
-    def test_dyamic_pom__no_dep_management(self):
+    def test_dyamic_pom__no_explicit_transitives(self):
         """
-        If there are not registered transitives, we don't generate
-        a dependencyManagement section.
+        If there are no registered transitives, we don't add them explicitly
+        to the genrated pom file.
         """
         # we need to overwrite what the default setUp method did to remove all
         # transitives
@@ -208,9 +214,11 @@ class PomTest(unittest.TestCase):
         artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3")
         artifact_def = buildpom._augment_art_def_values(artifact_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
                                  self._mocked_mvn_install_info("maven"),
-                                 pomcontent.NOOP)
+                                 pomcontent.NOOP,
+                                 depmd)
         pomgen = pom.DynamicPomGen(ws, artifact_def, dep, TEST_POM_TEMPLATE)
         org_function = bazel.query_java_library_deps_attributes
         try:
@@ -224,18 +232,49 @@ class PomTest(unittest.TestCase):
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>23.0</version>""", generated_pom)
-            self.assertNotIn("<dependencyManagement>", generated_pom)
+            # check that the special "explicit transitives" comment isn't there
+            self.assertNotIn("<!-- The transitives of the dependencies above -->", generated_pom)
 
         finally:
             bazel.query_java_library_deps_attributes = org_function
 
+    def test_dynamic_pom__classifier(self):
+        """
+        Tests that the globally defined classifier is used when referencing
+        a bazel-built dependency
+        """
+        depmd = dependencym.DependencyMetadata("split-the-g")
+        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+                                 self._mocked_mvn_install_info("maven"),
+                                 pomcontent.NOOP,
+                                 depmd)
+        root_artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3")
+        root_artifact_def = buildpom._augment_art_def_values(root_artifact_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
+        root_dep = dependency.new_dep_from_maven_artifact_def(root_artifact_def)
+
+        pomgen = pom.DynamicPomGen(ws, root_artifact_def, root_dep, TEST_POM_TEMPLATE)
+        dep_art_def = buildpom.MavenArtifactDef("class-group", "class-art", "1")
+        dep = dependency.new_dep_from_maven_artifact_def(dep_art_def)
+
+        dep_element, _ = pomgen._gen_dependency_element(
+            pom.PomContentType.RELEASE, dep, "", indent=0, close_element=True)
+        
+        self.assertIn("""<dependency>
+    <groupId>class-group</groupId>
+    <artifactId>class-art</artifactId>
+    <version>1</version>
+    <classifier>split-the-g</classifier>
+""", dep_element)
+
     def test_dynamic_pom__do_not_include_deps(self):
         """
-        Tests the seldomly used "include_deps = False" BUILD.pom attribute.
+        Tests the include_deps BUILD.pom attribute, set to False.
         """
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
-                                 pomcontent.NOOP)
+                                 pomcontent.NOOP,
+                                 depmd)
         artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3",
                                                  include_deps=False)
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
@@ -255,9 +294,11 @@ class PomTest(unittest.TestCase):
         """
         Test goldfile mode with dynamic pom gen.
         """
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
                                  self._mocked_mvn_install_info("maven"),
-                                 pomcontent.NOOP)
+                                 pomcontent.NOOP,
+                                 depmd)
         artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3")
         artifact_def = buildpom._augment_art_def_values(artifact_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
@@ -297,9 +338,11 @@ class PomTest(unittest.TestCase):
         """
         Verifies variable substitution in a pom template.
         """
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
                                  self._mocked_mvn_install_info("maven"),
-                                 pomcontent.NOOP)
+                                 pomcontent.NOOP,
+                                 depmd)
         artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.4.4")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = """
@@ -320,9 +363,11 @@ monorepo artifact version #{version}
         """
         Verifies references to monorepo versions in a pom template.
         """
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
-                                 pomcontent.NOOP)
+                                 pomcontent.NOOP,
+                                 depmd)
         artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = "srpc #{com.grail.srpc:srpc-api:version}"
@@ -342,9 +387,11 @@ monorepo artifact version #{version}
         are defined multiple times in different maven_install rules, can
         be referenced.
         """
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
                                  self._mocked_mvn_install_info("maven"),
-                                 pomcontent.NOOP)
+                                 pomcontent.NOOP,
+                                 depmd)
         artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.4.4")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = """
@@ -368,9 +415,11 @@ monorepo artifact version #{version}
         Ensures that external dependencies (jars) that have the same ga, but
         different versions, can be referenced using their "maven install" name.
         """
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
                                  self._mocked_mvn_install_info("maven"),
-                                 pomcontent.NOOP)
+                                 pomcontent.NOOP,
+                                 depmd)
         artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.4.4")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = """
@@ -390,9 +439,11 @@ v2 #{@maven2//:org_apache_maven_mult_versions.version}
         different versions, CANNOT be referenced using unqualified syntax
         (without maven_install name prefix).
         """
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
                                  self._mocked_mvn_install_info("maven"),
-                                 pomcontent.NOOP)
+                                 pomcontent.NOOP,
+                                 depmd)
         artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.4.4")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = """
@@ -423,9 +474,11 @@ v2 #{@maven2//:org_apache_maven_mult_versions.version}
         Verifies error handling when gavs are conflicting between external deps
         and what is set in BUILD.pom files.
         """
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
                                  self._mocked_mvn_install_info("maven"),
-                                 pomcontent.NOOP)
+                                 pomcontent.NOOP,
+                                 depmd)
         artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = "srpc #{g:a:version}"
@@ -446,9 +499,11 @@ v2 #{@maven2//:org_apache_maven_mult_versions.version}
         """
         Verifies version omissions when genmode is GOLDFILE.
         """
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
                                  self._mocked_mvn_install_info("maven"),
-                                 pomcontent.NOOP)
+                                 pomcontent.NOOP,
+                                 depmd)
         artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         srpc_artifact_def = buildpom.MavenArtifactDef("com.grail.srpc",
@@ -496,9 +551,11 @@ __pomgen.end_dependency_customization__
     </dependencyManagement>
 </project>
 """
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
-                                 pomcontent.NOOP)
+                                 pomcontent.NOOP,
+                                 depmd)
         artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = pom_template
@@ -555,9 +612,11 @@ __pomgen.end_dependency_customization__
     </dependencyManagement>
 </project>
 """
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
-                                 pomcontent.NOOP)
+                                 pomcontent.NOOP,
+                                 depmd)
         artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = pom_template
@@ -600,9 +659,11 @@ __pomgen.end_dependency_customization__
     </dependencyManagement>
 </project>
 """
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
-                                 pomcontent.NOOP)
+                                 pomcontent.NOOP,
+                                 depmd)
         artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = pom_template
@@ -675,9 +736,11 @@ __pomgen.end_dependency_customization__
     </dependencyManagement>
 </project>
 """
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
-                                 pomcontent.NOOP)
+                                 pomcontent.NOOP,
+                                 depmd)
         artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = pom_template
@@ -728,9 +791,11 @@ __pomgen.end_dependency_customization__
     </dependencyManagement>
 </project>
 """
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
-                                 pomcontent.NOOP)
+                                 pomcontent.NOOP,
+                                 depmd)
         artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = pom_template
@@ -747,9 +812,11 @@ __pomgen.end_dependency_customization__
         Verifies that an unknown variable in a pom template is handled and
         results in an error during template processing.
         """
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
-                                 pomcontent.NOOP)
+                                 pomcontent.NOOP,
+                                 depmd)
         artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId",
                                                  "1.2.3")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
@@ -766,9 +833,11 @@ __pomgen.end_dependency_customization__
         """
         Ensures that dependency management pom generation isn't totally broken.
         """
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
-                                 pomcontent.NOOP)
+                                 pomcontent.NOOP,
+                                 depmd)
         artifact_def = buildpom.MavenArtifactDef(
             "g1", "a2", "1.2.3", gen_dependency_management_pom=True)
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)

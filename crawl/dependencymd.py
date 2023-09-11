@@ -10,10 +10,11 @@ class DependencyMetadata:
     This class provides metadata about dependencies. This is data that cannot
     be discovered by crawling Bazel BUILD files.
     """
-    def __init__(self):
+    def __init__(self, jar_artifact_classifier):
         self._dep_to_transitives = {}
         self._dep_to_exclusions = {}
         self._dep_key_to_dependency = {}
+        self._jar_artifact_classifier = jar_artifact_classifier
 
     def get_transitive_closure(self, dependency):
         """
@@ -55,6 +56,14 @@ class DependencyMetadata:
                     # rule
                     ancestors.append(self._dep_key_to_dependency[dep_key])
         return ancestors
+
+    def get_classifier(self, dependency):
+        if dependency.classifier is not None:
+            return dependency.classifier
+        else:
+            if dependency.bazel_buildable:
+                return self._jar_artifact_classifier
+        return None
                 
     def register_transitives(self, dependency, transitives):
         key = self._get_key(dependency)

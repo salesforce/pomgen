@@ -8,6 +8,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 from common import maveninstallinfo
 from config import exclusions
 from crawl import crawler as crawlerm
+from crawl import dependencymd as dependencym
 from crawl import pom
 from crawl import pomcontent
 from crawl import workspace
@@ -40,10 +41,12 @@ class CrawlerTest(unittest.TestCase):
         self._add_artifact(repo_root_path, "lib/a1", "template", deps=[])
         self._add_artifact(repo_root_path, "lib/a2", "template", deps=["//lib/a1"])
 
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace(repo_root_path, [],
                                  exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
-                                 pomcontent.NOOP)
+                                 pomcontent.NOOP,
+                                 dependency_metadata=depmd)
         crawler = crawlerm.Crawler(ws, pom_template="")
 
         result = crawler.crawl(["lib/a2"])
@@ -62,10 +65,12 @@ class CrawlerTest(unittest.TestCase):
         self._add_artifact(repo_root_path, "lib/a1", "template", deps=[])
         self._add_artifact(repo_root_path, "lib/a2", "template", deps=["//lib/a1:a1"])
 
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace(repo_root_path, [],
                                  exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
-                                 pomcontent.NOOP)
+                                 pomcontent.NOOP,
+                                 dependency_metadata=depmd)
         crawler = crawlerm.Crawler(ws, pom_template="")
 
         result = crawler.crawl(["lib/a2"])
@@ -80,6 +85,7 @@ class CrawlerTest(unittest.TestCase):
         lib/a2 cannot reference lib/a1:foo - only default package refs
         are allowed.
         """
+        depmd = dependencym.DependencyMetadata(None)
         repo_root_path = tempfile.mkdtemp("monorepo")
         self._write_library_root(repo_root_path, "lib")
         self._add_artifact(repo_root_path, "lib/a1", "template", deps=[])
@@ -88,7 +94,8 @@ class CrawlerTest(unittest.TestCase):
         ws = workspace.Workspace(repo_root_path, [],
                                  exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
-                                 pomcontent.NOOP)
+                                 pomcontent.NOOP,
+                                 dependency_metadata=depmd)
         crawler = crawlerm.Crawler(ws, pom_template="")
 
         with self.assertRaises(Exception) as ctx:
@@ -107,10 +114,12 @@ class CrawlerTest(unittest.TestCase):
         self._add_artifact(repo_root_path, "lib/a1", "skip", deps=[])
         self._add_artifact(repo_root_path, "lib/a2", "template", deps=["//lib/a1:foo"])
 
+        depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace(repo_root_path, [],
                                  exclusions.src_exclusions(),
                                  maveninstallinfo.NOOP,
-                                 pomcontent.NOOP)
+                                 pomcontent.NOOP,
+                                 dependency_metadata=depmd)
         crawler = crawlerm.Crawler(ws, pom_template="")
 
         crawler.crawl(["lib/a2"])

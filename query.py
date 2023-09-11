@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 Copyright (c) 2018, salesforce.com, inc.
 All rights reserved.
@@ -21,6 +19,7 @@ from config import config
 from crawl import bazel
 from crawl import buildpom
 from crawl import crawler
+from crawl import dependencymd as dependencymdm
 from crawl import libaggregator
 from crawl import pomcontent
 from crawl import workspace
@@ -90,12 +89,14 @@ if __name__ == "__main__":
     repo_root = common.get_repo_root(args.repo_root)
     cfg = config.load(repo_root, args.verbose)
     mvn_install_info = maveninstallinfo.MavenInstallInfo(cfg.maven_install_paths)
+    depmd = dependencymdm.DependencyMetadata(cfg.jar_artifact_classifier)    
     ws = workspace.Workspace(repo_root,
                              cfg.excluded_dependency_paths, 
                              cfg.all_src_exclusions,
                              mvn_install_info,
-                             pomcontent.NOOP, 
-                             args.verbose)
+                             pomcontent.NOOP,
+                             dependency_metadata=depmd,
+                             verbose=args.verbose)
 
     determine_packages_to_process = (args.list_libraries or 
                                      args.list_artifacts or

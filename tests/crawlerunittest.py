@@ -10,6 +10,7 @@ from common import pomgenmode
 from crawl import buildpom
 from crawl import crawler as crawlerm
 from crawl import dependency
+from crawl import dependencymd as dependencymdm
 from crawl import workspace
 import os
 import unittest
@@ -533,11 +534,13 @@ class CrawlerUnitTest(unittest.TestCase):
         return dependency.new_dep_from_maven_art_str(artifact_str, name)
 
     def _get_workspace(self):
+        depmd = dependencymdm.DependencyMetadata(None)
         return workspace.Workspace(repo_root_path="a/b/c",
                                    excluded_dependency_paths=[],
                                    source_exclusions=[],
                                    maven_install_info=maveninstallinfo.NOOP,
-                                   pom_content="",)
+                                   pom_content="",
+                                   dependency_metadata=depmd)
 
 
 if __name__ == '__main__':
