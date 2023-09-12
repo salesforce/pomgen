@@ -97,7 +97,7 @@ def load(repo_root, verbose=False):
         excluded_src_file_extensions=artifact("excluded_extensions", (".md",)),
         transitives_versioning_mode=artifact("transitives_versioning_mode", "semver", valid_values=("semver", "counter")),
         jar_artifact_classifier=artifact("jar_classifier", None),
-        change_detection=artifact("change_detection", True),
+        change_detection_enabled=artifact("change_detection_enabled", True),
     )
 
     if verbose:
@@ -129,7 +129,7 @@ class Config:
                  excluded_src_file_extensions=(),
                  transitives_versioning_mode="semver",
                  jar_artifact_classifier=None,
-                 change_detection=True):
+                 change_detection_enabled=True):
 
         # general
         self.pom_template_path_and_content=pom_template_path_and_content
@@ -144,7 +144,7 @@ class Config:
         self.excluded_src_file_extensions = _to_tuple(excluded_src_file_extensions)
         self.transitives_versioning_mode = transitives_versioning_mode
         self._jar_artifact_classifier = jar_artifact_classifier
-        self._change_detection = change_detection
+        self._change_detection_enabled = _to_bool(change_detection_enabled)
 
     @property
     def pom_template(self):
@@ -160,7 +160,7 @@ class Config:
 
     @property
     def change_detection_enabled(self):
-        return self._change_detection
+        return self._change_detection_enabled
 
     @property
     def all_src_exclusions(self):
@@ -204,8 +204,17 @@ def _to_tuple(thing):
         tokens = thing.split(",")
         filtered_tokens = [t.strip() for t in tokens if len(t.strip()) > 0]
         return tuple(filtered_tokens)
-    raise Exception("Cannot convert to tuple")
+    raise Exception("Cannot convert to tuple [%s] % thing")
 
+
+def _to_bool(thing):
+    if isinstance(thing, bool):
+        return thing
+    if isinstance(thing, int):
+        return False if thing == 0 else True
+    if isinstance(thing, str):
+        return True if thing.lower() in ("true", "on", "1") else False
+    raise Exception("Cannot convert to bool [%s]" % thing)
 
 def _read_files(repo_root, paths):
     """
