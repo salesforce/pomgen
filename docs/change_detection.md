@@ -4,6 +4,7 @@ pomgen tracks whether an artifact has changed since it was last released. It als
 
 Change detection is most useful for libraries that have a large number of transitives, because it prevents the (unchanged) transitives from being released over and over again when the main Library changes.
 
+
 ## Example
 
 ```
@@ -56,6 +57,7 @@ bazel run @pomgen//:update -- --package examples/hello-world \
 ```
 
 For more details on working with snapshot jars, see [this doc](./bazel_maven_workflow.md).
+
 
 ## Release Reasons
 
@@ -150,6 +152,7 @@ bazel run //maven -- -a install
 bazel run //maven -- -a install_all
 ```
 
+
 ### Sources
 
 pomgen looks for the sources jar built by bazel's `java_library` rule, which has an [implicit target](https://bazel.build/reference/be/java#java_library_implicit_outputs) that builds the sources jar: `lib<name>-src.jar`. Bazel does not build this target by default when using the `...` wildcard pattern. It has to be built explicitly, or the special wilcard `...:all-targets` has to be used.
@@ -166,9 +169,11 @@ bazel build examples/hello-world/juicer/...:all-targets
 
 If pomgen cannot find the sources jar, it skips it.
 
+
 ## Disabling Change Detection
 
 Change detection is enabled by default. It can be disabled:
-- On a per-artifact basis by setting the `change_detection` attribute of the `maven_install` rule in the `BUILD.pom` file to `False`
+- Globally in the [pomgen configuration file](../README.md#configuration) (`[artifact] : change_detection_enabled`)
+- On a per-artifact basis, by setting the `change_detection` attribute of the `maven_install` rule in the `BUILD.pom` file to `False`
 - By setting the `--force` argument when running `pomgen`
 - By setting the `-f` argument when running `//maven`

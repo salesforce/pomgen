@@ -20,19 +20,15 @@ class Workspace:
     Manages workspace-level information and translates between Bazel and 
     Maven concepts.
     """
-
-    def __init__(self, repo_root_path, excluded_dependency_paths, 
-                 source_exclusions, 
-                 maven_install_info,
-                 pom_content,
-                 dependency_metadata,
-                 verbose=False):
+    def __init__(self, repo_root_path, config, maven_install_info,
+                 pom_content, dependency_metadata, verbose=False):
         self.repo_root_path = repo_root_path
-        self.excluded_dependency_paths = excluded_dependency_paths
-        self.source_exclusions = source_exclusions
+        self.excluded_dependency_paths = config.excluded_dependency_paths
+        self.source_exclusions = config.all_src_exclusions
         self.pom_content = pom_content
         self.verbose = verbose
         self.dependency_metadata = dependency_metadata
+        self.change_detection_enabled = config.change_detection_enabled
         self._name_to_ext_deps = self._parse_maven_install(maven_install_info, repo_root_path)
         self._package_to_artifact_def = {} # cache for artifact_def instances
 
@@ -58,7 +54,9 @@ class Workspace:
             return self._package_to_artifact_def[package]
         art_def = buildpom.parse_maven_artifact_def(self.repo_root_path, package)
         if art_def is not None:
-            art_def = artifactprocessor.augment_artifact_def(self.repo_root_path, art_def, self.source_exclusions)
+            art_def = artifactprocessor.augment_artifact_def(
+                self.repo_root_path, art_def, self.source_exclusions,
+                self.change_detection_enabled)
         # cache result, next time it is returned from cache
         self._package_to_artifact_def[package] = art_def
         return art_def

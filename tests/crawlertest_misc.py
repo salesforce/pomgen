@@ -6,7 +6,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 """
 
 from common import maveninstallinfo
-from config import exclusions
+from config import config
 from crawl import crawler as crawlerm
 from crawl import dependencymd as dependencym
 from crawl import pom
@@ -42,8 +42,8 @@ class CrawlerTest(unittest.TestCase):
         self._add_artifact(repo_root_path, "lib/a2", "template", deps=["//lib/a1"])
 
         depmd = dependencym.DependencyMetadata(None)
-        ws = workspace.Workspace(repo_root_path, [],
-                                 exclusions.src_exclusions(),
+        ws = workspace.Workspace(repo_root_path,
+                                 self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pomcontent.NOOP,
                                  dependency_metadata=depmd)
@@ -66,8 +66,8 @@ class CrawlerTest(unittest.TestCase):
         self._add_artifact(repo_root_path, "lib/a2", "template", deps=["//lib/a1:a1"])
 
         depmd = dependencym.DependencyMetadata(None)
-        ws = workspace.Workspace(repo_root_path, [],
-                                 exclusions.src_exclusions(),
+        ws = workspace.Workspace(repo_root_path,
+                                 self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pomcontent.NOOP,
                                  dependency_metadata=depmd)
@@ -91,8 +91,8 @@ class CrawlerTest(unittest.TestCase):
         self._add_artifact(repo_root_path, "lib/a1", "template", deps=[])
         self._add_artifact(repo_root_path, "lib/a2", "template", deps=["//lib/a1:foo"])
 
-        ws = workspace.Workspace(repo_root_path, [],
-                                 exclusions.src_exclusions(),
+        ws = workspace.Workspace(repo_root_path,
+                                 self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pomcontent.NOOP,
                                  dependency_metadata=depmd)
@@ -115,14 +115,17 @@ class CrawlerTest(unittest.TestCase):
         self._add_artifact(repo_root_path, "lib/a2", "template", deps=["//lib/a1:foo"])
 
         depmd = dependencym.DependencyMetadata(None)
-        ws = workspace.Workspace(repo_root_path, [],
-                                 exclusions.src_exclusions(),
+        ws = workspace.Workspace(repo_root_path,
+                                 self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pomcontent.NOOP,
                                  dependency_metadata=depmd)
         crawler = crawlerm.Crawler(ws, pom_template="")
 
         crawler.crawl(["lib/a2"])
+
+    def _get_config(self):
+        return config.Config()
 
     def _add_artifact(self, repo_root_path, package_rel_path, 
                       pom_generation_mode, deps=[]):

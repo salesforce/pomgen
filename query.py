@@ -90,9 +90,7 @@ if __name__ == "__main__":
     cfg = config.load(repo_root, args.verbose)
     mvn_install_info = maveninstallinfo.MavenInstallInfo(cfg.maven_install_paths)
     depmd = dependencymdm.DependencyMetadata(cfg.jar_artifact_classifier)    
-    ws = workspace.Workspace(repo_root,
-                             cfg.excluded_dependency_paths, 
-                             cfg.all_src_exclusions,
+    ws = workspace.Workspace(repo_root, cfg,
                              mvn_install_info,
                              pomcontent.NOOP,
                              dependency_metadata=depmd,

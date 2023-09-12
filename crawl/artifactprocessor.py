@@ -19,7 +19,10 @@ from crawl import releasereason
 import os
 
 
-def augment_artifact_def(repo_root_path, art_def, source_exclusions):
+def augment_artifact_def(repo_root_path,
+                         art_def,
+                         source_exclusions,
+                         change_detection_enabled):
     art_def.library_path = _get_library_path(repo_root_path, art_def)
 
     if art_def.released_version is None or art_def.released_artifact_hash is None:
@@ -27,7 +30,7 @@ def augment_artifact_def(repo_root_path, art_def, source_exclusions):
         art_def.requires_release = True
         art_def.release_reason = releasereason.ReleaseReason.FIRST
     else:
-        if art_def.change_detection:
+        if change_detection_enabled and art_def.change_detection:
             has_changed = _has_changed_since_last_release(repo_root_path, art_def, source_exclusions)
             if has_changed:
                 art_def.requires_release = True

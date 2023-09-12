@@ -6,7 +6,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 """
 from common import maveninstallinfo
 from common import pomgenmode
-from config import exclusions
+from config import config
 from crawl import bazel
 from crawl import buildpom
 from crawl import dependency
@@ -61,7 +61,8 @@ class PomTest(unittest.TestCase):
         Ensures that dynamic pom generation isn't totally broken.
         """
         depmd = dependencym.DependencyMetadata(None)
-        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+        ws = workspace.Workspace("some/path",
+                                 self._get_config(),
                                  self._mocked_mvn_install_info("maven"),
                                  pomcontent.NOOP,
                                  dependency_metadata=depmd)
@@ -155,8 +156,8 @@ class PomTest(unittest.TestCase):
 """
         pc = pomcontent.PomContent()
         pc.description = "this is a cool description"
-        ws = workspace.Workspace("some/path", [], 
-                                 exclusions.src_exclusions(),
+        ws = workspace.Workspace("some/path",
+                                 self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pc,
                                  None)
@@ -181,8 +182,8 @@ class PomTest(unittest.TestCase):
         pc = pomcontent.PomContent()
         # pc.description IS NOT set here - that's the point of this test
         depmd = dependencym.DependencyMetadata(None)
-        ws = workspace.Workspace("some/path", [],
-                                 exclusions.src_exclusions(),
+        ws = workspace.Workspace("some/path",
+                                 self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pc,
                                  depmd)
@@ -215,7 +216,8 @@ class PomTest(unittest.TestCase):
         artifact_def = buildpom._augment_art_def_values(artifact_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         depmd = dependencym.DependencyMetadata(None)
-        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+        ws = workspace.Workspace("some/path",
+                                 self._get_config(),
                                  self._mocked_mvn_install_info("maven"),
                                  pomcontent.NOOP,
                                  depmd)
@@ -244,7 +246,8 @@ class PomTest(unittest.TestCase):
         a bazel-built dependency
         """
         depmd = dependencym.DependencyMetadata("split-the-g")
-        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+        ws = workspace.Workspace("some/path",
+                                 self._get_config(),
                                  self._mocked_mvn_install_info("maven"),
                                  pomcontent.NOOP,
                                  depmd)
@@ -271,7 +274,8 @@ class PomTest(unittest.TestCase):
         Tests the include_deps BUILD.pom attribute, set to False.
         """
         depmd = dependencym.DependencyMetadata(None)
-        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+        ws = workspace.Workspace("some/path",
+                                 self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pomcontent.NOOP,
                                  depmd)
@@ -295,7 +299,8 @@ class PomTest(unittest.TestCase):
         Test goldfile mode with dynamic pom gen.
         """
         depmd = dependencym.DependencyMetadata(None)
-        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+        ws = workspace.Workspace("some/path",
+                                 self._get_config(),
                                  self._mocked_mvn_install_info("maven"),
                                  pomcontent.NOOP,
                                  depmd)
@@ -339,7 +344,8 @@ class PomTest(unittest.TestCase):
         Verifies variable substitution in a pom template.
         """
         depmd = dependencym.DependencyMetadata(None)
-        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+        ws = workspace.Workspace("some/path",
+                                 self._get_config(),
                                  self._mocked_mvn_install_info("maven"),
                                  pomcontent.NOOP,
                                  depmd)
@@ -364,7 +370,8 @@ monorepo artifact version #{version}
         Verifies references to monorepo versions in a pom template.
         """
         depmd = dependencym.DependencyMetadata(None)
-        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+        ws = workspace.Workspace("some/path",
+                                 self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pomcontent.NOOP,
                                  depmd)
@@ -388,7 +395,8 @@ monorepo artifact version #{version}
         be referenced.
         """
         depmd = dependencym.DependencyMetadata(None)
-        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+        ws = workspace.Workspace("some/path",
+                                 self._get_config(),
                                  self._mocked_mvn_install_info("maven"),
                                  pomcontent.NOOP,
                                  depmd)
@@ -416,7 +424,8 @@ monorepo artifact version #{version}
         different versions, can be referenced using their "maven install" name.
         """
         depmd = dependencym.DependencyMetadata(None)
-        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+        ws = workspace.Workspace("some/path",
+                                 self._get_config(),
                                  self._mocked_mvn_install_info("maven"),
                                  pomcontent.NOOP,
                                  depmd)
@@ -440,7 +449,8 @@ v2 #{@maven2//:org_apache_maven_mult_versions.version}
         (without maven_install name prefix).
         """
         depmd = dependencym.DependencyMetadata(None)
-        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+        ws = workspace.Workspace("some/path",
+                                 self._get_config(),
                                  self._mocked_mvn_install_info("maven"),
                                  pomcontent.NOOP,
                                  depmd)
@@ -475,7 +485,8 @@ v2 #{@maven2//:org_apache_maven_mult_versions.version}
         and what is set in BUILD.pom files.
         """
         depmd = dependencym.DependencyMetadata(None)
-        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+        ws = workspace.Workspace("some/path",
+                                 self._get_config(),
                                  self._mocked_mvn_install_info("maven"),
                                  pomcontent.NOOP,
                                  depmd)
@@ -500,7 +511,8 @@ v2 #{@maven2//:org_apache_maven_mult_versions.version}
         Verifies version omissions when genmode is GOLDFILE.
         """
         depmd = dependencym.DependencyMetadata(None)
-        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+        ws = workspace.Workspace("some/path",
+                                 self._get_config(),
                                  self._mocked_mvn_install_info("maven"),
                                  pomcontent.NOOP,
                                  depmd)
@@ -552,7 +564,8 @@ __pomgen.end_dependency_customization__
 </project>
 """
         depmd = dependencym.DependencyMetadata(None)
-        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+        ws = workspace.Workspace("some/path",
+                                 self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pomcontent.NOOP,
                                  depmd)
@@ -613,7 +626,8 @@ __pomgen.end_dependency_customization__
 </project>
 """
         depmd = dependencym.DependencyMetadata(None)
-        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+        ws = workspace.Workspace("some/path",
+                                 self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pomcontent.NOOP,
                                  depmd)
@@ -660,7 +674,8 @@ __pomgen.end_dependency_customization__
 </project>
 """
         depmd = dependencym.DependencyMetadata(None)
-        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+        ws = workspace.Workspace("some/path",
+                                 self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pomcontent.NOOP,
                                  depmd)
@@ -737,7 +752,8 @@ __pomgen.end_dependency_customization__
 </project>
 """
         depmd = dependencym.DependencyMetadata(None)
-        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+        ws = workspace.Workspace("some/path",
+                                 self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pomcontent.NOOP,
                                  depmd)
@@ -792,7 +808,8 @@ __pomgen.end_dependency_customization__
 </project>
 """
         depmd = dependencym.DependencyMetadata(None)
-        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+        ws = workspace.Workspace("some/path",
+                                 self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pomcontent.NOOP,
                                  depmd)
@@ -813,7 +830,8 @@ __pomgen.end_dependency_customization__
         results in an error during template processing.
         """
         depmd = dependencym.DependencyMetadata(None)
-        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+        ws = workspace.Workspace("some/path",
+                                 self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pomcontent.NOOP,
                                  depmd)
@@ -834,7 +852,8 @@ __pomgen.end_dependency_customization__
         Ensures that dependency management pom generation isn't totally broken.
         """
         depmd = dependencym.DependencyMetadata(None)
-        ws = workspace.Workspace("some/path", [], exclusions.src_exclusions(),
+        ws = workspace.Workspace("some/path",
+                                 self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pomcontent.NOOP,
                                  depmd)
@@ -852,6 +871,9 @@ __pomgen.end_dependency_customization__
         self.assertIn("<dependencyManagement>", generated_pom)
         self.assertIn("<artifactId>guava</artifactId>", generated_pom)
         self.assertIn("<artifactId>commons</artifactId>", generated_pom)
+
+    def _get_config(self):
+        return config.Config()
 
     def _mocked_mvn_install_info(self, maven_install_name):
         mii = maveninstallinfo.MavenInstallInfo(())
