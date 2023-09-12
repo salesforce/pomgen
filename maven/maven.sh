@@ -211,7 +211,7 @@ fi
 # load the configured classifier to use for jar artifacts, this classifier is
 # be used for jars processed below by this script, and it is added to generated
 # pom.xml files referencing those jars
-jar_artifact_classifier=$(bazel run //misc:configvalueloader -- --key artifact.jar_classifier --default None)
+jar_artifact_classifier=$(bazel run @pomgen//misc:configvalueloader -- --key artifact.jar_classifier --default None)
 
 
 for action in $(echo $actions | tr "," "\n")
