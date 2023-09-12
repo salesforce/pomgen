@@ -97,6 +97,10 @@ maven_install_paths=
 excluded_dependency_paths=
 
 [artifact]
+# Global toggle for change detection (docs/change_detection.md)
+# Default value: True
+change_detection_enabled=
+
 # Paths not considered when determining whether an artifact has changed
 # Default value: src/test,
 excluded_relative_paths=
@@ -115,10 +119,10 @@ excluded_extensions=
 transitives_versioning_mode=
 
 # The classifier used for all jars artifacts assembled by pomgen
-# By default, no classifier is set
 # The same value can also be specified by setting the environment variable
 # POMGEN_JAR_CLASSIFIER - the environment variable takes precedence over the
 # value set in this cfg file
+# Default value: empty (not set)
 jar_classifier=
 ```
 

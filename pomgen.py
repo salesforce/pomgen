@@ -82,9 +82,7 @@ def main(args):
         logger.debug("Global pom content: %s" % pom_content)
 
     mvn_install_info = maveninstallinfo.MavenInstallInfo(cfg.maven_install_paths)
-    ws = workspace.Workspace(repo_root,
-                             cfg.excluded_dependency_paths,
-                             cfg.all_src_exclusions,
+    ws = workspace.Workspace(repo_root, cfg,
                              mvn_install_info,
                              pom_content,
                              dependencymd)

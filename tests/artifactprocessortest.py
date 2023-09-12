@@ -24,7 +24,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         self._touch_file_at_path(repo_root, "", "MVN-INF", "LIBRARY.root")
         self.assertIs(None, art_def.released_artifact_hash)
 
-        art_def = artifactprocessor.augment_artifact_def(repo_root, art_def, exclusions.src_exclusions())
+        art_def = artifactprocessor.augment_artifact_def(repo_root, art_def, exclusions.src_exclusions(), change_detection_enabled=True)
 
         self.assertTrue(art_def.requires_release)
 
@@ -35,8 +35,8 @@ class ArtifactProcessorTest(unittest.TestCase):
         art_def_2 = buildpom.MavenArtifactDef("g1", "a2", "1.0.0", bazel_package="foo/lib2/pack1")
         self._touch_file_at_path(repo_root, "foo/lib2", "MVN-INF", "LIBRARY.root")
 
-        art_def_1 = artifactprocessor.augment_artifact_def(repo_root, art_def_1, exclusions.src_exclusions())
-        art_def_2 = artifactprocessor.augment_artifact_def(repo_root, art_def_2, exclusions.src_exclusions())
+        art_def_1 = artifactprocessor.augment_artifact_def(repo_root, art_def_1, exclusions.src_exclusions(), change_detection_enabled=True)
+        art_def_2 = artifactprocessor.augment_artifact_def(repo_root, art_def_2, exclusions.src_exclusions(), change_detection_enabled=True)
 
         self.assertEqual("lib1", art_def_1.library_path)
         self.assertEqual("foo/lib2", art_def_2.library_path)
@@ -46,7 +46,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         art_def_1 = buildpom.MavenArtifactDef("g1", "a1", "1.0.0", bazel_package="lib1/pack1")
         self._touch_file_at_path(repo_root, "lib1/pack1", "MVN-INF", "LIBRARY.root")
 
-        art_def_1 = artifactprocessor.augment_artifact_def(repo_root, art_def_1, exclusions.src_exclusions())
+        art_def_1 = artifactprocessor.augment_artifact_def(repo_root, art_def_1, exclusions.src_exclusions(), change_detection_enabled=True)
 
         self.assertEqual("lib1/pack1", art_def_1.library_path)
 
@@ -55,7 +55,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         art_def_1 = buildpom.MavenArtifactDef("g1", "a1", "1.0.0", bazel_package="lib1/pack1")
 
         with self.assertRaises(Exception) as ctx:
-            artifactprocessor.augment_artifact_def(repo_root, art_def_1, exclusions.src_exclusions())
+            artifactprocessor.augment_artifact_def(repo_root, art_def_1, exclusions.src_exclusions(), change_detection_enabled=True)
 
         self.assertIn("Did not find LIBRARY.root at", str(ctx.exception))
         self.assertIn("or any parent dir", str(ctx.exception))
@@ -65,22 +65,33 @@ class ArtifactProcessorTest(unittest.TestCase):
         current_artifact_hash = git.get_dir_hash(repo_root_path, ["pack1/pack2"], exclusions.src_exclusions())
         art_def = buildpom.MavenArtifactDef("g1", "a1", "1.1.0", bazel_package="pack1/pack2", released_version="1.2.0", released_artifact_hash=current_artifact_hash)
         
-        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions())
+        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions(), change_detection_enabled=True)
 
         self.assertNotEqual(None, art_def.requires_release)
         self.assertFalse(art_def.requires_release)
         self.assertEqual(None, art_def.release_reason)
 
-    def test_artifact_without_changes_always_release(self):
+    def test_artifact_without_changes__disabled_change_detection__artifact(self):
         repo_root_path = self._setup_repo_with_package("pack1/pack2")
         current_artifact_hash = git.get_dir_hash(repo_root_path, ["pack1/pack2"], exclusions.src_exclusions())
         art_def = buildpom.MavenArtifactDef("g1", "a1", "1.1.0", bazel_package="pack1/pack2", released_version="1.2.0", released_artifact_hash=current_artifact_hash, change_detection=False)
 
-        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions())
+        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions(), change_detection_enabled=True)
 
         self.assertNotEqual(None, art_def.requires_release)
-        self.assertTrue(art_def.requires_release, "Expected artifact to require release")
         self.assertEqual(releasereason.ReleaseReason.ALWAYS, art_def.release_reason)
+        self.assertTrue(art_def.requires_release, "Expected artifact to require release")
+
+    def test_artifact_without_changes__disabled_change_detection__globally(self):
+        repo_root_path = self._setup_repo_with_package("pack1/pack2")
+        current_artifact_hash = git.get_dir_hash(repo_root_path, ["pack1/pack2"], exclusions.src_exclusions())
+        art_def = buildpom.MavenArtifactDef("g1", "a1", "1.1.0", bazel_package="pack1/pack2", released_version="1.2.0", released_artifact_hash=current_artifact_hash, change_detection=True)
+
+        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions(), change_detection_enabled=False)
+
+        self.assertNotEqual(None, art_def.requires_release)
+        self.assertEqual(releasereason.ReleaseReason.ALWAYS, art_def.release_reason)
+        self.assertTrue(art_def.requires_release, "Expected artifact to require release")
 
     def test_artifact_with_changes_since_last_release__new_file(self):
         package = "pack1/pack2"
@@ -91,7 +102,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         self._touch_file_at_path(repo_root_path, package, "", "Foo.java")
         self._commit(repo_root_path)
         
-        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions())
+        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions(), change_detection_enabled=True)
 
         self.assertNotEqual(None, art_def.requires_release)
         self.assertTrue(art_def.requires_release, "Expected artifact to require release")
@@ -108,7 +119,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         self._touch_file_at_path(repo_root_path, package, "", "Blah.java")
         self._commit(repo_root_path)
         
-        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions())
+        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions(), change_detection_enabled=True)
 
         self.assertNotEqual(None, art_def.requires_release)
         self.assertTrue(art_def.requires_release, "Expected artifact to require release")
@@ -125,7 +136,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         current_artifact_hash = git.get_dir_hash(repo_root_path, [package1, package2], exclusions.src_exclusions())
         art_def = buildpom.MavenArtifactDef("g1", "a1", "1.1.0", released_version="1.2.0", bazel_package=package1, released_artifact_hash=current_artifact_hash, additional_change_detected_packages=[package2])
         # sanity: no release required
-        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions())
+        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions(), change_detection_enabled=True)
         self.assertNotEqual(None, art_def.requires_release)
         self.assertFalse(art_def.requires_release, "Artifact should not be released")
 
@@ -133,7 +144,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         self._touch_file_at_path(repo_root_path, package2, "", "Blah.java")
         self._commit(repo_root_path)
 
-        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions())
+        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions(), change_detection_enabled=True)
 
         self.assertNotEqual(None, art_def.requires_release)
         self.assertTrue(art_def.requires_release, "Artifact should not be released")
@@ -153,7 +164,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         self._touch_file_at_path(repo_root_path, package2, "", "Blah.java")
         self._commit(repo_root_path)
 
-        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions())
+        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions(), change_detection_enabled=True)
 
         self.assertNotEqual(None, art_def.requires_release)
         self.assertFalse(art_def.requires_release, "Artifact should not be released")
@@ -172,7 +183,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         self._touch_file_at_path(repo_root_path, package, "", "Foo.java")
         # ... but DON't commit
         
-        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions())
+        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions(), change_detection_enabled=True)
 
         self.assertNotEqual(None, art_def.requires_release)
         self.assertTrue(art_def.requires_release, "Expected artifact to require release")
@@ -190,7 +201,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         self._touch_file_at_path(repo_root_path, package, "MVN-INF", "BUILD.pom")
         self._commit(repo_root_path)
         
-        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions())
+        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions(), change_detection_enabled=True)
 
         self.assertNotEqual(None, art_def.requires_release)
         self.assertFalse(art_def.requires_release)
@@ -208,7 +219,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         self._touch_file_at_path(repo_root_path, package, "docs", "f.md")
         self._commit(repo_root_path)
         
-        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, src_exclusions)
+        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, src_exclusions, change_detection_enabled=True)
 
         self.assertNotEqual(None, art_def.requires_release)
         self.assertFalse(art_def.requires_release)
@@ -226,7 +237,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         self._touch_file_at_path(repo_root_path, package, "f", ".gitignore")
         self._commit(repo_root_path)
         
-        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, src_exclusions)
+        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, src_exclusions, change_detection_enabled=True)
 
         self.assertNotEqual(None, art_def.requires_release)
         self.assertFalse(art_def.requires_release)
@@ -243,7 +254,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         self._touch_file_at_path(repo_root_path, package, "MVN-INF", "BUILD.pom.released")
         self._commit(repo_root_path)
         
-        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions())
+        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions(), change_detection_enabled=True)
 
         self.assertNotEqual(None, art_def.requires_release)
         self.assertFalse(art_def.requires_release)
@@ -260,7 +271,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         self._touch_file_at_path(repo_root_path, package, "MVN-INF", "pom.xml.released")
         self._commit(repo_root_path)
         
-        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions())
+        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions(), change_detection_enabled=True)
 
         self.assertNotEqual(None, art_def.requires_release)
         self.assertFalse(art_def.requires_release)
@@ -284,7 +295,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         self._touch_file_at_path(repo_root_path, package, "src/test", "MyTest.java")
         self._commit(repo_root_path)
 
-        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, src_exclusions)
+        art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, src_exclusions, change_detection_enabled=True)
 
         self.assertNotEqual(None, art_def.requires_release)
         self.assertFalse(art_def.requires_release)

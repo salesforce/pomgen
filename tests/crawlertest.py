@@ -7,6 +7,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 
 from common.os_util import run_cmd
 from common import maveninstallinfo
+from config import config
 from config import exclusions
 from crawl import crawler
 from crawl import dependencymd as dependencymdm
@@ -20,8 +21,10 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+
 GROUP_ID = "group"
 POM_TEMPLATE_FILE = "foo.template"
+
 
 class CrawlerTest(unittest.TestCase):
 
@@ -59,7 +62,7 @@ class CrawlerTest(unittest.TestCase):
         os.chdir(self.repo_root_path)
         depmd = dependencymdm.DependencyMetadata(None)
         ws = workspace.Workspace(self.repo_root_path,
-                                 [], exclusions.src_exclusions(),
+                                 config=config.Config(),
                                  maven_install_info=maveninstallinfo.NOOP,
                                  pom_content=pomcontent.NOOP,
                                  dependency_metadata=depmd)

@@ -24,6 +24,10 @@ maven_install_paths=maven_install.json,
 excluded_dependency_paths=projects/protos/,
 
 [artifact]
+# Globally toggles change detection, the default value is on (True).
+# See /docs/change_detection.md
+change_detection_enabled=True
+
 # Paths not considered when determining whether an artifact has changed
 excluded_relative_paths=src/tests,
 
@@ -41,7 +45,7 @@ transitives_versioning_mode=semver|counter
 # The same value can also be specified by setting the environment variable
 # POMGEN_JAR_CLASSIFIER - the environment variable takes precedence over the
 # value set in this cfg file
-jar_classifier=javax
+jar_classifier=
 """
 
 try:
@@ -93,6 +97,7 @@ def load(repo_root, verbose=False):
         excluded_src_file_extensions=artifact("excluded_extensions", (".md",)),
         transitives_versioning_mode=artifact("transitives_versioning_mode", "semver", valid_values=("semver", "counter")),
         jar_artifact_classifier=artifact("jar_classifier", None),
+        change_detection=artifact("change_detection", True),
     )
 
     if verbose:
@@ -123,7 +128,8 @@ class Config:
                  excluded_src_file_names=(),
                  excluded_src_file_extensions=(),
                  transitives_versioning_mode="semver",
-                 jar_artifact_classifier=None):
+                 jar_artifact_classifier=None,
+                 change_detection=True):
 
         # general
         self.pom_template_path_and_content=pom_template_path_and_content
@@ -138,6 +144,7 @@ class Config:
         self.excluded_src_file_extensions = _to_tuple(excluded_src_file_extensions)
         self.transitives_versioning_mode = transitives_versioning_mode
         self._jar_artifact_classifier = jar_artifact_classifier
+        self._change_detection = change_detection
 
     @property
     def pom_template(self):
@@ -150,6 +157,10 @@ class Config:
         if classifier is None:
             classifier = self._jar_artifact_classifier
         return classifier
+
+    @property
+    def change_detection_enabled(self):
+        return self._change_detection
 
     @property
     def all_src_exclusions(self):

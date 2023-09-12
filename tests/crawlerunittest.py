@@ -7,6 +7,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 
 from common import maveninstallinfo
 from common import pomgenmode
+from config import config
 from crawl import buildpom
 from crawl import crawler as crawlerm
 from crawl import dependency
@@ -536,8 +537,7 @@ class CrawlerUnitTest(unittest.TestCase):
     def _get_workspace(self):
         depmd = dependencymdm.DependencyMetadata(None)
         return workspace.Workspace(repo_root_path="a/b/c",
-                                   excluded_dependency_paths=[],
-                                   source_exclusions=[],
+                                   config=config.Config(),
                                    maven_install_info=maveninstallinfo.NOOP,
                                    pom_content="",
                                    dependency_metadata=depmd)

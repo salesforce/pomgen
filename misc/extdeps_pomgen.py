@@ -75,12 +75,8 @@ def main(args):
     cfg = config.load(repo_root)
     mvn_install_info = maveninstallinfo.MavenInstallInfo(cfg.maven_install_paths)    
     depmd = dependencymdm.DependencyMetadata(cfg.jar_artifact_classifier)
-    ws = workspace.Workspace(repo_root, 
-                             cfg.excluded_dependency_paths,
-                             cfg.all_src_exclusions,
-                             mvn_install_info,
-                             pomcontent.NOOP,
-                             dependency_metadata=depmd)
+    ws = workspace.Workspace(repo_root,  cfg, mvn_install_info,
+                             pomcontent.NOOP, dependency_metadata=depmd)
 
     group_id = "all_ext_deps_group" if args.group_id is None else args.group_id
     artifact_id = "all_ext_deps_art" if args.artifact_id is None else args.artifact_id
