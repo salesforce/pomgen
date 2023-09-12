@@ -10,6 +10,7 @@ import os
 import tempfile
 import unittest
 
+
 class ConfigTest(unittest.TestCase):
 
     def test_pom_template(self):
@@ -126,6 +127,45 @@ jar_classifier=jdk8
         finally:
             del os.environ["POMGEN_JAR_CLASSIFIER"]
 
+    def test_change_detection__default(self):
+        repo_root = tempfile.mkdtemp("root")
+        os.mkdir(os.path.join(repo_root, "config"))
+        pom_template_path = self._write_file(repo_root, "WORKSPACE", "foo")
+        pom_template_path = self._write_file(repo_root, "config/pom_template.xml", "foo")
+        self._write_file(repo_root, ".pomgenrc", "")
+
+        cfg = config.load(repo_root)
+
+        self.assertTrue(cfg.change_detection_enabled)
+
+    def test_change_detection__enabled(self):
+        repo_root = tempfile.mkdtemp("root")
+        os.mkdir(os.path.join(repo_root, "config"))
+        pom_template_path = self._write_file(repo_root, "WORKSPACE", "foo")
+        pom_template_path = self._write_file(repo_root, "config/pom_template.xml", "foo")
+        self._write_file(repo_root, ".pomgenrc", """
+[artifact]
+change_detection_enabled=True
+""")
+
+        cfg = config.load(repo_root)
+
+        self.assertTrue(cfg.change_detection_enabled)
+
+    def test_change_detection__disabled(self):
+        repo_root = tempfile.mkdtemp("root")
+        os.mkdir(os.path.join(repo_root, "config"))
+        pom_template_path = self._write_file(repo_root, "WORKSPACE", "foo")
+        pom_template_path = self._write_file(repo_root, "config/pom_template.xml", "foo")
+        self._write_file(repo_root, ".pomgenrc", """
+[artifact]
+change_detection_enabled=False
+""")
+
+        cfg = config.load(repo_root)
+
+        self.assertFalse(cfg.change_detection_enabled)
+
     def test_str(self):
         repo_root = tempfile.mkdtemp("root")
         pom_template_path = self._write_file(repo_root, "pom_template", "foo")
@@ -135,24 +175,6 @@ jar_classifier=jdk8
 
         self.assertIn("pom_template_path=%s" % pom_template_path, str(cfg))
         self.assertIn("maven_install_paths=('maven', 'misc')" , str(cfg))
-
-    def _write_pomgenrc(self, repo_root, pom_template_path, maven_install_paths):
-        content = """[general]
-pom_template_path=%s
-""" % pom_template_path
-
-        if maven_install_paths is not None:
-            content = content + """
-maven_install_paths=%s
-""" % maven_install_paths
-
-        self._write_file(repo_root, ".pomgenrc", content)
-
-    def _write_file(self, repo_root, relative_path, content):
-        path = os.path.join(repo_root, relative_path)
-        with open(path, "w") as f:
-            f.write(content)
-        return path
 
     def test_pathsep__excluded_dependency_paths(self):
         cfg = config.Config(excluded_dependency_paths="abc")
@@ -188,6 +210,25 @@ maven_install_paths=%s
         cfg = config.Config(excluded_src_file_extensions="")
         self.assertTrue(isinstance(cfg.excluded_src_file_extensions, tuple))
         self.assertEqual(0, len(cfg.excluded_src_file_extensions))
+
+    def _write_pomgenrc(self, repo_root, pom_template_path, maven_install_paths):
+        content = """[general]
+pom_template_path=%s
+""" % pom_template_path
+
+        if maven_install_paths is not None:
+            content = content + """
+maven_install_paths=%s
+""" % maven_install_paths
+
+        self._write_file(repo_root, ".pomgenrc", content)
+
+    def _write_file(self, repo_root, relative_path, content):
+        path = os.path.join(repo_root, relative_path)
+        with open(path, "w") as f:
+            f.write(content)
+        return path
+
 
 if __name__ == '__main__':
     unittest.main()
