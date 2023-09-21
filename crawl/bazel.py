@@ -108,33 +108,35 @@ def parse_maven_install(mvn_install_name, json_file_path):
     with open(json_file_path, "r") as f:
         content = f.read()
         install_json = json.loads(content)
-        json_dep_tree = install_json["dependency_tree"]
-        conflict_resolution = _parse_conflict_resolution(json_dep_tree, mvn_install_name)
-        json_deps = json_dep_tree["dependencies"]
-        for json_dep in json_deps:
-            coord = json_dep["coord"]
+
+        artifacts = install_json["artifacts"]
+        deps = install_json["dependencies"]
+        repository_key = list(install_json["repositories"].keys())[0]
+        all_artifacts = install_json["repositories"][repository_key]
+
+        conflict_resolution = _parse_conflict_resolution(install_json, mvn_install_name)
+
+        for json_dep in all_artifacts:
+            group_id_artifact_id = ":".join(json_dep.split(":")[:2]) # remove classifier/package, so we can grab version from artifacts list
+            version = artifacts[group_id_artifact_id]["version"]
+            coord = json_dep + ":" + version
             dep = dependency.new_dep_from_maven_art_str(coord, mvn_install_name)
             if dep in conflict_resolution:
                 dep = conflict_resolution[dep]
             if dep.classifier != "sources":
                 transitives = []
-                for transitive_gav in json_dep["dependencies"]:
-                    transitive_dep = dependency.new_dep_from_maven_art_str(transitive_gav, mvn_install_name)
-                    if transitive_dep in conflict_resolution:
-                        transitive_dep = conflict_resolution[transitive_dep]
-                    transitives.append(transitive_dep)
-                # exclusions only specify group_id:artifact_id - we use
-                # dependency.Dependency instances instead of raw strings for
-                # consistency, but then we need to add a dummy version
-                if "exclusions" in json_dep:
-                    exclusions = [dependency.new_dep_from_maven_art_str(
-                        "%s:%s" % (d, dependency.GA_DUMMY_DEP_VERSION),
-                        mvn_install_name) for d in json_dep["exclusions"]]
-                else:
-                    exclusions = ()
+                if json_dep in deps:
+                    for transitive_gav in deps[json_dep]:
+                        group_id_artifact_id = ":".join(transitive_gav.split(":")[:2]) # remove classifier/package, so we can grab version from artifacts list
+                        version = artifacts[group_id_artifact_id]["version"]
+                        transitive_gav = transitive_gav + ":" + version
+                        transitive_dep = dependency.new_dep_from_maven_art_str(transitive_gav, mvn_install_name)
+                        if transitive_dep in conflict_resolution:
+                            transitive_dep = conflict_resolution[transitive_dep]
+                        transitives.append(transitive_dep)
+                exclusions = ()
                 result.append((dep, transitives, exclusions))
     return result
-
 
 def target_pattern_to_path(target_pattern):
     """
