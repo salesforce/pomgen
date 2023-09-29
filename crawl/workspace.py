@@ -24,6 +24,7 @@ class Workspace:
                  pom_content, dependency_metadata, verbose=False):
         self.repo_root_path = repo_root_path
         self.excluded_dependency_paths = config.excluded_dependency_paths
+        self.excluded_dependency_labels = config.excluded_dependency_labels
         self.source_exclusions = config.all_src_exclusions
         self.pom_content = pom_content
         self.verbose = verbose
@@ -116,6 +117,9 @@ class Workspace:
         return [art_def.bazel_package for art_def in art_defs if art_def.pom_generation_mode.produces_artifact]
 
     def _parse_dep_label(self, dep_label):
+        if dep_label in self.excluded_dependency_labels:
+            return None
+
         if dep_label.startswith("@"):
             if dep_label not in self._name_to_ext_deps:
                 print(self._name_to_ext_deps.values())
