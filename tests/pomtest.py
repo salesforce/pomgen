@@ -98,8 +98,8 @@ class PomTest(unittest.TestCase):
             <version>1.0.0</version>
             <exclusions>
                 <exclusion>
-                    <groupId>ge1</groupId>
-                    <artifactId>e1</artifactId>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
                 </exclusion>
             </exclusions>""", generated_pom)
 
@@ -107,6 +107,12 @@ class PomTest(unittest.TestCase):
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>1.2.3</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>""", generated_pom)
 
             # transitive of guava, but also top-level
@@ -114,6 +120,12 @@ class PomTest(unittest.TestCase):
             <groupId>gt2</groupId>
             <artifactId>t2</artifactId>
             <version>1.0.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>""", generated_pom)
 
             # transitive of guava
@@ -121,6 +133,12 @@ class PomTest(unittest.TestCase):
             <groupId>gt1</groupId>
             <artifactId>t1</artifactId>
             <version>1.0.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>""", generated_pom)
 
             # deps are BUILD file order
@@ -663,11 +681,23 @@ __pomgen.end_dependency_customization__
                 <groupId>com.grail.srpc</groupId>
                 <artifactId>srpc-api</artifactId>
                 <version>5.6.7</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>*</groupId>
+                        <artifactId>*</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>cg</groupId>
                 <artifactId>ca</artifactId>
                 <version>0.0.1</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>*</groupId>
+                        <artifactId>*</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -691,7 +721,6 @@ __pomgen.end_dependency_customization__
         pomgen.register_dependencies_transitive_closure__library(set([external_dep, internal_dep]))
 
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
-
         self.assertEqual(expected_pom, generated_pom)
 
     def test_template__crawled_external_deps__configured_exclusions(self):
@@ -738,12 +767,8 @@ __pomgen.end_dependency_customization__
                 <classifier>c1</classifier>
                 <exclusions>
                     <exclusion>
-                        <groupId>aaa</groupId>
-                        <artifactId>ea2</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>zzz</groupId>
-                        <artifactId>ea1</artifactId>
+                        <groupId>*</groupId>
+                        <artifactId>*</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>
@@ -765,7 +790,6 @@ __pomgen.end_dependency_customization__
         pomgen.register_dependencies_transitive_closure__library(set([crawled_dep]))
 
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
-
         self.assertEqual(expected_pom, generated_pom)
 
     def test_template__crawled_external_deps__configured_attributes(self):
@@ -802,6 +826,12 @@ __pomgen.end_dependency_customization__
                 <version>0.0.1</version>
                 <classifier>sources</classifier>
                 <scope>test</scope>
+                <exclusions>
+                    <exclusion>
+                        <groupId>*</groupId>
+                        <artifactId>*</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -821,7 +851,6 @@ __pomgen.end_dependency_customization__
         pomgen.register_dependencies_transitive_closure__library(set([crawled_dep]))
 
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
-
         self.assertEqual(expected_pom, generated_pom)
 
     def test_template_unknown_variable(self):
