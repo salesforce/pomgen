@@ -603,21 +603,6 @@ class DynamicPomGen(AbstractPomGen):
 
         return transitives
 
-    def _get_hardcoded_exclusions_for_dep(self, dep):
-        """
-        A few jar artifacts reference dependencies that do not exist; these 
-        need to be excluded explicitly.
-
-        Returns tuples (group_id, artifact_id) to exclude.
-        """
-        if dep.group_id == "com.twitter.common.zookeeper" and \
-           dep.artifact_id in ("client", "group", "server-set"):
-            return (("com.twitter", "finagle-core-java"),
-                    ("com.twitter", "util-core-java"),
-                    ("org.apache.zookeeper", "zookeeper-client"))
-
-        return ()
-
 
 class DependencyManagementPomGen(AbstractPomGen):
     """

@@ -78,16 +78,6 @@ class ParsedDependencies:
         # a mapping of a Dependency instance to its string xml representation
         self._dependency_to_str_repr = dependency_to_str_repr
 
-    def get_parsed_exclusions_for(self, dependency):
-        """
-        Returns the exclusions for the specified dependency that were parsed 
-        out of a pom template.
-
-        The exclusions are returned as a list of Dependency instances.
-        """
-        parsed_dep = self.get_parsed_dependency_for(dependency)
-        return () if parsed_dep is None else self._dependency_to_exclusions[parsed_dep]
-
     def get_parsed_xml_str_for(self, dependency):
         """
         Returns the raw, unformatted xml string of the specified dependency, as
