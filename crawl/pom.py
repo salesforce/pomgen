@@ -492,10 +492,13 @@ class TemplatePomGen(AbstractPomGen):
         deps = _sort(deps)
         for dep in deps:
             dep = self._copy_attributes_from_parsed_dep(dep, pom_template_parsed_deps)
-            dep_has_exclusions = True
+            pom_template_exclusions = pom_template_parsed_deps.get_parsed_exclusions_for(dep)
+            dep_has_exclusions = len(pom_template_exclusions) > 0
             content, indent = self._gen_dependency_element(pomcontenttype, dep, content, indent, close_element=not dep_has_exclusions)
             if dep_has_exclusions:
-                group_and_artifact_ids = [("*","*")]
+                exclusions = list(pom_template_exclusions)
+                exclusions.sort()
+                group_and_artifact_ids = [(d.group_id, d.artifact_id) for d in exclusions]
                 content, indent = self._gen_exclusions(content, indent, group_and_artifact_ids)
                 content, indent = self._xml(content, "dependency", indent, close_element=True)
 

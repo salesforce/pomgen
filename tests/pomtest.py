@@ -681,23 +681,11 @@ __pomgen.end_dependency_customization__
                 <groupId>com.grail.srpc</groupId>
                 <artifactId>srpc-api</artifactId>
                 <version>5.6.7</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>*</groupId>
-                        <artifactId>*</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
             <dependency>
                 <groupId>cg</groupId>
                 <artifactId>ca</artifactId>
                 <version>0.0.1</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>*</groupId>
-                        <artifactId>*</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -767,8 +755,12 @@ __pomgen.end_dependency_customization__
                 <classifier>c1</classifier>
                 <exclusions>
                     <exclusion>
-                        <groupId>*</groupId>
-                        <artifactId>*</artifactId>
+                        <groupId>aaa</groupId>
+                        <artifactId>ea2</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>zzz</groupId>
+                        <artifactId>ea1</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>
@@ -826,12 +818,6 @@ __pomgen.end_dependency_customization__
                 <version>0.0.1</version>
                 <classifier>sources</classifier>
                 <scope>test</scope>
-                <exclusions>
-                    <exclusion>
-                        <groupId>*</groupId>
-                        <artifactId>*</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
         </dependencies>
     </dependencyManagement>
