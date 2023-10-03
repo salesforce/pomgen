@@ -578,9 +578,11 @@ class DynamicPomGen(AbstractPomGen):
         for dep in dependencies:
             content, indent = self._gen_dependency_element(pomcontenttype, dep, content, indent, close_element=False)
             # handle <exclusions>
-            # exclude all transitives from <dependencies> as all transitives are already root level anyway
-            excluded_group_and_artifact_ids = [("*", "*")]
-            content, indent = self._gen_exclusions(content, indent, excluded_group_and_artifact_ids)
+            # if a dep is built in the shared-repo, do not add any exclusions, they will do that themselves.
+            if not dep.bazel_buildable:
+                # exclude all transitives from <dependencies> as all transitives are already root level anyway
+                excluded_group_and_artifact_ids = [("*", "*")]
+                content, indent = self._gen_exclusions(content, indent, excluded_group_and_artifact_ids)
             content, indent = self._xml(content, "dependency", indent, close_element=True)
         return content
 

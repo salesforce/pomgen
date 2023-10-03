@@ -92,6 +92,8 @@ def query_all_libraries(repository_root_path, packages, verbose=False):
                 package = os.path.dirname(package)
     return sorted(lib_roots)
 
+def _normalize_dependency_string_to_group_id_artifact_id(dependency):
+    return ":".join(dependency.split(":")[:2]) # remove classifier/package, so we can grab version from artifacts list
 
 def parse_maven_install(mvn_install_name, json_file_path):
     """
@@ -117,7 +119,7 @@ def parse_maven_install(mvn_install_name, json_file_path):
         conflict_resolution = _parse_conflict_resolution(install_json, mvn_install_name)
 
         for json_dep in all_artifacts:
-            group_id_artifact_id = ":".join(json_dep.split(":")[:2]) # remove classifier/package, so we can grab version from artifacts list
+            group_id_artifact_id = _normalize_dependency_string_to_group_id_artifact_id(json_dep)
             version = artifacts[group_id_artifact_id]["version"]
             coord = json_dep + ":" + version
             dep = dependency.new_dep_from_maven_art_str(coord, mvn_install_name)
@@ -125,15 +127,34 @@ def parse_maven_install(mvn_install_name, json_file_path):
                 dep = conflict_resolution[dep]
             if dep.classifier != "sources":
                 transitives = []
-                if json_dep in deps:
-                    for transitive_gav in deps[json_dep]:
-                        group_id_artifact_id = ":".join(transitive_gav.split(":")[:2]) # remove classifier/package, so we can grab version from artifacts list
-                        version = artifacts[group_id_artifact_id]["version"]
+                transitives_to_process = []
+                if group_id_artifact_id in deps:
+                    for transitive_gav in deps[group_id_artifact_id]:
+                        transitive_group_id_artifact_id = _normalize_dependency_string_to_group_id_artifact_id(transitive_gav)
+                        version = artifacts[transitive_group_id_artifact_id]["version"]
                         transitive_gav = transitive_gav + ":" + version
                         transitive_dep = dependency.new_dep_from_maven_art_str(transitive_gav, mvn_install_name)
                         if transitive_dep in conflict_resolution:
                             transitive_dep = conflict_resolution[transitive_dep]
                         transitives.append(transitive_dep)
+                        # We need to process the transitives dependencies too to get the full transitive closure.
+                        transitives_to_process.append(transitive_gav)
+                    # Process dependencies of transitives in the same way as we do above.
+                    # This is done recursively so if we encounter a transitive that we haven't processed yet, append it to be processed.
+                    for transitive_to_process in transitives_to_process:
+                        transitive_group_id_artifact_id = _normalize_dependency_string_to_group_id_artifact_id(transitive_to_process)
+                        if transitive_group_id_artifact_id in deps:
+                            for transitive_gav in deps[transitive_group_id_artifact_id]:
+                                transitive_group_id_artifact_id = _normalize_dependency_string_to_group_id_artifact_id(transitive_gav)
+                                version = artifacts[transitive_group_id_artifact_id]["version"]
+                                transitive_gav = transitive_gav + ":" + version
+                                transitive_dep = dependency.new_dep_from_maven_art_str(transitive_gav, mvn_install_name)
+                                if transitive_dep in conflict_resolution:
+                                    transitive_dep = conflict_resolution[transitive_dep]
+                                if transitive_dep not in transitives:
+                                    transitives.append(transitive_dep)
+                                if transitive_gav not in transitives_to_process:
+                                    transitives_to_process.append(transitive_gav)
                 exclusions = ()
                 result.append((dep, transitives, exclusions))
     return result
