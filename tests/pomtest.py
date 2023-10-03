@@ -709,6 +709,7 @@ __pomgen.end_dependency_customization__
         pomgen.register_dependencies_transitive_closure__library(set([external_dep, internal_dep]))
 
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
+
         self.assertEqual(expected_pom, generated_pom)
 
     def test_template__crawled_external_deps__configured_exclusions(self):
@@ -782,6 +783,7 @@ __pomgen.end_dependency_customization__
         pomgen.register_dependencies_transitive_closure__library(set([crawled_dep]))
 
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
+
         self.assertEqual(expected_pom, generated_pom)
 
     def test_template__crawled_external_deps__configured_attributes(self):
@@ -837,6 +839,7 @@ __pomgen.end_dependency_customization__
         pomgen.register_dependencies_transitive_closure__library(set([crawled_dep]))
 
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
+
         self.assertEqual(expected_pom, generated_pom)
 
     def test_template_unknown_variable(self):
