@@ -166,6 +166,20 @@ change_detection_enabled=False
 
         self.assertFalse(cfg.change_detection_enabled)
 
+    def test_excluded_labels(self):
+        repo_root = tempfile.mkdtemp("root")
+        os.mkdir(os.path.join(repo_root, "config"))
+        pom_template_path = self._write_file(repo_root, "WORKSPACE", "foo")
+        pom_template_path = self._write_file(repo_root, "config/pom_template.xml", "foo")
+        self._write_file(repo_root, ".pomgenrc", """
+[crawler]
+excluded_dependency_labels=  123    ,   444
+""")
+
+        cfg = config.load(repo_root)
+
+        self.assertEquals(("123", "444"), cfg.excluded_dependency_labels)
+
     def test_str(self):
         repo_root = tempfile.mkdtemp("root")
         pom_template_path = self._write_file(repo_root, "pom_template", "foo")

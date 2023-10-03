@@ -17,7 +17,6 @@ from crawl import dependencymd as dependencym
 from crawl import git
 from crawl import pomcontent
 from crawl import workspace
-
 import os
 import tempfile
 import unittest
@@ -138,6 +137,22 @@ class WorkspaceTest(unittest.TestCase):
         self.assertEqual("logback-classic", deps[0].artifact_id)
         self.assertEqual("1.2.3", deps[0].version)
         self.assertIsNone(deps[0].bazel_package)
+
+    def test_excluded_dependency_labels(self):
+        """
+        Verifies that excluded dependency labels are not added to the list of 
+        dependencies.
+        """
+        depmd = dependencym.DependencyMetadata(None)
+        ws = workspace.Workspace("some/path",
+            config=self._get_config(excluded_dependency_labels=["@maven//:ch_qos_logback_logback_classic",]),
+            maven_install_info=self._mocked_mvn_install_info("maven"),
+            pom_content=pomcontent.NOOP,
+            dependency_metadata=depmd)
+
+        deps = ws.parse_dep_labels(["@maven//:ch_qos_logback_logback_classic"])
+
+        self.assertEqual(0, len(deps))
         
     def test_parse_ext_dep_with_reserved_words(self):
         """
@@ -486,9 +501,8 @@ rules_jvm_external_setup()
         with open(workspace_file_path, "w") as f:
            f.write(workspace_file)
 
-    def _get_config(self, excluded_dependency_paths=[]):
-        return config.Config(
-            excluded_dependency_paths=excluded_dependency_paths)
+    def _get_config(self, **kwargs):
+        return config.Config(**kwargs)
 
 
 if __name__ == '__main__':

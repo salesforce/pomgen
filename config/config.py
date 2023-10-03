@@ -5,56 +5,13 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 
 
-Responsible for loading a config file of the following format:
-
-[general]
-# Path to the pom template, used when generating pom.xml files for jar artifacts
-pom_template_path=
-# A list of paths to pinned maven_install json files.
-# Globs are supported, for example: tools/maven_install/*.json
-maven_install_paths=maven_install.json,
-
-[crawler]
-# A list of path prefixes that are not crawled by pomgen.  Any dependency
-# that starts with one of the strings returned by this method is skipped 
-# and not processed (and not included in the generated pom.xml).
-# These dependencies are similar to Maven's "provided" scope: if they are
-# needed at runtime, it is expected that the final runtime assembly
-# contains them.
-excluded_dependency_paths=projects/protos/,
-
-[artifact]
-# Globally toggles change detection, the default value is on (True).
-# See /docs/change_detection.md
-change_detection_enabled=True
-
-# Paths not considered when determining whether an artifact has changed
-excluded_relative_paths=src/tests,
-
-# File names not considered when determining whether an artifact has changed
-excluded_filenames=.gitignore,
-
-# Ignored file extensions when determining whether an artifact has changed
-excluded_extensions=.md,
-
-# query versioning mode for proposed next versions
-transitives_versioning_mode=semver|counter
-
-# The classifier used for all jars artifacts assembled by pomgen
-# By default, no classifier is set
-# The same value can also be specified by setting the environment variable
-# POMGEN_JAR_CLASSIFIER - the environment variable takes precedence over the
-# value set in this cfg file
-jar_classifier=
+Responsible for loading a config file. For the config file format, see /README.md#configuration.
 """
 
-try:
-    import ConfigParser as configparser
-except ImportError:
-    import configparser
 
-from config import exclusions
 from common import logger
+from config import exclusions
+import configparser
 import os
 
 
@@ -92,6 +49,7 @@ def load(repo_root, verbose=False):
         pom_template_path_and_content=_read_files(repo_root, pom_template_p)[0],
         maven_install_paths=gen("maven_install_paths", ("maven_install.json",)),
         excluded_dependency_paths=crawl("excluded_dependency_paths", ()),
+        excluded_dependency_labels=crawl("excluded_dependency_labels", ()),
         excluded_src_relpaths=artifact("excluded_relative_paths", ("src/test",)),
         excluded_src_file_names=artifact("excluded_filenames", (".gitignore",)),
         excluded_src_file_extensions=artifact("excluded_extensions", (".md",)),
@@ -124,6 +82,7 @@ class Config:
                  pom_template_path_and_content=("",""),
                  maven_install_paths=(),
                  excluded_dependency_paths=(),
+                 excluded_dependency_labels=(),
                  excluded_src_relpaths=(),
                  excluded_src_file_names=(),
                  excluded_src_file_extensions=(),
@@ -137,6 +96,7 @@ class Config:
 
         # crawler
         self.excluded_dependency_paths = _add_pathsep(_to_tuple(excluded_dependency_paths))
+        self.excluded_dependency_labels = _to_tuple(excluded_dependency_labels)
 
         # artifact
         self.excluded_src_relpaths = _add_pathsep(_to_tuple(excluded_src_relpaths))
@@ -178,6 +138,7 @@ maven_install_paths=%s
 
 [crawler]
 excluded_dependency_paths=%s
+excluded_dependency_labels=%s
 
 [artifact]
 excluded_relative_paths=%s
@@ -185,14 +146,17 @@ excluded_filenames=%s
 excluded_extensions=%s
 transitives_versioning_mode=%s
 jar_artifact_classifier=%s
+change_detection_enabled=%s
 """ % (self.pom_template_path_and_content[0],
        self.maven_install_paths,
        self.excluded_dependency_paths,
+       self.excluded_dependency_labels,
        self.excluded_src_relpaths,
        self.excluded_src_file_names,
        self.excluded_src_file_extensions,
        self.transitives_versioning_mode,
-       self.jar_artifact_classifier)
+       self.jar_artifact_classifier,
+       self.change_detection_enabled)
 
 
 def _to_tuple(thing):

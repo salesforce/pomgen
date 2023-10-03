@@ -85,16 +85,28 @@ pom_template_path=
 # Example value: tools/maven_install/*.json,another/path/to/mvn_install.json,
 maven_install_paths=
 
+
 [crawler]
-# A list of path prefixes that are not crawled by pomgen.  Any dependency
-# that starts with one of the strings returned by this method is skipped 
-# and not processed (and not included in the generated pom.xml).
+# A list of path prefixes that are not crawled by pomgen.  Any source dependency
+# that starts with one of the specified paths is skipped and not processed
+# (and not included in the generated pom.xml).
 # These dependencies are similar to Maven's "provided" scope: if they are
 # needed at runtime, it is expected that the final runtime assembly
 # contains them.
-# Default value: ""
+# Default value: []
 # Example value: projects/protos/,
 excluded_dependency_paths=
+
+# A list of labels that are skipped over by pomgen.  Any dependency
+# that matches one of the specified strings is skipped and not processed
+# (and not included in the generated pom.xml).
+# These dependencies are similar to Maven's "provided" scope: if they are
+# needed at runtime, it is expected that the final runtime assembly
+# contains them.
+# Default value: []
+# Example value: @maven//:com_google_guava_guava,
+excluded_dependency_labels=
+
 
 [artifact]
 # Global toggle for change detection (docs/change_detection.md)
