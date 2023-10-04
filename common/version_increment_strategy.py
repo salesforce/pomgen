@@ -18,7 +18,7 @@ def get_rel_qualifier_increment_strategy(last_released_version):
     See /docs/ci.md#using-a-different-version-increment-mode-for-transitives.
     """
     return RelQualifierIncrementStrategy(last_released_version)
-    
+
 
 def get_version_increment_strategy(strategy_name):
     assert strategy_name in VERSION_INCREMENT_STRATEGIES, "Unknown version increment strategy [%s], valid strategies are %s" % (strategy_name, VERSION_INCREMENT_STRATEGIES)
@@ -110,9 +110,11 @@ class MajorVersionIncrementStrategy(DefaultVersionIncrementStrategy):
         1.0.0 -> 2.0.0
         1.1.1 -> 2.0.0
         1.0.9 -> 2.0.0
+        1.1   -> 2.0.0
+        1     -> 2.0.0
         """
-        i = current_version.index(".")
-        major_component = int(current_version[0:i])
+        components = current_version.split(".")
+        major_component = int(components[0])
         return "%i.0.0" % (major_component + 1)
 
 
@@ -126,9 +128,14 @@ class MinorVersionIncrementStrategy(DefaultVersionIncrementStrategy):
 
         1.0.0 -> 1.1.0
         1.1.1 -> 1.2.0
+        1.1   -> 1.2.0
+        1     -> 1.1.0
         """
         components = current_version.split(".")
-        minor_component = int(components[1])
+        if len(components) > 1:
+            minor_component = int(components[1])
+        else:
+            minor_component = 0
         return "%s.%i.0" % (components[0], minor_component + 1)
 
 
@@ -142,10 +149,20 @@ class PatchVersionIncrementStrategy(DefaultVersionIncrementStrategy):
 
         1.0.0 -> 1.0.1
         1.1.1 -> 1.1.2
+        1.2   -> 1.2.1
+        1     -> 1.0.1
         """
         components = current_version.split(".")
-        patch_component = int(components[2])
-        return "%s.%s.%i" % (components[0], components[1], patch_component + 1)
+        if len(components) > 2:
+            minor_component = components[1]
+            patch_component = int(components[2])
+        elif len(components) == 2:
+            minor_component = components[1]
+            patch_component = 0
+        else:
+            minor_component = 0
+            patch_component = 0
+        return "%s.%s.%i" % (components[0], minor_component, patch_component + 1)
 
 
 class CalverVersionIncrementStrategy(DefaultVersionIncrementStrategy):
@@ -232,7 +249,7 @@ def _get_qualifier_and_version(version):
     """
     Splits the version qualifier from the version and returns a tuple:
     (qualifier, version)
-        
+
     If the specified version doesn't have a qualifier, returns
     (None, version)
     """
