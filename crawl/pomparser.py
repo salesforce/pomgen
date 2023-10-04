@@ -80,9 +80,8 @@ class ParsedDependencies:
 
     def get_parsed_exclusions_for(self, dependency):
         """
-        Returns the exclusions for the specified dependency that were parsed 
+        Returns the exclusions for the specified dependency that were parsed
         out of a pom template.
-
         The exclusions are returned as a list of Dependency instances.
         """
         parsed_dep = self.get_parsed_dependency_for(dependency)

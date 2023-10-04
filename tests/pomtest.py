@@ -75,6 +75,12 @@ class PomTest(unittest.TestCase):
         try:
             bazel.query_java_library_deps_attributes = lambda r, p: ("@maven//:com_google_guava_guava", "@maven//:aopalliance_aopalliance", "@maven//:ch_qos_logback_logback_classic", "@maven//:gt2_t2" )
             _, _, deps = pomgen.process_dependencies()
+            deps = list(deps)
+            # appending a dependency that is built in the shared-repo (should not have an exclusions block)
+            artifact_def = buildpom.MavenArtifactDef("shared-repo", "my-dep", "1.2.3")
+            dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+            deps.append(dep)
+            deps = tuple(deps)
             pomgen.register_dependencies(deps)
             generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
 
@@ -98,8 +104,8 @@ class PomTest(unittest.TestCase):
             <version>1.0.0</version>
             <exclusions>
                 <exclusion>
-                    <groupId>ge1</groupId>
-                    <artifactId>e1</artifactId>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
                 </exclusion>
             </exclusions>""", generated_pom)
 
@@ -107,6 +113,12 @@ class PomTest(unittest.TestCase):
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>1.2.3</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>""", generated_pom)
 
             # transitive of guava, but also top-level
@@ -114,6 +126,19 @@ class PomTest(unittest.TestCase):
             <groupId>gt2</groupId>
             <artifactId>t2</artifactId>
             <version>1.0.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>""", generated_pom)
+
+            # this dependency shouldn't have the exclusions block due to it having "bazel_buildable=True"
+            self.assertIn("""<dependency>
+            <groupId>shared-repo</groupId>
+            <artifactId>my-dep</artifactId>
+            <version>1.2.3</version>
         </dependency>""", generated_pom)
 
             # transitive of guava
@@ -121,6 +146,12 @@ class PomTest(unittest.TestCase):
             <groupId>gt1</groupId>
             <artifactId>t1</artifactId>
             <version>1.0.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>""", generated_pom)
 
             # deps are BUILD file order

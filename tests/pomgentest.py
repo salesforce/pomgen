@@ -43,8 +43,10 @@ class PomGenTest(unittest.TestCase):
         self._add_pom_template()
         self._write_file("","","maven_install.json", """
 {
-    "dependency_tree": {
-        "dependencies": []
+    "artifacts": {},
+    "dependencies": {},
+    "repositories": {
+        "https://maven.google.com/": []
     }
 }
 """)

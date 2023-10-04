@@ -578,11 +578,11 @@ class DynamicPomGen(AbstractPomGen):
         for dep in dependencies:
             content, indent = self._gen_dependency_element(pomcontenttype, dep, content, indent, close_element=False)
             # handle <exclusions>
-            excluded_group_and_artifact_ids = [(d.group_id, d.artifact_id) for d in self._workspace.dependency_metadata.get_transitive_exclusions(dep)]
-            excluded_group_and_artifact_ids += self._get_hardcoded_exclusions_for_dep(dep)
-            if len(excluded_group_and_artifact_ids) > 0:
+            # if a dep is built in the shared-repo, do not add any exclusions, they will do that themselves.
+            if not dep.bazel_buildable:
+                # exclude all transitives from <dependencies> as all transitives are already root level anyway
+                excluded_group_and_artifact_ids = [("*", "*")]
                 content, indent = self._gen_exclusions(content, indent, excluded_group_and_artifact_ids)
-
             content, indent = self._xml(content, "dependency", indent, close_element=True)
         return content
 
@@ -608,21 +608,6 @@ class DynamicPomGen(AbstractPomGen):
                     transitives_set.add(transitive)
 
         return transitives
-
-    def _get_hardcoded_exclusions_for_dep(self, dep):
-        """
-        A few jar artifacts reference dependencies that do not exist; these 
-        need to be excluded explicitly.
-
-        Returns tuples (group_id, artifact_id) to exclude.
-        """
-        if dep.group_id == "com.twitter.common.zookeeper" and \
-           dep.artifact_id in ("client", "group", "server-set"):
-            return (("com.twitter", "finagle-core-java"),
-                    ("com.twitter", "util-core-java"),
-                    ("org.apache.zookeeper", "zookeeper-client"))
-
-        return ()
 
 
 class DependencyManagementPomGen(AbstractPomGen):
