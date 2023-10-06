@@ -27,6 +27,12 @@ class VersionIncrementStrategyTest(unittest.TestCase):
         self.assertEqual("2.0.0-SNAPSHOT", s.get_next_development_version("1.0.5"))
         self.assertEqual("2.0.0-qual1-SNAPSHOT", s.get_next_development_version("1.9.99-qual1"))
 
+        self.assertEqual("2.0.0-SNAPSHOT", s.get_next_development_version("1-SNAPSHOT"))
+        self.assertEqual("2.0.0-SNAPSHOT", s.get_next_development_version("1"))
+        self.assertEqual("1", s.get_next_release_version("1"))
+        self.assertEqual("2.0.0-SNAPSHOT", s.get_next_development_version("1.0-SNAPSHOT"))
+        self.assertEqual("1.0", s.get_next_release_version("1.0"))
+
     def test_minor_version(self):
         s = vis.get_version_increment_strategy("minor")
 
@@ -41,6 +47,12 @@ class VersionIncrementStrategyTest(unittest.TestCase):
         self.assertEqual("1.1.0-SNAPSHOT", s.get_next_development_version("1.0.1"))
         self.assertEqual("1.1.0-SNAPSHOT", s.get_next_development_version("1.0.9"))
         self.assertEqual("1.2.0-qual1-SNAPSHOT", s.get_next_development_version("1.1.99-qual1"))
+
+        self.assertEqual("1.1.0-SNAPSHOT", s.get_next_development_version("1-SNAPSHOT"))
+        self.assertEqual("1.1.0-SNAPSHOT", s.get_next_development_version("1"))
+        self.assertEqual("1", s.get_next_release_version("1"))
+        self.assertEqual("1.1.0-SNAPSHOT", s.get_next_development_version("1.0-SNAPSHOT"))
+        self.assertEqual("1.0", s.get_next_release_version("1.0"))
 
     def test_patch_version(self):
         s = vis.get_version_increment_strategy("patch")
