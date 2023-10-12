@@ -12,6 +12,7 @@ from common import argsupport
 from common import common
 from common import logger
 from common import maveninstallinfo
+from common import overridefileinfo
 from common import mdfiles
 from config import config
 from crawl import crawler as crawlerm
@@ -81,11 +82,13 @@ def main(args):
     if args.verbose:
         logger.debug("Global pom content: %s" % pom_content)
 
+    override_file_info = overridefileinfo.OverrideFileInfo(cfg.override_file_paths)
     mvn_install_info = maveninstallinfo.MavenInstallInfo(cfg.maven_install_paths)
     ws = workspace.Workspace(repo_root, cfg,
                              mvn_install_info,
                              pom_content,
-                             dependencymd)
+                             dependencymd,
+                             override_file_info = override_file_info)
     packages = argsupport.get_all_packages(repo_root, args.package)
     packages = ws.filter_artifact_producing_packages(packages)
     if len(packages) == 0:

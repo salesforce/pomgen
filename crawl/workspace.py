@@ -21,7 +21,7 @@ class Workspace:
     Maven concepts.
     """
     def __init__(self, repo_root_path, config, maven_install_info,
-                 pom_content, dependency_metadata, verbose=False):
+                 pom_content, dependency_metadata, override_file_info = [], verbose=False):
         self.repo_root_path = repo_root_path
         self.excluded_dependency_paths = config.excluded_dependency_paths
         self.excluded_dependency_labels = config.excluded_dependency_labels
@@ -32,6 +32,7 @@ class Workspace:
         self.change_detection_enabled = config.change_detection_enabled
         self._name_to_ext_deps = self._parse_maven_install(maven_install_info, repo_root_path)
         self._package_to_artifact_def = {} # cache for artifact_def instances
+        self.override_file_info = override_file_info
 
 
     @property
@@ -43,6 +44,21 @@ class Workspace:
         The mapping is of the form: {maven_jar.name: Dependency instance}.
         """
         return self._name_to_ext_deps
+
+    @property
+    def name_to_override_dependencies(self):
+        """
+        Returns a dict for all overrides dependencies passed in the config file
+
+        The mapping is of the form: {dep: overridded_dep}
+        """
+        if len(self.override_file_info.get_override_file_names_and_paths(self.repo_root_path)) == 0:
+            return {}
+        overrides_dict = {}
+        for (_, fpath) in self.override_file_info.get_override_file_names_and_paths(self.repo_root_path):
+            parsed_data = bazel.parse_override_file(fpath)
+            overrides_dict.update(parsed_data)
+        return overrides_dict
 
     def parse_maven_artifact_def(self, package):
         """

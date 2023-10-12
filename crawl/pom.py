@@ -12,6 +12,7 @@ import copy
 from crawl import bazel
 from crawl import pomparser
 from crawl import workspace
+from crawl import dependency
 import os
 import re
 
@@ -537,6 +538,7 @@ class DynamicPomGen(AbstractPomGen):
         super(DynamicPomGen, self).__init__(workspace, artifact_def, dependency)
         self.pom_content = workspace.pom_content
         self.pom_template = pom_template
+        self._workspace = workspace
 
     def gen(self, pomcontenttype):
         content = self.pom_template.replace("#{group_id}", self._artifact_def.group_id)
@@ -544,12 +546,32 @@ class DynamicPomGen(AbstractPomGen):
         version = self._artifact_def_version(pomcontenttype)
         content = content.replace("#{version}", version)
         content = self._handle_description(content, self.pom_content.description)
+
+        # Update the dependencies according to the overridden file
+        self.dependencies = self._update_overridden_deps(self.dependencies)
         if len(self.dependencies) == 0:
             content = self._remove_token(content, "#{dependencies}")
         else:
             content = content.replace(
                 "#{dependencies}", self._gen_dependencies(pomcontenttype))
         return content
+
+    def _update_overridden_deps(self, deps):
+        overrides_dict = self._workspace.name_to_override_dependencies
+        ext_deps = self._workspace.name_to_external_dependencies
+        output_deps = []
+        if overrides_dict == {}:
+            return deps
+        for dep in deps:
+            dep_str = dep
+            if isinstance(dep_str, dependency.ThirdPartyDependency):
+                dep_str = dep_str.bazel_dep_name
+            if isinstance(dep_str, dependency.MonorepoDependency):
+                dep_str = "@//" + dep_str.bazel_package + ":" + dep_str.bazel_target
+            if dep_str in overrides_dict.keys() and overrides_dict[dep_str] in ext_deps.keys():
+                dep = ext_deps[overrides_dict[dep_str]]
+            output_deps.append(dep)
+        return output_deps
 
     def _load_additional_dependencies_hook(self):
         return _query_dependencies(self._workspace, self._artifact_def,
@@ -564,6 +586,9 @@ class DynamicPomGen(AbstractPomGen):
         # account for any version overrides that need to carry over to the
         # Maven build.
         transitives = self._get_transitive_deps(self.dependencies)
+
+        # Update the dependencies according to the overridden file
+        transitives = self._update_overridden_deps(transitives)
         if len(transitives) > 0:
             content += self._xml_comment("The transitives of the dependencies above", indent)
             content += self._gen_dependencies_xml(pomcontenttype, transitives, indent)
