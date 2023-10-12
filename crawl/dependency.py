@@ -217,6 +217,10 @@ class ThirdPartyDependency(AbstractDependency):
         return name
 
     @property
+    def bazel_dep_name(self):
+        return self._bzl_artifact_name()
+
+    @property
     def bazel_buildable(self):
         return False
 
