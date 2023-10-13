@@ -34,10 +34,10 @@ overrides = {
     "com.sun.activation:jakarta.activation":    "@jakarta//:jakarta_activation_jakarta_activation_api",
 '''
             )
-        m = overridefileinfo.OverrideFileInfo(("override_file.bzl",), repo_root)
+        o = overridefileinfo.OverrideFileInfo(("override_file.bzl",), repo_root)
 
-        files = m.get_override_file_names_and_paths()
-        override_names_dict = m.name_to_override_dependencies()
+        files = o.get_override_file_names_and_paths()
+        override_names_dict = o.name_to_override_dependencies()
 
         self.assertEqual(1, len(files))
         self.assertEqual("override_file", files[0][0])
