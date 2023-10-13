@@ -21,12 +21,7 @@ class OverrideFileInfoTest(unittest.TestCase):
             "override_file.bzl",
             '''
 overrides = {
-    # BOUNCY CASTLE (salesforce once forked it)
-    "org.sfdc-bouncycastle:bc-fips":            "@org_bouncycastle//:org_bouncycastle_bc_fips",
-    "org.sfdc-bouncycastle:bctls-fips":         "@org_bouncycastle//:org_bouncycastle_bctls_fips",
-
     # JAVAX -> JAKARTA MIGRATION
-    #   https://sfdc.co/jakarta-migration  and  https://sfdc.co/jakarta-migration-spreadsheet
     "javax.activation:activation":              "@jakarta//:jakarta_activation_jakarta_activation_api",
     "javax.inject:javax.inject":                "@jakarta//:jakarta_inject_jakarta_inject_api",
 
@@ -43,8 +38,6 @@ overrides = {
         self.assertEqual("override_file", files[0][0])
         self.assertEqual(os.path.join(repo_root, "override_file.bzl"), files[0][1])
         self.assertEqual({
-            'org_sfdc_bouncycastle_bc_fips': '@org_bouncycastle//:org_bouncycastle_bc_fips', 
-            'org_sfdc_bouncycastle_bctls_fips': '@org_bouncycastle//:org_bouncycastle_bctls_fips', 
             'javax_activation_activation': '@jakarta//:jakarta_activation_jakarta_activation_api', 
             'javax_inject_javax_inject': '@jakarta//:jakarta_inject_jakarta_inject_api', 
             'com_sun_activation_jakarta_activation': '@jakarta//:jakarta_activation_jakarta_activation_api'

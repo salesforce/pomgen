@@ -33,8 +33,8 @@ Example `overridden.bzl`
 
 ```
 overridden = {
-  "org.sfdc-bouncycastle:bc-fips": "@org_bouncycastle//:org_bouncycastle_bc_fips",
-  "org.sfdc-bouncycastle:bctls-fips": "@org_bouncycastle//:org_bouncycastle_bctls_fips"
+  "javax.xml.bind:jaxb-api": "@jakarta//:jakarta_xml_bind_jakarta_xml_bind_api",
+  "javax.servlet:servlet-api": "@jakarta//:jakarta_servlet_jakarta_servlet_api",
 }
 ```
 
