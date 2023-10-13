@@ -557,6 +557,8 @@ class DynamicPomGen(AbstractPomGen):
         return content
 
     def _update_overridden_deps(self, deps):
+        if self._workspace.override_file_info == []:
+            return deps
         overrides_dict = self._workspace.override_file_info.name_to_override_dependencies()
         ext_deps = self._workspace.name_to_external_dependencies
         output_deps = []
