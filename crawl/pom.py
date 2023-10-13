@@ -557,19 +557,15 @@ class DynamicPomGen(AbstractPomGen):
         return content
 
     def _update_overridden_deps(self, deps):
-        overrides_dict = self._workspace.name_to_override_dependencies
+        overrides_dict = self._workspace.override_file_info.name_to_override_dependencies()
         ext_deps = self._workspace.name_to_external_dependencies
         output_deps = []
         if overrides_dict == {}:
             return deps
         for dep in deps:
-            dep_str = dep
-            if isinstance(dep_str, dependency.ThirdPartyDependency):
-                dep_str = dep_str.bazel_dep_name
-            if isinstance(dep_str, dependency.MonorepoDependency):
-                dep_str = "@//" + dep_str.bazel_package + ":" + dep_str.bazel_target
-            if dep_str in overrides_dict.keys() and overrides_dict[dep_str] in ext_deps.keys():
-                dep = ext_deps[overrides_dict[dep_str]]
+            overridded_str_dep = dep.override_matching_str
+            if overridded_str_dep in overrides_dict.keys() and overrides_dict[overridded_str_dep] in ext_deps.keys():
+                dep = ext_deps[overrides_dict[overridded_str_dep]]
             output_deps.append(dep)
         return output_deps
 

@@ -82,7 +82,7 @@ def main(args):
     if args.verbose:
         logger.debug("Global pom content: %s" % pom_content)
 
-    override_file_info = overridefileinfo.OverrideFileInfo(cfg.override_file_paths)
+    override_file_info = overridefileinfo.OverrideFileInfo(cfg.override_file_paths, repo_root)
     mvn_install_info = maveninstallinfo.MavenInstallInfo(cfg.maven_install_paths)
     ws = workspace.Workspace(repo_root, cfg,
                              mvn_install_info,

@@ -123,6 +123,10 @@ class AbstractDependency(object):
     def bazel_buildable(self):
         raise Exception("must be implemented in subclass")
 
+    @property
+    def override_matching_str(self):
+        raise Exception("must be implemented in subclass")
+
     def __hash__(self):
         return hash((self.group_id, self.artifact_id, self.classifier, self.packaging))
 
@@ -217,7 +221,7 @@ class ThirdPartyDependency(AbstractDependency):
         return name
 
     @property
-    def bazel_dep_name(self):
+    def override_matching_str(self):
         return self._bzl_artifact_name()
 
     @property
@@ -273,6 +277,10 @@ class MonorepoDependency(AbstractDependency):
     @property
     def references_artifact(self):
         return self._artifact_def.pom_generation_mode.produces_artifact
+
+    @property
+    def override_matching_str(self):
+        return "@//" + self.bazel_package + ":" + self.bazel_target
 
     @classmethod
     def _init_target(clazz, bazel_package, bazel_target):

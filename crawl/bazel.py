@@ -17,7 +17,6 @@ from common import logger
 from crawl import dependency
 import os
 import json
-import re
 
 
 def query_java_library_deps_attributes(repository_root_path, target_pattern):
@@ -95,34 +94,6 @@ def query_all_libraries(repository_root_path, packages, verbose=False):
 
 def _normalize_dependency_string_to_group_id_artifact_id(dependency):
     return ":".join(dependency.split(":")[:2]) # remove classifier/package, so we can grab version from artifacts list
-
-def parse_override_file(file_path):
-    """
-    Returns a dict of {dep: overridded_dep} mapping
-    """
-    with open(file_path, "r") as f:
-        contents = f.read()
-
-        # Removes comments
-        contents = re.sub("#.*z*\n", "", contents).split("{")[1].split("}")[0]
-
-        # Removes whitespaces
-        contents = re.sub(r'":\s+', '":', contents)
-        contents = re.sub(r',\s+', ',', contents)
-
-        # Removes the extra comma if present
-        if contents.endswith(","):
-            contents = contents[:-1]
-        contents = "{" + contents.strip() + "}"
-        override_data = json.loads(contents)
-        output = {}
-
-        # Updates /, . and - with _
-        # Example - org.springframework:spring-jcl to org_springframework_spring_jcl
-        for dep, overridded_dep in override_data.items():
-            pattern = r'(?<=[^\d])\.|\.(?=[^\d])'
-            output[re.sub(pattern, "_", dep.replace(':', '_').replace("-", "_"))] = overridded_dep
-        return output
 
 def parse_maven_install(mvn_install_name, json_file_path):
     """

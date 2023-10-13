@@ -45,21 +45,6 @@ class Workspace:
         """
         return self._name_to_ext_deps
 
-    @property
-    def name_to_override_dependencies(self):
-        """
-        Returns a dict for all overrides dependencies passed in the config file
-
-        The mapping is of the form: {dep: overridded_dep}
-        """
-        if len(self.override_file_info.get_override_file_names_and_paths(self.repo_root_path)) == 0:
-            return {}
-        overrides_dict = {}
-        for (_, fpath) in self.override_file_info.get_override_file_names_and_paths(self.repo_root_path):
-            parsed_data = bazel.parse_override_file(fpath)
-            overrides_dict.update(parsed_data)
-        return overrides_dict
-
     def parse_maven_artifact_def(self, package):
         """
         Parses the Maven metadata files files in the specified package and 

@@ -31,10 +31,12 @@ Value of `override_file_paths` should be comma separated paths containing .bzl f
 
 Example `overridden.bzl`
 
+```
 overridden = {
   "org.sfdc-bouncycastle:bc-fips": "@org_bouncycastle//:org_bouncycastle_bc_fips",
   "org.sfdc-bouncycastle:bctls-fips": "@org_bouncycastle//:org_bouncycastle_bctls_fips"
 }
+```
 
 ## Setup
 
