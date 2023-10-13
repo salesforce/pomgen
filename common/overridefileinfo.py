@@ -22,7 +22,7 @@ class OverrideFileInfo:
 
         The mapping is of the form: {dep: overridded_dep}
         """
-        override_file_names_and_paths = self._get_override_file_names_and_paths()
+        override_file_names_and_paths = self.get_override_file_names_and_paths()
         if override_file_names_and_paths == 0:
             return {}
         overrides_dict = {}
@@ -31,7 +31,7 @@ class OverrideFileInfo:
             overrides_dict.update(parsed_data)
         return overrides_dict
 
-    def _get_override_file_names_and_paths(self):
+    def get_override_file_names_and_paths(self):
         """
         Returns a list of tuples (override file name, override file path)
         """
