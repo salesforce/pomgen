@@ -3,6 +3,6 @@ java_import(
     jars = [
         "oldfruit.jar",
     ],
-    visibility = ["//examples/java_import/oldfruitlover:__pkg__"],
+    visibility = ["//examples/java-import/oldfruitlover:__pkg__"],
 )
 

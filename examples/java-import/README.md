@@ -10,7 +10,7 @@ In practice, this means that the `java_import` rule can only reference a single 
 From the root of the repository:
 
 ```
-bazel run //maven -- -a pomgen,install -t examples/java_import
+bazel run //maven -- -a pomgen,install -t examples/java-import
 ```
 
 The cmd above installs jars and poms into `~/.m2/repository`. The `java_import` jar is at:

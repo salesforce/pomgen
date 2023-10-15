@@ -83,7 +83,7 @@ If the jar artifact is not built by bazel (this is unusual), this attribute can 
 
 Default value: `None`
 
-See the `java_import` [example](../examples/java_import).
+See the `java_import` [example](../examples/java-import).
 
 ### LIBRARY.root (required)
 
