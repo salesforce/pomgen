@@ -40,6 +40,28 @@ class ConfigTest(unittest.TestCase):
 
         self.assertEqual(("eternal", "world"), cfg.maven_install_paths)
 
+    def test_override_file_paths_default(self):
+        repo_root = tempfile.mkdtemp("root")
+        pom_template_path = self._write_file(repo_root, "pom_template", "foo")
+        self._write_pomgenrc(repo_root, pom_template_path, None)
+
+        cfg = config.load(repo_root)
+
+        self.assertEqual((), cfg.override_file_paths)
+
+    def test_override_file_paths(self):
+        repo_root = tempfile.mkdtemp("root")
+        pom_template_path = self._write_file(repo_root, "pom_template", "foo")
+        content = """[general]
+pom_template_path=""" + pom_template_path + """
+override_file_paths=override.bzl"""
+
+        self._write_file(repo_root, ".pomgenrc", content)
+
+        cfg = config.load(repo_root)
+
+        self.assertEqual(("override.bzl",), cfg.override_file_paths)
+
     def test_transitives_versioning_mode__semver(self):
         repo_root = tempfile.mkdtemp("root")
         os.mkdir(os.path.join(repo_root, "config"))

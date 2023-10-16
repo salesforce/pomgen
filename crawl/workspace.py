@@ -88,12 +88,12 @@ class Workspace:
         if self.override_file_info == []:
             return deps
         overrides_dict = self.override_file_info.name_to_override_dependencies()
-        ext_deps = self.name_to_external_dependencies
+        ext_deps = self._name_to_ext_deps
         output_deps = []
         if overrides_dict == {}:
             return deps
         for dep in deps:
-            overridded_str_dep = dep.override_matching_str
+            overridded_str_dep = dep.override_key
             if overridded_str_dep in overrides_dict.keys() and overrides_dict[overridded_str_dep] in ext_deps.keys():
                 dep = ext_deps[overrides_dict[overridded_str_dep]]
             output_deps.append(dep)
