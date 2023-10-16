@@ -79,7 +79,25 @@ class Workspace:
             dep = self._parse_dep_label(label)
             if dep is not None:
                 deps.append(dep)
+
+        # Update the dependencies according to the overridden file
+        deps = self.override_deps(deps)
         return deps
+
+    def override_deps(self, deps):
+        if self.override_file_info == []:
+            return deps
+        overrides_dict = self.override_file_info.name_to_override_dependencies()
+        ext_deps = self.name_to_external_dependencies
+        output_deps = []
+        if overrides_dict == {}:
+            return deps
+        for dep in deps:
+            overridded_str_dep = dep.override_matching_str
+            if overridded_str_dep in overrides_dict.keys() and overrides_dict[overridded_str_dep] in ext_deps.keys():
+                dep = ext_deps[overrides_dict[overridded_str_dep]]
+            output_deps.append(dep)
+        return output_deps
 
     def normalize_deps(self, artifact_def, deps):
         """
