@@ -59,7 +59,7 @@ overrides = {
         artifact = "javax.inject:javax.inject:1"
         dep = dependency.new_dep_from_maven_art_str(artifact, "name")
 
-        self.assertEqual("@jakarta//:jakarta_inject_jakarta_inject_api", o.overidden_dep_value(dep))
+        self.assertEqual("@jakarta//:jakarta_inject_jakarta_inject_api", o.overridden_dep_value(dep))
 
     def test_override_deps(self):
         repo_root = tempfile.mkdtemp("monorepo")

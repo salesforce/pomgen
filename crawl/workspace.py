@@ -174,11 +174,11 @@ class Workspace:
         for key, dep in result.items():
             if self.override_file_info == []:
                 break
-            overriden_dep = self.override_file_info.overidden_dep_value(dep)
-            if overriden_dep in result.keys():
-                result[key] = result[overriden_dep]
+            overridden_dep = self.override_file_info.overridden_dep_value(dep)
+            if overridden_dep in result.keys():
+                result[key] = result[overridden_dep]
 
-        # Registers the overriden transitives
+        # Registers the overridden transitives
         for t in transitives_list:
             for dep, transitives in t.items():
                 if not self.override_file_info == []:

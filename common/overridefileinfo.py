@@ -16,7 +16,7 @@ class OverrideFileInfo:
         self.override_file_paths = override_file_paths
         self.repo_root_path = repo_root_path
 
-    def overidden_dep_value(self, dep):
+    def overridden_dep_value(self, dep):
         overrides_dict = self.name_to_override_dependencies()
         if overrides_dict == {}:
             return dep
