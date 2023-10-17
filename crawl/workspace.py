@@ -30,9 +30,9 @@ class Workspace:
         self.verbose = verbose
         self.dependency_metadata = dependency_metadata
         self.change_detection_enabled = config.change_detection_enabled
+        self.override_file_info = override_file_info
         self._name_to_ext_deps = self._parse_maven_install(maven_install_info, repo_root_path)
         self._package_to_artifact_def = {} # cache for artifact_def instances
-        self.override_file_info = override_file_info
 
 
     @property
@@ -79,25 +79,7 @@ class Workspace:
             dep = self._parse_dep_label(label)
             if dep is not None:
                 deps.append(dep)
-
-        # Update the dependencies according to the overridden file
-        deps = self.override_deps(deps)
         return deps
-
-    def override_deps(self, deps):
-        if self.override_file_info == []:
-            return deps
-        overrides_dict = self.override_file_info.name_to_override_dependencies()
-        ext_deps = self._name_to_ext_deps
-        output_deps = []
-        if overrides_dict == {}:
-            return deps
-        for dep in deps:
-            overridded_str_dep = dep.override_key
-            if overridded_str_dep in overrides_dict.keys() and overrides_dict[overridded_str_dep] in ext_deps.keys():
-                dep = ext_deps[overrides_dict[overridded_str_dep]]
-            output_deps.append(dep)
-        return output_deps
 
     def normalize_deps(self, artifact_def, deps):
         """
@@ -176,6 +158,7 @@ class Workspace:
         files) -> the corresponding dependency.Dependency instance.
         """
         result = {}
+        transitives_list = []
         for name_and_path in maven_install_info.get_maven_install_names_and_paths(repo_root_path):
             mvn_install_name, json_file_path = name_and_path
             parse_result = bazel.parse_maven_install(mvn_install_name, json_file_path)
@@ -184,6 +167,40 @@ class Workspace:
                 if self.verbose:
                     logger.debug("Registered dep %s" % key)
                 result[key] = dep
-                self.dependency_metadata.register_transitives(dep, transitives)
+                transitives_list.append({dep : transitives})
                 self.dependency_metadata.register_exclusions(dep, exclusions)
+
+        for key, dep in result.items():
+            overriden_dep = self.overidden_dep_value(dep)
+            if overriden_dep in result.keys():
+                result[key] = result[overriden_dep]
+
+        for t in transitives_list:
+            for dep, transitives in t.items():
+                self.dependency_metadata.register_transitives(dep, self.override_deps(transitives, result))
+
+
         return result
+
+    def overidden_dep_value(self, dep):
+        if self.override_file_info == []:
+            return dep
+        overrides_dict = self.override_file_info.name_to_override_dependencies()
+        if dep.override_key in overrides_dict.keys():
+            return overrides_dict[dep.override_key]
+        else:
+            return dep
+
+    def override_deps(self, deps, ext_deps):
+        if self.override_file_info == []:
+            return deps
+        overrides_dict = self.override_file_info.name_to_override_dependencies()
+        output_deps = []
+        if overrides_dict == {}:
+            return deps
+        for dep in deps:
+            overridded_str_dep = dep.override_key
+            if overridded_str_dep in overrides_dict.keys() and overrides_dict[overridded_str_dep] in ext_deps.keys():
+                dep = ext_deps[overrides_dict[overridded_str_dep]]
+            output_deps.append(dep)
+        return output_deps

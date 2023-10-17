@@ -297,8 +297,6 @@ class Crawler:
             accumulated_deps = []
             self._accumulate_deps_and_walk(node, accumulated_deps,
                                            target_to_all_dependencies)
-        for target, deps in target_to_all_dependencies.items():
-            target_to_all_dependencies[target] = self.workspace.override_deps(deps)
         return target_to_all_dependencies
 
     def _accumulate_deps_and_walk(self, node, accumulated_deps,
