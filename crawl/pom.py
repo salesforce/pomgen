@@ -544,7 +544,6 @@ class DynamicPomGen(AbstractPomGen):
         version = self._artifact_def_version(pomcontenttype)
         content = content.replace("#{version}", version)
         content = self._handle_description(content, self.pom_content.description)
-
         if len(self.dependencies) == 0:
             content = self._remove_token(content, "#{dependencies}")
         else:
