@@ -48,6 +48,7 @@ def load(repo_root, verbose=False):
     cfg = Config(
         pom_template_path_and_content=_read_files(repo_root, pom_template_p)[0],
         maven_install_paths=gen("maven_install_paths", ("maven_install.json",)),
+        override_file_paths=gen("override_file_paths", ()),
         excluded_dependency_paths=crawl("excluded_dependency_paths", ()),
         excluded_dependency_labels=crawl("excluded_dependency_labels", ()),
         excluded_src_relpaths=artifact("excluded_relative_paths", ("src/test",)),
@@ -81,6 +82,7 @@ class Config:
     def __init__(self, 
                  pom_template_path_and_content=("",""),
                  maven_install_paths=(),
+                 override_file_paths=(),
                  excluded_dependency_paths=(),
                  excluded_dependency_labels=(),
                  excluded_src_relpaths=(),
@@ -93,6 +95,7 @@ class Config:
         # general
         self.pom_template_path_and_content=pom_template_path_and_content
         self.maven_install_paths = _to_tuple(maven_install_paths)
+        self.override_file_paths = _to_tuple(override_file_paths)
 
         # crawler
         self.excluded_dependency_paths = _add_pathsep(_to_tuple(excluded_dependency_paths))
@@ -135,6 +138,7 @@ class Config:
         return """[general]
 pom_template_path=%s
 maven_install_paths=%s
+override_file_paths=%s
 
 [crawler]
 excluded_dependency_paths=%s
@@ -149,6 +153,7 @@ jar_artifact_classifier=%s
 change_detection_enabled=%s
 """ % (self.pom_template_path_and_content[0],
        self.maven_install_paths,
+       self.override_file_paths,
        self.excluded_dependency_paths,
        self.excluded_dependency_labels,
        self.excluded_src_relpaths,

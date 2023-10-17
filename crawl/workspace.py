@@ -21,7 +21,7 @@ class Workspace:
     Maven concepts.
     """
     def __init__(self, repo_root_path, config, maven_install_info,
-                 pom_content, dependency_metadata, verbose=False):
+                 pom_content, dependency_metadata, override_file_info = [], verbose=False):
         self.repo_root_path = repo_root_path
         self.excluded_dependency_paths = config.excluded_dependency_paths
         self.excluded_dependency_labels = config.excluded_dependency_labels
@@ -32,6 +32,7 @@ class Workspace:
         self.change_detection_enabled = config.change_detection_enabled
         self._name_to_ext_deps = self._parse_maven_install(maven_install_info, repo_root_path)
         self._package_to_artifact_def = {} # cache for artifact_def instances
+        self.override_file_info = override_file_info
 
 
     @property
@@ -78,7 +79,25 @@ class Workspace:
             dep = self._parse_dep_label(label)
             if dep is not None:
                 deps.append(dep)
+
+        # Update the dependencies according to the overridden file
+        deps = self.override_deps(deps)
         return deps
+
+    def override_deps(self, deps):
+        if self.override_file_info == []:
+            return deps
+        overrides_dict = self.override_file_info.name_to_override_dependencies()
+        ext_deps = self._name_to_ext_deps
+        output_deps = []
+        if overrides_dict == {}:
+            return deps
+        for dep in deps:
+            overridded_str_dep = dep.override_key
+            if overridded_str_dep in overrides_dict.keys() and overrides_dict[overridded_str_dep] in ext_deps.keys():
+                dep = ext_deps[overrides_dict[overridded_str_dep]]
+            output_deps.append(dep)
+        return output_deps
 
     def normalize_deps(self, artifact_def, deps):
         """

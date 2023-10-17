@@ -216,6 +216,14 @@ py_test(
 )
 
 py_test(
+    name = "overridefileinfotest",
+    srcs = ["common/overridefileinfo.py", "tests/overridefileinfotest.py",],
+    imports = ["."],
+    size = "small",
+    python_version = python_version,
+)
+
+py_test(
     name = "mdfilestest",
     srcs = ["common/mdfiles.py", "tests/mdfilestest.py",],
     imports = ["."],

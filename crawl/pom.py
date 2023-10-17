@@ -607,6 +607,8 @@ class DynamicPomGen(AbstractPomGen):
                     transitives.append(transitive)
                     transitives_set.add(transitive)
 
+         # Update the transitives according to the overridden file
+        transitives = self._workspace.override_deps(transitives)
         return transitives
 
 

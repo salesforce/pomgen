@@ -11,6 +11,7 @@ dependencies.
 """
 
 from common import common
+from common import overridefileinfo
 from common import maveninstallinfo
 from config import config
 from crawl import buildpom
@@ -73,10 +74,12 @@ def main(args):
     args = _parse_arguments(args)
     repo_root = common.get_repo_root(args.repo_root)    
     cfg = config.load(repo_root)
-    mvn_install_info = maveninstallinfo.MavenInstallInfo(cfg.maven_install_paths)    
+    override_file_info = overridefileinfo.OverrideFileInfo(cfg.override_file_paths, repo_root)
+    mvn_install_info = maveninstallinfo.MavenInstallInfo(cfg.maven_install_paths)
     depmd = dependencymdm.DependencyMetadata(cfg.jar_artifact_classifier)
     ws = workspace.Workspace(repo_root,  cfg, mvn_install_info,
-                             pomcontent.NOOP, dependency_metadata=depmd)
+                             pomcontent.NOOP, dependency_metadata=depmd,
+                             override_file_info = override_file_info)
 
     group_id = "all_ext_deps_group" if args.group_id is None else args.group_id
     artifact_id = "all_ext_deps_art" if args.artifact_id is None else args.artifact_id
