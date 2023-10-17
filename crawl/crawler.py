@@ -18,6 +18,7 @@ from crawl.releasereason import ReleaseReason
 import difflib
 import os
 
+
 class Node:
     """
     A single node in the DAG, based on references in BUILD files.
