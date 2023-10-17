@@ -2,6 +2,7 @@ from common import overridefileinfo
 import os
 import tempfile
 import unittest
+from crawl import dependency
 
 class OverrideFileInfoTest(unittest.TestCase):
 
@@ -42,6 +43,46 @@ overrides = {
             'javax_inject_javax_inject': '@jakarta//:jakarta_inject_jakarta_inject_api', 
             'com_sun_activation_jakarta_activation': '@jakarta//:jakarta_activation_jakarta_activation_api'
             }, override_names_dict)
+
+    def test_overidden_dep_value(self):
+        repo_root = tempfile.mkdtemp("monorepo")
+        self._touch_file_at_path(
+            repo_root,
+            "override_file.bzl",
+            '''
+overrides = {
+    "javax.inject:javax.inject":                "@jakarta//:jakarta_inject_jakarta_inject_api",
+'''
+            )
+        o = overridefileinfo.OverrideFileInfo(("override_file.bzl",), repo_root)
+
+        artifact = "javax.inject:javax.inject:1"
+        dep = dependency.new_dep_from_maven_art_str(artifact, "name")
+
+        self.assertEqual("@jakarta//:jakarta_inject_jakarta_inject_api", o.overidden_dep_value(dep))
+
+    def test_override_deps(self):
+        repo_root = tempfile.mkdtemp("monorepo")
+        self._touch_file_at_path(
+            repo_root,
+            "override_file.bzl",
+            '''
+overrides = {
+    "javax.activation:activation":              "@jakarta//:jakarta_activation_jakarta_activation_api",
+'''
+            )
+        ext_deps = {"@jakarta//:jakarta_activation_jakarta_activation_api": dependency.new_dep_from_maven_art_str("jakarta.activation:jakarta.activation-api:1.2.2", "name")}
+        o = overridefileinfo.OverrideFileInfo(("override_file.bzl",), repo_root)
+
+        artifacts = ["javax.activation:activation:1.1.1", "org.glassfish.hk2:hk2:2.6.1", "com.google.guava:guava:32.0.1-jre"]
+        deps = [dependency.new_dep_from_maven_art_str(artifact, "name") for artifact in artifacts]
+
+        overridden_deps = o.override_deps(deps, ext_deps)
+
+        self.assertNotEqual(deps[0], overridden_deps[0])
+        self.assertEqual(deps[1], overridden_deps[1])
+        self.assertEqual(deps[2], overridden_deps[2])
+        self.assertEqual(ext_deps["@jakarta//:jakarta_activation_jakarta_activation_api"], overridden_deps[0])
 
     def _touch_file_at_path(self, repo_root_path, file_path, content):
         path = os.path.join(repo_root_path, file_path)

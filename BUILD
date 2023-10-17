@@ -217,7 +217,7 @@ py_test(
 
 py_test(
     name = "overridefileinfotest",
-    srcs = ["common/overridefileinfo.py", "tests/overridefileinfotest.py",],
+    srcs = ["common/overridefileinfo.py", "tests/overridefileinfotest.py", "crawl/dependency.py"],
     imports = ["."],
     size = "small",
     python_version = python_version,

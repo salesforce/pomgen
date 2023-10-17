@@ -170,37 +170,19 @@ class Workspace:
                 transitives_list.append({dep : transitives})
                 self.dependency_metadata.register_exclusions(dep, exclusions)
 
+        # Overrides the deps honoring the override file
         for key, dep in result.items():
-            overriden_dep = self.overidden_dep_value(dep)
+            if self.override_file_info == []:
+                break
+            overriden_dep = self.override_file_info.overidden_dep_value(dep)
             if overriden_dep in result.keys():
                 result[key] = result[overriden_dep]
 
+        # Registers the overriden transitives
         for t in transitives_list:
             for dep, transitives in t.items():
-                self.dependency_metadata.register_transitives(dep, self.override_deps(transitives, result))
-
+                if not self.override_file_info == []:
+                    transitives = self.override_file_info.override_deps(transitives, result)
+                self.dependency_metadata.register_transitives(dep, transitives)
 
         return result
-
-    def overidden_dep_value(self, dep):
-        if self.override_file_info == []:
-            return dep
-        overrides_dict = self.override_file_info.name_to_override_dependencies()
-        if dep.override_key in overrides_dict.keys():
-            return overrides_dict[dep.override_key]
-        else:
-            return dep
-
-    def override_deps(self, deps, ext_deps):
-        if self.override_file_info == []:
-            return deps
-        overrides_dict = self.override_file_info.name_to_override_dependencies()
-        output_deps = []
-        if overrides_dict == {}:
-            return deps
-        for dep in deps:
-            overridded_str_dep = dep.override_key
-            if overridded_str_dep in overrides_dict.keys() and overrides_dict[overridded_str_dep] in ext_deps.keys():
-                dep = ext_deps[overrides_dict[overridded_str_dep]]
-            output_deps.append(dep)
-        return output_deps
