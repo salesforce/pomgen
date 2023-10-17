@@ -14,6 +14,7 @@ from common import common
 from common import instancequery
 from common import logger
 from common import maveninstallinfo
+from common import overridefileinfo
 from common import version_increment_strategy as vis
 from config import config
 from crawl import bazel
@@ -88,12 +89,14 @@ if __name__ == "__main__":
     args = _parse_arguments(sys.argv[1:])
     repo_root = common.get_repo_root(args.repo_root)
     cfg = config.load(repo_root, args.verbose)
+    override_file_info = overridefileinfo.OverrideFileInfo(cfg.override_file_paths, repo_root)
     mvn_install_info = maveninstallinfo.MavenInstallInfo(cfg.maven_install_paths)
     depmd = dependencymdm.DependencyMetadata(cfg.jar_artifact_classifier)    
     ws = workspace.Workspace(repo_root, cfg,
                              mvn_install_info,
                              pomcontent.NOOP,
                              dependency_metadata=depmd,
+                             override_file_info = override_file_info,
                              verbose=args.verbose)
 
     determine_packages_to_process = (args.list_libraries or 

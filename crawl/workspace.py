@@ -21,7 +21,7 @@ class Workspace:
     Maven concepts.
     """
     def __init__(self, repo_root_path, config, maven_install_info,
-                 pom_content, dependency_metadata, verbose=False):
+                 pom_content, dependency_metadata, override_file_info = [], verbose=False):
         self.repo_root_path = repo_root_path
         self.excluded_dependency_paths = config.excluded_dependency_paths
         self.excluded_dependency_labels = config.excluded_dependency_labels
@@ -30,6 +30,7 @@ class Workspace:
         self.verbose = verbose
         self.dependency_metadata = dependency_metadata
         self.change_detection_enabled = config.change_detection_enabled
+        self.override_file_info = override_file_info
         self._name_to_ext_deps = self._parse_maven_install(maven_install_info, repo_root_path)
         self._package_to_artifact_def = {} # cache for artifact_def instances
 
@@ -157,6 +158,7 @@ class Workspace:
         files) -> the corresponding dependency.Dependency instance.
         """
         result = {}
+        transitives_list = []
         for name_and_path in maven_install_info.get_maven_install_names_and_paths(repo_root_path):
             mvn_install_name, json_file_path = name_and_path
             parse_result = bazel.parse_maven_install(mvn_install_name, json_file_path)
@@ -165,6 +167,22 @@ class Workspace:
                 if self.verbose:
                     logger.debug("Registered dep %s" % key)
                 result[key] = dep
-                self.dependency_metadata.register_transitives(dep, transitives)
+                transitives_list.append({dep : transitives})
                 self.dependency_metadata.register_exclusions(dep, exclusions)
+
+        # Overrides the deps honoring the override file
+        for key, dep in result.items():
+            if self.override_file_info == []:
+                break
+            overridden_dep = self.override_file_info.overridden_dep_value(dep)
+            if overridden_dep in result.keys():
+                result[key] = result[overridden_dep]
+
+        # Registers the overridden transitives
+        for t in transitives_list:
+            for dep, transitives in t.items():
+                if not self.override_file_info == []:
+                    transitives = self.override_file_info.override_deps(transitives, result)
+                self.dependency_metadata.register_transitives(dep, transitives)
+
         return result

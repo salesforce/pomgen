@@ -1,0 +1,4 @@
+[general]
+pom_template_path=path_to_pom
+maven_install_paths=path_to_pinned_jsons
+override_file_paths=examples/override-deps/overide.bzl
