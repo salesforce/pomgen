@@ -13,7 +13,7 @@ from crawl import artifactprocessor
 from crawl import bazel
 from crawl import buildpom
 from crawl import dependency
-
+import copy
 
 class Workspace:
     """
@@ -171,18 +171,23 @@ class Workspace:
                 self.dependency_metadata.register_exclusions(dep, exclusions)
 
         # Overrides the deps honoring the override file
+        overridden_result = copy.deepcopy(result)
         for key, dep in result.items():
             if self.override_file_info == []:
                 break
             overridden_dep = self.override_file_info.overridden_dep_value(dep)
             if overridden_dep in result.keys():
-                result[key] = result[overridden_dep]
+
+                # Store the dep which needs to be overridden with the new one
+                overridden_result[key + "_old"] = result[key]
+
+                # Override the dep
+                overridden_result[key] = result[overridden_dep]
 
         # Registers the overridden transitives
         for t in transitives_list:
             for dep, transitives in t.items():
                 if not self.override_file_info == []:
-                    transitives = self.override_file_info.override_deps(transitives, result)
+                    transitives = self.override_file_info.override_deps(transitives, overridden_result)
                 self.dependency_metadata.register_transitives(dep, transitives)
-
-        return result
+        return overridden_result
