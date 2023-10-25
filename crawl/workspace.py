@@ -171,11 +171,10 @@ class Workspace:
                 transitives_list.append({dep : transitives})
                 self.dependency_metadata.register_exclusions(dep, exclusions)
 
+        # Overrides the direct deps mapping
         overridden_result = copy.deepcopy(result)
 
-        # Overrides the deps honoring the override file
-        overridden_result = copy.deepcopy(result)
-        for key, dep in result.items():
+        for key, dep in overridden_result.items():
             if self.override_file_info == []:
                 break
             overridden_dep = self.override_file_info.overridden_dep_value(dep)
