@@ -31,20 +31,9 @@ class Workspace:
         self.dependency_metadata = dependency_metadata
         self.change_detection_enabled = config.change_detection_enabled
         self.override_file_info = override_file_info
-        self._name_to_ext_overridden_deps = {}
+        self.label_to_ext_deps = {}
         self.external_dependencies = self._parse_maven_install(maven_install_info, repo_root_path)
         self._package_to_artifact_def = {} # cache for artifact_def instances
-
-
-    # @property
-    # def name_to_external_dependencies(self):
-    #     """
-    #     Returns a dict for all external dependencies declared for this 
-    #     WORKSPACE.
- 
-    #     The mapping is of the form: {maven_jar.name: Dependency instance}.
-    #     """
-    #     return self._name_to_ext_deps
 
     def parse_maven_artifact_def(self, package):
         """
@@ -123,10 +112,10 @@ class Workspace:
             return None
 
         if dep_label.startswith("@"):
-            if dep_label not in self._name_to_ext_overridden_deps:
-                print(self._name_to_ext_overridden_deps.values())
+            if dep_label not in self.label_to_ext_deps:
+                print(self.label_to_ext_deps.values())
                 raise Exception("Unknown external dependency - please make sure all maven install json files have been registered with pomgen (by setting maven_install_paths in the pomgen config file): [%s]" % dep_label)
-            return self._name_to_ext_overridden_deps[dep_label]
+            return self.label_to_ext_deps[dep_label]
         elif dep_label.startswith("//"):
             # monorepo src ref:
             package_path = dep_label[2:] # remove leading "//"
@@ -190,6 +179,6 @@ class Workspace:
 
         # Registers direct deps with their overridden deps
         # If a dep is not be overridden then it will point to the original dep
-        self._name_to_ext_overridden_deps = overridden_result
+        self.label_to_ext_deps = overridden_result
 
         return list(result.values())
