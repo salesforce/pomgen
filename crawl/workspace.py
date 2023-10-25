@@ -31,6 +31,7 @@ class Workspace:
         self.dependency_metadata = dependency_metadata
         self.change_detection_enabled = config.change_detection_enabled
         self.override_file_info = override_file_info
+        self._name_to_ext_overridden_deps = {}
         self._name_to_ext_deps = self._parse_maven_install(maven_install_info, repo_root_path)
         self._package_to_artifact_def = {} # cache for artifact_def instances
 
@@ -122,10 +123,10 @@ class Workspace:
             return None
 
         if dep_label.startswith("@"):
-            if dep_label not in self._name_to_ext_deps:
-                print(self._name_to_ext_deps.values())
+            if dep_label not in self._name_to_ext_overridden_deps:
+                print(self._name_to_ext_overridden_deps.values())
                 raise Exception("Unknown external dependency - please make sure all maven install json files have been registered with pomgen (by setting maven_install_paths in the pomgen config file): [%s]" % dep_label)
-            return self._name_to_ext_deps[dep_label]
+            return self._name_to_ext_overridden_deps[dep_label]
         elif dep_label.startswith("//"):
             # monorepo src ref:
             package_path = dep_label[2:] # remove leading "//"
@@ -170,19 +171,16 @@ class Workspace:
                 transitives_list.append({dep : transitives})
                 self.dependency_metadata.register_exclusions(dep, exclusions)
 
+        overridden_result = copy.deepcopy(result)
+
         # Overrides the deps honoring the override file
         overridden_result = copy.deepcopy(result)
         for key, dep in result.items():
             if self.override_file_info == []:
                 break
             overridden_dep = self.override_file_info.overridden_dep_value(dep)
-            if overridden_dep in result.keys():
-
-                # Store the dep which needs to be overridden with the new one
-                overridden_result[key + "_old"] = result[key]
-
-                # Override the dep
-                overridden_result[key] = result[overridden_dep]
+            if overridden_dep in overridden_result.keys():
+                overridden_result[key] = overridden_result[overridden_dep]
 
         # Registers the overridden transitives
         for t in transitives_list:
@@ -190,4 +188,9 @@ class Workspace:
                 if not self.override_file_info == []:
                     transitives = self.override_file_info.override_deps(transitives, overridden_result)
                 self.dependency_metadata.register_transitives(dep, transitives)
-        return overridden_result
+
+        # Registers direct deps with their overridden deps
+        # If a dep is not be overridden then it will point to the original dep
+        self._name_to_ext_overridden_deps = overridden_result
+
+        return result
