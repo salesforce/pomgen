@@ -142,7 +142,7 @@ if __name__ == "__main__":
         print(_to_json(all_artifacts))
 
     if args.list_external_dependencies:
-        external_dependencies = sorted(ws.name_to_external_dependencies.values(), key=lambda dep: dep.bazel_label_name)
+        external_dependencies = sorted(ws.external_dependencies, key=lambda dep: dep.bazel_label_name)
         ext_deps = []
         for external_dependency in external_dependencies:
             attrs = OrderedDict()

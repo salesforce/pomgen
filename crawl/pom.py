@@ -375,7 +375,7 @@ class TemplatePomGen(AbstractPomGen):
         # all external deps + deps built out of the monorepo that are
         # transitives of this library
         all_deps = \
-            list(self._workspace.name_to_external_dependencies.values()) + \
+            list(self._workspace.external_dependencies) + \
             [d for d in self.dependencies_library_transitive_closure if d.bazel_package is not None]
 
         for dep in all_deps:

@@ -32,19 +32,19 @@ class Workspace:
         self.change_detection_enabled = config.change_detection_enabled
         self.override_file_info = override_file_info
         self._name_to_ext_overridden_deps = {}
-        self._name_to_ext_deps = self._parse_maven_install(maven_install_info, repo_root_path)
+        self.external_dependencies = self._parse_maven_install(maven_install_info, repo_root_path)
         self._package_to_artifact_def = {} # cache for artifact_def instances
 
 
-    @property
-    def name_to_external_dependencies(self):
-        """
-        Returns a dict for all external dependencies declared for this 
-        WORKSPACE.
+    # @property
+    # def name_to_external_dependencies(self):
+    #     """
+    #     Returns a dict for all external dependencies declared for this 
+    #     WORKSPACE.
  
-        The mapping is of the form: {maven_jar.name: Dependency instance}.
-        """
-        return self._name_to_ext_deps
+    #     The mapping is of the form: {maven_jar.name: Dependency instance}.
+    #     """
+    #     return self._name_to_ext_deps
 
     def parse_maven_artifact_def(self, package):
         """
@@ -155,7 +155,7 @@ class Workspace:
         """
         Parses all pinned json files for the specified maven_install rules.
 
-        Returns a dictionary mapping of the dependency label (as used in BUILD
+        Returns a list containing the dependency labels (as used in BUILD
         files) -> the corresponding dependency.Dependency instance.
         """
         result = {}
@@ -192,4 +192,4 @@ class Workspace:
         # If a dep is not be overridden then it will point to the original dep
         self._name_to_ext_overridden_deps = overridden_result
 
-        return result
+        return list(result.values())
