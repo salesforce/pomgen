@@ -103,7 +103,7 @@ def main(args):
             dep_labels.add(line)
         dependencies = ws.parse_dep_labels(dep_labels)
     else:
-        dependencies = list(ws.name_to_external_dependencies.values())
+        dependencies = list(ws.external_dependencies)
 
     # to be nice:
     dependencies.sort()

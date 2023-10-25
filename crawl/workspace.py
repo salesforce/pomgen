@@ -14,7 +14,6 @@ from crawl import bazel
 from crawl import buildpom
 from crawl import dependency
 
-
 class Workspace:
     """
     Manages workspace-level information and translates between Bazel and 
@@ -31,19 +30,16 @@ class Workspace:
         self.dependency_metadata = dependency_metadata
         self.change_detection_enabled = config.change_detection_enabled
         self.override_file_info = override_file_info
-        self._name_to_ext_deps = self._parse_maven_install(maven_install_info, repo_root_path)
+        self._external_dependencies, self._label_to_ext_dep = self._parse_maven_install(maven_install_info, repo_root_path)
         self._package_to_artifact_def = {} # cache for artifact_def instances
 
-
     @property
-    def name_to_external_dependencies(self):
+    def external_dependencies(self):
         """
-        Returns a dict for all external dependencies declared for this 
+        Returns a tuple for all external dependencies declared for this 
         WORKSPACE.
- 
-        The mapping is of the form: {maven_jar.name: Dependency instance}.
         """
-        return self._name_to_ext_deps
+        return self._external_dependencies
 
     def parse_maven_artifact_def(self, package):
         """
@@ -122,10 +118,10 @@ class Workspace:
             return None
 
         if dep_label.startswith("@"):
-            if dep_label not in self._name_to_ext_deps:
-                print(self._name_to_ext_deps.values())
+            if dep_label not in self._label_to_ext_dep:
+                print(self._label_to_ext_dep.values())
                 raise Exception("Unknown external dependency - please make sure all maven install json files have been registered with pomgen (by setting maven_install_paths in the pomgen config file): [%s]" % dep_label)
-            return self._name_to_ext_deps[dep_label]
+            return self._label_to_ext_dep[dep_label]
         elif dep_label.startswith("//"):
             # monorepo src ref:
             package_path = dep_label[2:] # remove leading "//"
@@ -154,7 +150,7 @@ class Workspace:
         """
         Parses all pinned json files for the specified maven_install rules.
 
-        Returns a dictionary mapping of the dependency label (as used in BUILD
+        Returns a tuple containing the dependency labels (as used in BUILD
         files) -> the corresponding dependency.Dependency instance.
         """
         result = {}
@@ -170,19 +166,24 @@ class Workspace:
                 transitives_list.append({dep : transitives})
                 self.dependency_metadata.register_exclusions(dep, exclusions)
 
-        # Overrides the deps honoring the override file
-        for key, dep in result.items():
-            if self.override_file_info == []:
-                break
-            overridden_dep = self.override_file_info.overridden_dep_value(dep)
-            if overridden_dep in result.keys():
-                result[key] = result[overridden_dep]
+        # Overrides the direct deps mapping
+        overridden_result = {}
+
+        if self.override_file_info == []:
+            overridden_result = result
+        else:
+            for key, dep in result.items():
+                overridden_dep = self.override_file_info.overridden_dep_value(dep)
+                if overridden_dep in overridden_result.keys():
+                    overridden_result[key] = result[overridden_dep]
+                else:
+                    overridden_result[key] = result[key]
 
         # Registers the overridden transitives
         for t in transitives_list:
             for dep, transitives in t.items():
                 if not self.override_file_info == []:
-                    transitives = self.override_file_info.override_deps(transitives, result)
+                    transitives = self.override_file_info.override_deps(transitives, overridden_result)
                 self.dependency_metadata.register_transitives(dep, transitives)
 
-        return result
+        return tuple(result.values()), overridden_result
