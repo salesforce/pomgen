@@ -110,7 +110,7 @@ pom_template_path=
 maven_install_paths=
 
 # The list of all overridden deps bzl files, comma-separated.
-# Default value: Empty
+# Default value: empty (not set)
 override_file_paths=
 
 [crawler]
