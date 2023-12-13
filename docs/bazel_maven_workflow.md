@@ -50,11 +50,10 @@ Similar to above, we can generate SNAPSHOT jars using Bazel, so that they can be
 
 #### The process for generating SNAPSHOT jars using Bazel
 1. Make code changes to the library which you want to release SNAPSHOT jar for.
-2. Build your library by running `bazel build <path to the library>`.
-3. Run `bazel run @pomgen//:update -- --package <path to the library>` to update version of your library artifact.
-4. Run `bazel run @pomgen//maven -- -a pomgen` to generate poms
-5. Run `bazel run @pomgen//maven -- -a install` to install the libraries into `~/.m2/repository`.
-6. Update the pom.xml in the consuming Maven project to use <new version>-SNAPSHOT of your library.
+1. Build your library by running `bazel build path/to/library` (the default bazel target MUST be the one building the library jar)
+1. Run `bazel run @pomgen//maven -- -a pomgen -t path/to/library` to generate poms
+1. Run `bazel run @pomgen//maven -- -a install -t path/to/library` to install the library into `~/.m2/repository`.
+1. Update the pom.xml in the consuming Maven project to use <new version>-SNAPSHOT of your library.
  
 #### Example
 Make some code changes in `examples/hello-world/healthyfoods/fruit-api`.
