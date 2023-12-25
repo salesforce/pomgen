@@ -9,10 +9,10 @@
 #          mean string 
 # 4th arg: optional relative repo path for a more targeted pom search, must start with a '/'
 _for_each_pom() {
-    action=$1
-    repo_root_dir_path=$2
-    custom_jar_classifier=$3
-    pom_root_path=$4
+    local action=$1
+    local repo_root_dir_path=$2
+    local custom_jar_classifier=$3
+    local pom_root_path=$4
 
     if ! [[ "$action" =~ ^(install_main_artifact|build_javadoc_jar|install_sources_and_javadoc_jars|upload_all_artifacts|clean_source_tree)$ ]]; then
         echo "ERROR: Unknown action $action" && exit 1
@@ -138,7 +138,6 @@ _for_each_pom() {
             fi
             if [ ! -f "${jar_artifact_path}" ]; then
                 echo "ERROR: did not find jar artifact at ${jar_artifact_path}"
-                echo "This is a bug"
                 exit 1
             fi
 

@@ -176,4 +176,3 @@ def _get_lib_release_reason(current_release_reason, proposed_release_reason):
             return proposed_release_reason
 
     return current_release_reason
-

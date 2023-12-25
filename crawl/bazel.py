@@ -92,8 +92,10 @@ def query_all_libraries(repository_root_path, packages, verbose=False):
                 package = os.path.dirname(package)
     return sorted(lib_roots)
 
+
 def _normalize_dependency_string_to_group_id_artifact_id(dependency):
     return ":".join(dependency.split(":")[:2]) # remove classifier/package, so we can grab version from artifacts list
+
 
 def parse_maven_install(mvn_install_name, json_file_path):
     """
@@ -158,6 +160,7 @@ def parse_maven_install(mvn_install_name, json_file_path):
                 exclusions = ()
                 result.append((dep, transitives, exclusions))
     return result
+
 
 def target_pattern_to_path(target_pattern):
     """
@@ -233,6 +236,7 @@ def _parse_conflict_resolution(json_dep_tree, mvn_install_name):
             assert actual_dep not in conflict_resolution
             conflict_resolution[actual_dep] = wanted_dep
     return conflict_resolution
+
 
 def is_never_link_dep(repository_root_path, package):
     """

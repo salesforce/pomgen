@@ -15,8 +15,10 @@ from common import maveninstallinfo
 from common import overridefileinfo
 from common import mdfiles
 from config import config
+from crawl import bazel
 from crawl import crawler as crawlerm
 from crawl import dependencymd as dependencym
+from crawl import libaggregator
 from crawl import pom
 from crawl import pomcontent as pomcontentm
 from crawl import workspace
@@ -26,52 +28,8 @@ import re
 import sys
 
 
-def _parse_arguments(args):
-    parser = argparse.ArgumentParser(description="Monorepo Pom Generator")
-    parser.add_argument("--package", type=str, required=True,
-        help="Narrows pomgen to the specified package(s). " + argsupport.get_package_doc())
-    parser.add_argument("--destdir", type=str, required=True,
-        help="The root directory generated poms are written to")
-    parser.add_argument("--repo_root", type=str, required=False,
-        help="The root of the repository")
-    parser.add_argument("--force", required=False, action="store_true",
-        help="If set, always generated poms, regardless of whether an artifact has changed since it was last released")
-    parser.add_argument("--pom_goldfile", required=False, action="store_true",
-        help="Generates a goldfile pom")
-    parser.add_argument("--verbose", required=False, action="store_true",
-        help="Verbose output")
-    parser.add_argument("--pom.description", type=str, required=False,
-        dest="pom_description", help="Written as the pom's <description/>")
-
-    # deprecated May 2021
-    parser.add_argument("--recursive", required=False, action="store_true",
-        help=argparse.SUPPRESS)
-
-    return parser.parse_args(args)
-
-
-def _write_file(path, content):                    
-    with open(path, "w") as f:
-        f.write(content)
-
-
-def _get_output_dir(args):
-    if not args.destdir:
-        return None
-    if not os.path.exists(args.destdir):
-        os.makedirs(args.destdir)
-    if not os.path.isdir(args.destdir):
-        raise Exception("[%s] is not a directory %s" % args.out)
-    destdir = os.path.realpath(args.destdir)
-    logger.info("Output dir [%s]" %  destdir)
-    return destdir
-
-
 def main(args):
     args = _parse_arguments(args)
-
-    if args.recursive:
-        logger.warning("The --recursive argument has been deprecated, setting it has no effect, pomgen always runs with --recursive enabled. Please do not set this argument anymore")
 
     repo_root = common.get_repo_root(args.repo_root)
     cfg = config.load(repo_root, args.verbose)
@@ -94,12 +52,22 @@ def main(args):
     if len(packages) == 0:
         raise Exception("Did not find any artifact producing BUILD.pom packages at [%s]" % args.package)
     crawler = crawlerm.Crawler(ws, cfg.pom_template, args.verbose)
-    result = crawler.crawl(packages, follow_references=True, force_release=args.force)
+    result = crawler.crawl(packages, follow_references=not args.ignore_references, force_release=args.force)
 
     if len(result.pomgens) == 0:
         logger.info("No releases are required. pomgen will not generate any pom files. To force pom generation, use pomgen's --force option.")
     else:
         output_dir = _get_output_dir(args)
+
+        lib_paths = bazel.query_all_libraries(repo_root, packages)
+        if len(lib_paths) == 1:
+            # a single lib as a starting point is the common case,
+            # so we do not bother with the other cases for now
+            if not args.ignore_references:
+                # the libraries hint file contains the list of all upstream
+                # libs (including the current lib) - this only works when
+                # crawling is enabled (ignore_references disables crawling)
+                _write_all_libraries_hint_files(result, output_dir, lib_paths[0])
 
         for pomgen in result.pomgens:
             pom_dest_dir = os.path.join(output_dir, pomgen.bazel_package)
@@ -127,13 +95,62 @@ def main(args):
                 # if jar_path has been set in the BUILD.pom file, we write a
                 # hint file with the path out so we can find it more easily
                 # later when jars are processed
-                # we can generalize this code with a "custom generator" concept
-                # if we have the need for writing more of these one-off files
                 jar_path = pomgen.artifact_def.jar_path
                 if jar_path is not None:
                     hint_file_path = os.path.join(pom_dest_dir, mdfiles.JAR_LOCATION_HINT_FILE)
                     _write_file(hint_file_path, jar_path)
                     logger.info("Wrote jar location hint file [%s] with content [%s]" % (hint_file_path, jar_path))
+
+
+
+def _parse_arguments(args):
+    parser = argparse.ArgumentParser(description="Monorepo Pom Generator")
+    parser.add_argument("--package", type=str, required=True,
+        help="Narrows pomgen to the specified package(s). " + argsupport.get_package_doc())
+    parser.add_argument("--destdir", type=str, required=True,
+        help="The root directory generated poms are written to")
+    parser.add_argument("--repo_root", type=str, required=False,
+        help="The root of the repository")
+    parser.add_argument("--force", required=False, action="store_true",
+        help="If set, always generated poms, regardless of whether an artifact has changed since it was last released")
+    parser.add_argument("--ignore_references", required=False, action="store_true",
+        help="If set, pomgen does not follow references in BUILD files and only processes the packages packages specified by --package (instead of using them as a starting point and then crawling BUILD files)")
+    parser.add_argument("--pom_goldfile", required=False, action="store_true",
+        help="Generates a goldfile pom")
+    parser.add_argument("--verbose", required=False, action="store_true",
+        help="Verbose output")
+    parser.add_argument("--pom.description", type=str, required=False,
+        dest="pom_description", help="Written as the pom's <description/>")
+
+    return parser.parse_args(args)
+
+
+def _write_file(path, content):                    
+    with open(path, "w") as f:
+        f.write(content)
+
+
+def _get_output_dir(args):
+    if not args.destdir:
+        return None
+    if not os.path.exists(args.destdir):
+        os.makedirs(args.destdir)
+    if not os.path.isdir(args.destdir):
+        raise Exception("[%s] is not a directory %s" % args.out)
+    return os.path.realpath(args.destdir)
+
+
+def _write_all_libraries_hint_files(crawler_result, output_dir, start_lib_path):
+    libaggregator.get_libraries_to_release(crawler_result.nodes)
+    lib_paths = [l.library_path for l in libaggregator.LibraryNode.ALL_LIBRARY_NODES if l.requires_release]
+    if len(lib_paths) > 0:
+        hint_file_dir = os.path.join(output_dir, start_lib_path)
+        if not os.path.exists(hint_file_dir):
+            os.makedirs(hint_file_dir)
+        hint_file_path = os.path.join(hint_file_dir, "libraries.txt")
+        _write_file(hint_file_path, "\n".join(lib_paths))
+        logger.info("Wrote libraries hint file to [%s]" % hint_file_path)
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])

@@ -166,8 +166,8 @@ if __name__ == "__main__":
 
     if crawl_artifact_dependencies:
         crawler = crawler.Crawler(ws, cfg.pom_template, args.verbose)
-        artifact_result = crawler.crawl(packages, force_release=args.force)
-        root_library_nodes = libaggregator.get_libraries_to_release(artifact_result.nodes)
+        crawler_result = crawler.crawl(packages, force_release=args.force)
+        root_library_nodes = libaggregator.get_libraries_to_release(crawler_result.nodes)
 
         if args.library_release_plan_tree:
             pretty_tree_output = ""
@@ -205,7 +205,7 @@ if __name__ == "__main__":
             
             if args.artifact_release_plan:
                 all_artifacts_json = []
-                for dep in artifact_result.crawled_bazel_packages:
+                for dep in crawler_result.crawled_bazel_packages:
                     attrs = OrderedDict()
                     attrs["artifact_id"] = dep.artifact_id
                     attrs["group_id"] = dep.group_id
