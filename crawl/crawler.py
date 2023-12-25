@@ -92,7 +92,7 @@ class Crawler:
 
         follow_references: 
             If False, this crawler will not crawl BUILD file references, 
-            effectively only processing the packages passed into this method
+            only processing the packages passed into this method
 
             This is typically only used for debugging.
 

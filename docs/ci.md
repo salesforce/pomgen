@@ -6,11 +6,13 @@ At a high level, pomgen is meant to be called the following way from a CI job.
 
 Note that pomgen [assumes you are using git](https://github.com/salesforce/pomgen/issues/30).
 
+
 ### Build the binary artifacts
 
 ```
 bazel build <bazel package>
 ```
+
 
 ### Update Artifact versions for releasing
 
@@ -30,11 +32,13 @@ Look for the attribute called `proposed_release_version`.
 
 See this [related issue](https://github.com/salesforce/pomgen/issues/29) to make this easier.
 
+
 ### Generate poms
 
 ```
-bazel run @pomgen//maven -- -a pomgen -t <bazel package>
+bazel run @pomgen//maven -- -a pomgen -l <bazel package>
 ```
+
 
 ### Upload Artifacts to the Maven Repository
 
@@ -44,7 +48,9 @@ bazel run @pomgen//maven -- -a deploy_all
 
 "deploy_all" includes sources and javadoc.
 
+
 ### Update release metadata
+
 
 #### Generate pom goldfiles
 
@@ -54,6 +60,7 @@ These files are used by pomgen to determine whether a new release is required be
 bazel run @pomgen//:pomgen -- --package <bazel package> --destdir <root of repo> --pom_goldfile
 ```
 
+
 #### Write BUILD.pom.released files
 
 These files are used by pomgen to determine whether any binary Artifact has changed since it was last released.
@@ -61,6 +68,7 @@ These files are used by pomgen to determine whether any binary Artifact has chan
 ```
 bazel run @pomgen//:update -- --package <bazel package> --new_released_version <release version> --update_released_artifact_hash_to_current
 ```
+
 
 ### Update Artifact versions for development
 
@@ -75,9 +83,11 @@ Then increment the artifact version:
 bazel run @pomgen//:update -- --package <bazel package> --new_version <proposed dev version from above>
 ```
 
+
 ### Commit metadata changes back to the repository
 
 Commit and send PR.
+
 
 
 ## About propsed versions

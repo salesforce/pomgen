@@ -1,5 +1,6 @@
 # Skip Mode
 
+
 ## Looking around
 
 The [skip pom generation mode](passthrough/MVN-INF/BUILD.pom) can be used to mark bazel targets that [provide dependencies only](passthrough/BUILD), but that do not produce any Maven artifacts. All dependencies of these types of targets will be added to pom generated for the referencing target.
@@ -9,6 +10,7 @@ The libraries in this example reference each other the following way:
 ```
 parent (contains 2 artifacts: parent1 and parent2) -> passthrough -> lib
 ```
+
 
 ### Generating poms
 

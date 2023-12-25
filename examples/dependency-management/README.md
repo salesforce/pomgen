@@ -13,7 +13,7 @@ bazel build examples/dependency-management/...
 ```
 
 ```
-bazel run @pomgen//maven -- -a pomgen,install -t examples/dependency-management
+bazel run @pomgen//maven -- -a pomgen,install -l examples/dependency-management
 ```
 
 Now look under your `$HOME/.m2/repository`:

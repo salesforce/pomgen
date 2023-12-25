@@ -142,14 +142,11 @@ examples/hello-world/juicer <> 3.0.0-SNAPSHOT
 A typical dev workflow is:
 
 - Make changes to one or more libraries
+- Build the jars (using Bazel)
 - Generate pom(s) and install the library/ies into `~/.m2/repository` so that other Maven-based builds can find them:
 
 ```
-bazel run //maven -- -a pomgen -t examples/hello-world/juicer
-bazel run //maven -- -a install
-
-# or to install jar artifacts and also source and javadoc jars:
-bazel run //maven -- -a install_all
+bazel run //maven -- -a pomgen,install -l examples/hello-world/juicer
 ```
 
 
