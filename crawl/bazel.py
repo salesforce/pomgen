@@ -14,6 +14,7 @@ requested data.
 from common import mdfiles
 from common.os_util import run_cmd
 from common import logger
+from collections import defaultdict
 from crawl import dependency
 import os
 import json
@@ -97,69 +98,106 @@ def _normalize_dependency_string_to_group_id_artifact_id(dependency):
     return ":".join(dependency.split(":")[:2]) # remove classifier/package, so we can grab version from artifacts list
 
 
-def parse_maven_install(mvn_install_name, json_file_path):
+def parse_maven_install(names_and_paths, label_to_overridden_fq_label={}):
     """
-    Returns a list of tuples, one item for each dependency managed by the 
-    specified maven_install json file: (dep, transitives, exclusions)
+    Parses the given maven_install pinned json files.
 
-        dep: dependency.Dependency instance managed by the maven_install rule
-        transitives: for the dep, the transitive closure of dependencies, as
-                     list of dependency.Dependency instances
-        exclusions: for the dep, the transitives that are explicitly excluded,
-                    as a list of dependency.Dependency instances
+    Returns the parsed dependencies, as an iterable of tuples:
+      - t[0]: a dependency.Dependency instance
+      - t[1]: for the dependency at t[0], an iterable of the dependencies
+              it references (the full transitive closure)
+    """
+    # internal bookkeeping: stores a mapping of unqualified label (without the
+    # @maven_install_name prefix) to a list of deps with that unqualified label
+    # the label is a str, the deps are _DepWithDirects instances
+    # this is a one to many mapping because there may be multiple matching
+    # deps, each in a different maven install rule
+    unqual_label_to_deps = defaultdict(list)
+    # internal bookkeeping: stores a mapping of qualified label (with the
+    # @maven_install_name prefix) to the dep with that label
+    # the label is a str, the dep is a _DepWithDirects instance
+    fq_label_to_dep = {}
+
+    # parse pinned files
+    for name, pinned_file_path in names_and_paths:
+        for dep in _parse_pinned(name, pinned_file_path):
+            d = dep.dep # dep is a _DepWithDirects instance
+            unqual_label_to_deps[d.unqualified_bazel_label_name].append(dep)
+            assert d.bazel_label_name not in fq_label_to_dep
+            fq_label_to_dep[d.bazel_label_name] = dep
+
+
+    # process overrides (if there are any)
+    # for each dep, we update the direct transitives with the overridden
+    # dep(s)
+    for unqual_label, fq_label in label_to_overridden_fq_label.items():
+        src_deps = unqual_label_to_deps.get(unqual_label, [])
+        for src_dep in src_deps:
+            if fq_label in fq_label_to_dep:
+                target_dep = fq_label_to_dep[fq_label]
+                for dep in fq_label_to_dep.values():
+                    for i, direct in enumerate(dep.directs):
+                        if direct is src_dep:
+                            dep.directs[i] = target_dep
+
+
+    # final result: list of tuples: (dep, transitive closure of deps)
+    # the deps are dependency.Dependency instances
+    dep_and_transitives = []
+
+    # compute transitive closure for each top level dep and assemble the result
+    for dep in fq_label_to_dep.values():
+        unwrapped_dep = dep.dep
+        unwrapped_transitives = [t.dep for t in dep.get_transitive_closure()]
+        dep_and_transitives.append((unwrapped_dep, unwrapped_transitives,))
+
+    return dep_and_transitives
+
+
+def _parse_pinned(mvn_install_name, pinned_file_path):
+    """
+    Parses the maven_install pinned json file with the given name (ns) and path.
+
+    Returns an iterable of _DepWithDirects instances, one for each top level
+    encountered in the pinned file.
     """
     result = []
-    with open(json_file_path, "r") as f:
+    with open(pinned_file_path, "r") as f:
         content = f.read()
-        install_json = json.loads(content)
+    install_json = json.loads(content)
+    repository_key = list(install_json["repositories"].keys())[0]
+    all_artifacts_json = install_json["repositories"][repository_key]
+    artifacts_json = install_json["artifacts"]
+    direct_deps_json = install_json["dependencies"]
+    conflict_resolution = _parse_conflict_resolution(install_json, mvn_install_name)
 
-        artifacts = install_json["artifacts"]
-        deps = install_json["dependencies"]
-        repository_key = list(install_json["repositories"].keys())[0]
-        all_artifacts = install_json["repositories"][repository_key]
+    # collect top level dependencies and build a mappping of
+    # coord -> dependency.Dependency instance
+    # note that the coord doesn't have the version component, but the dep does
+    # this is because the coord without version is a lookup key in the pinned
+    # maven_install file
+    coord_wo_vers_to_dep = {}
+    for coord_wo_vers in all_artifacts_json:
+        dep = dependency.new_dep_from_maven_art_str(
+            coord_wo_vers + ":-1", mvn_install_name)
+        # we need the group_id and artifact_id only to lookup the version
+        group_id_artifact_id = "%s:%s" % (dep.group_id, dep.artifact_id)
+        version = artifacts_json[group_id_artifact_id]["version"]
+        dep = dependency.new_dep_from_maven_art_str(
+            coord_wo_vers + ":" + version, mvn_install_name)
+        if dep in conflict_resolution:
+            dep = conflict_resolution[dep]
+        if dep.classifier != "sources":
+            assert coord_wo_vers not in coord_wo_vers_to_dep
+            coord_wo_vers_to_dep[coord_wo_vers] = _DepWithDirects(dep)
+    
+    # for each top level dependency, find and associate direct transitives
+    deps_with_directs = []
+    for coord_wo_vers, dep in coord_wo_vers_to_dep.items():
+        for direct_dep_coord_wo_vers in direct_deps_json.get(coord_wo_vers, []):
+            dep.directs.append(coord_wo_vers_to_dep[direct_dep_coord_wo_vers])
 
-        conflict_resolution = _parse_conflict_resolution(install_json, mvn_install_name)
-
-        for json_dep in all_artifacts:
-            group_id_artifact_id = _normalize_dependency_string_to_group_id_artifact_id(json_dep)
-            version = artifacts[group_id_artifact_id]["version"]
-            coord = json_dep + ":" + version
-            dep = dependency.new_dep_from_maven_art_str(coord, mvn_install_name)
-            if dep in conflict_resolution:
-                dep = conflict_resolution[dep]
-            if dep.classifier != "sources":
-                transitives = []
-                transitives_to_process = []
-                if group_id_artifact_id in deps:
-                    for transitive_gav in deps[group_id_artifact_id]:
-                        transitive_group_id_artifact_id = _normalize_dependency_string_to_group_id_artifact_id(transitive_gav)
-                        version = artifacts[transitive_group_id_artifact_id]["version"]
-                        transitive_gav = transitive_gav + ":" + version
-                        transitive_dep = dependency.new_dep_from_maven_art_str(transitive_gav, mvn_install_name)
-                        if transitive_dep in conflict_resolution:
-                            transitive_dep = conflict_resolution[transitive_dep]
-                        transitives.append(transitive_dep)
-                        # We need to process the transitives dependencies too to get the full transitive closure.
-                        transitives_to_process.append(transitive_gav)
-                    # Process dependencies of transitives in the same way as we do above.
-                    # This is done recursively so if we encounter a transitive that we haven't processed yet, append it to be processed.
-                    for transitive_to_process in transitives_to_process:
-                        transitive_group_id_artifact_id = _normalize_dependency_string_to_group_id_artifact_id(transitive_to_process)
-                        if transitive_group_id_artifact_id in deps:
-                            for transitive_gav in deps[transitive_group_id_artifact_id]:
-                                transitive_group_id_artifact_id = _normalize_dependency_string_to_group_id_artifact_id(transitive_gav)
-                                version = artifacts[transitive_group_id_artifact_id]["version"]
-                                transitive_gav = transitive_gav + ":" + version
-                                transitive_dep = dependency.new_dep_from_maven_art_str(transitive_gav, mvn_install_name)
-                                if transitive_dep in conflict_resolution:
-                                    transitive_dep = conflict_resolution[transitive_dep]
-                                if transitive_dep not in transitives:
-                                    transitives.append(transitive_dep)
-                                if transitive_gav not in transitives_to_process:
-                                    transitives_to_process.append(transitive_gav)
-                exclusions = ()
-                result.append((dep, transitives, exclusions))
-    return result
+    return coord_wo_vers_to_dep.values()
 
 
 def target_pattern_to_path(target_pattern):
@@ -247,3 +285,27 @@ def is_never_link_dep(repository_root_path, package):
     query = "bazel query 'attr('neverlink', 1, %s)'" % package
     stdout = run_cmd(query, cwd=repository_root_path)
     return package in stdout
+
+
+class _DepWithDirects:
+    """
+    Helper class to track a dep with its direct transitives.
+    The rest of pomgen only cares about dep -> transives closure of its deps,
+    but while processing pinned files, storing this intermediate state is
+    useful.
+    """
+    def __init__(self, dep):
+        self.dep = dep
+        self.directs = []
+
+    def get_transitive_closure(self):
+        transitive_closure = []
+        _DepWithDirects._collect_directs(self, transitive_closure)
+        return transitive_closure
+    
+    @classmethod
+    def _collect_directs(clazz, current_dep, all_deps):
+        for d in current_dep.directs:
+            if d not in all_deps:
+                all_deps.append(d)
+                _DepWithDirects._collect_directs(d, all_deps)

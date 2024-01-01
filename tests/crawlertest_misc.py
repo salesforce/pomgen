@@ -46,7 +46,8 @@ class CrawlerTest(unittest.TestCase):
                                  self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pomcontent.NOOP,
-                                 dependency_metadata=depmd)
+                                 dependency_metadata=depmd,
+                                 label_to_overridden_fq_label={})
         crawler = crawlerm.Crawler(ws, pom_template="")
 
         result = crawler.crawl(["lib/a2"])
@@ -70,7 +71,8 @@ class CrawlerTest(unittest.TestCase):
                                  self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pomcontent.NOOP,
-                                 dependency_metadata=depmd)
+                                 dependency_metadata=depmd,
+                                 label_to_overridden_fq_label={})
         crawler = crawlerm.Crawler(ws, pom_template="")
 
         result = crawler.crawl(["lib/a2"])
@@ -95,7 +97,8 @@ class CrawlerTest(unittest.TestCase):
                                  self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pomcontent.NOOP,
-                                 dependency_metadata=depmd)
+                                 dependency_metadata=depmd,
+                                 label_to_overridden_fq_label={})
         crawler = crawlerm.Crawler(ws, pom_template="")
 
         with self.assertRaises(Exception) as ctx:
@@ -119,7 +122,8 @@ class CrawlerTest(unittest.TestCase):
                                  self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pomcontent.NOOP,
-                                 dependency_metadata=depmd)
+                                 dependency_metadata=depmd,
+                                 label_to_overridden_fq_label={})
         crawler = crawlerm.Crawler(ws, pom_template="")
 
         crawler.crawl(["lib/a2"])

@@ -729,7 +729,7 @@ def _query_dependencies(workspace, artifact_def, dependency):
             return workspace.normalize_deps(artifact_def, deps)
         except Exception as e:
             msg = e.message if hasattr(e, "message") else type(e)
-            raise Exception("Error while processing dependencies: %s %s caused by %s" % (msg, artifact_def, repr(e)))
+            raise Exception("Error while processing dependencies: %s %s caused by %s\nOne possible cause for this error is that the java_libary rule that builds the jar artifact is not the default bazel package target (same name as dir it lives in)" % (msg, artifact_def, repr(e)))
 
 
 def _build_bazel_label(package, target):

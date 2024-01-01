@@ -65,7 +65,8 @@ class CrawlerTest(unittest.TestCase):
                                  config=config.Config(),
                                  maven_install_info=maveninstallinfo.NOOP,
                                  pom_content=pomcontent.NOOP,
-                                 dependency_metadata=depmd)
+                                 dependency_metadata=depmd,
+                                 label_to_overridden_fq_label={})
         self.crawler = crawler.Crawler(ws, pom_template="")
 
     def tearDown(self):

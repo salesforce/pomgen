@@ -46,7 +46,7 @@ def main(args):
                              mvn_install_info,
                              pom_content,
                              dependencymd,
-                             override_file_info = override_file_info)
+                             override_file_info.label_to_overridden_fq_label)
     packages = argsupport.get_all_packages(repo_root, args.package)
     packages = ws.filter_artifact_producing_packages(packages)
     if len(packages) == 0:

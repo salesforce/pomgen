@@ -540,7 +540,8 @@ class CrawlerUnitTest(unittest.TestCase):
                                    config=config.Config(),
                                    maven_install_info=maveninstallinfo.NOOP,
                                    pom_content="",
-                                   dependency_metadata=depmd)
+                                   dependency_metadata=depmd,
+                                   label_to_overridden_fq_label={})
 
 
 if __name__ == '__main__':
