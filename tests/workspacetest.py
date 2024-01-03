@@ -28,9 +28,9 @@ class WorkspaceTest(unittest.TestCase):
         self.orig_bazel_parse_maven_install = bazel.parse_maven_install
         f = dependency.new_dep_from_maven_art_str
         query_result = [
-            (f("org.apache.maven:maven-artifact:3.3.9", "maven"), [], []),
-            (f("com.google.guava:guava:23.0", "maven"), [], []),
-            (f("ch.qos.logback:logback-classic:1.2.3", "maven"), [], [])
+            (f("org.apache.maven:maven-artifact:3.3.9", "maven"), [],),
+            (f("com.google.guava:guava:23.0", "maven"), [],),
+            (f("ch.qos.logback:logback-classic:1.2.3", "maven"), [],)
         ]
         bazel.parse_maven_install = lambda name, path: query_result
     
@@ -43,7 +43,8 @@ class WorkspaceTest(unittest.TestCase):
                                  self._get_config(),
                                  maveninstallinfo.NOOP, 
                                  pom_content=pomcontent.NOOP,
-                                 dependency_metadata=depmd)
+                                 dependency_metadata=depmd,
+                                 label_to_overridden_fq_label={})
         package = "a/b/c"
         art1 = buildpom.MavenArtifactDef("g1", "a1", "1", bazel_package=package,
                                          pom_generation_mode=pomgenmode.DYNAMIC)
@@ -65,7 +66,8 @@ class WorkspaceTest(unittest.TestCase):
                                  self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pom_content=pomcontent.NOOP,
-                                 dependency_metadata=depmd)
+                                 dependency_metadata=depmd,
+                                 label_to_overridden_fq_label={})
         package = "a/b/c"
         art1 = buildpom.MavenArtifactDef("g1", "a1", "1", bazel_package=package,
                                          pom_generation_mode=pomgenmode.SKIP)
@@ -91,7 +93,8 @@ class WorkspaceTest(unittest.TestCase):
                                  self._get_config(),
                                  maven_install_info=self._mocked_mvn_install_info("maven"),
                                  pom_content=pomcontent.NOOP,
-                                 dependency_metadata=depmd)
+                                 dependency_metadata=depmd,
+                                 label_to_overridden_fq_label={})
 
         deps = ws.parse_dep_labels(["@maven//:ch_qos_logback_logback_classic"])
 
@@ -111,7 +114,8 @@ class WorkspaceTest(unittest.TestCase):
                                  self._get_config(),
                                  maven_install_info=self._mocked_mvn_install_info("maven"),
                                  pom_content=pomcontent.NOOP,
-                                 dependency_metadata=depmd)
+                                 dependency_metadata=depmd,
+                                 label_to_overridden_fq_label={})
 
         with self.assertRaises(Exception) as ctx:
             deps = ws.parse_dep_labels(["@maven//:bad_qos_logback_logback_classic"])
@@ -128,7 +132,8 @@ class WorkspaceTest(unittest.TestCase):
             config=self._get_config(excluded_dependency_paths=["projects/protos/",]),
             maven_install_info=self._mocked_mvn_install_info("maven"),
             pom_content=pomcontent.NOOP,
-            dependency_metadata=depmd)
+            dependency_metadata=depmd,
+            label_to_overridden_fq_label={})
 
         deps = ws.parse_dep_labels(["@maven//:ch_qos_logback_logback_classic", "//projects/protos/grail:java_protos"])
 
@@ -148,7 +153,8 @@ class WorkspaceTest(unittest.TestCase):
             config=self._get_config(excluded_dependency_labels=["@maven//:ch_qos_logback_logback_classic",]),
             maven_install_info=self._mocked_mvn_install_info("maven"),
             pom_content=pomcontent.NOOP,
-            dependency_metadata=depmd)
+            dependency_metadata=depmd,
+            label_to_overridden_fq_label={})
 
         deps = ws.parse_dep_labels(["@maven//:ch_qos_logback_logback_classic"])
 
@@ -165,7 +171,8 @@ class WorkspaceTest(unittest.TestCase):
                                  self._get_config(),
                                  maven_install_info=self._mocked_mvn_install_info("maven"),
                                  pom_content=pomcontent.NOOP,
-                                 dependency_metadata=depmd)
+                                 dependency_metadata=depmd,
+                                 label_to_overridden_fq_label={})
 
         deps = ws.parse_dep_labels(["@maven//:org_apache_maven_maven_artifact"])
 
@@ -191,7 +198,8 @@ class WorkspaceTest(unittest.TestCase):
                                  self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pom_content=pomcontent.NOOP,
-                                 dependency_metadata=depmd)
+                                 dependency_metadata=depmd,
+                                 label_to_overridden_fq_label={})
 
         deps = ws.parse_dep_labels(["//%s" % package_name])
 
@@ -219,7 +227,8 @@ class WorkspaceTest(unittest.TestCase):
                                  self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pom_content=pomcontent.NOOP,
-                                 dependency_metadata=depmd)
+                                 dependency_metadata=depmd,
+                                 label_to_overridden_fq_label={})
 
         deps = ws.parse_dep_labels(["//%s:my_cool_target" % package_name])
 
@@ -253,7 +262,8 @@ class WorkspaceTest(unittest.TestCase):
                                  self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pom_content=pomcontent.NOOP,
-                                 dependency_metadata=depmd)
+                                 dependency_metadata=depmd,
+                                 label_to_overridden_fq_label={})
 
         with self.assertRaises(Exception) as ctx:
             deps = ws.parse_dep_labels(["//%s" % package_name,
@@ -282,7 +292,8 @@ class WorkspaceTest(unittest.TestCase):
                                  self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pom_content=pomcontent.NOOP,
-                                 dependency_metadata=depmd)
+                                 dependency_metadata=depmd,
+                                 label_to_overridden_fq_label={})
 
         deps = ws.parse_dep_labels(["//%s" % package_name,
                                     "//%s:%s" % (bad_package_name, bad_package_name)])
@@ -298,7 +309,8 @@ class WorkspaceTest(unittest.TestCase):
                                  self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pom_content=pomcontent.NOOP,
-                                 dependency_metadata=depmd)
+                                 dependency_metadata=depmd,
+                                 label_to_overridden_fq_label={})
 
         with self.assertRaises(Exception) as ctx:
             deps = ws.parse_dep_labels(["this is a label"])
@@ -332,7 +344,8 @@ class WorkspaceTest(unittest.TestCase):
                                  self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pom_content=pomcontent.NOOP,
-                                 dependency_metadata=depmd)
+                                 dependency_metadata=depmd,
+                                 label_to_overridden_fq_label={})
 
         deps = ws.parse_dep_labels(["//%s" % package_name])
 
@@ -370,7 +383,8 @@ class WorkspaceTest(unittest.TestCase):
                                  self._get_config(),
                                  maveninstallinfo.NOOP,
                                  pom_content=pomcontent.NOOP,
-                                 dependency_metadata=depmd)
+                                 dependency_metadata=depmd,
+                                 label_to_overridden_fq_label={})
 
         deps = ws.parse_dep_labels(["//%s" % package_name])
 

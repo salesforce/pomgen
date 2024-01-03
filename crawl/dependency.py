@@ -34,9 +34,6 @@ class AbstractDependency(object):
                      False -> this is an external dependency or a pom artifact
                      or something else that bazel cannot build
 
-    override_key: the key value to match the json in override file.
-                   For ThirdParty dep - contains group_id, artifactid, packaging, classifier (if present)
-                   For MonoRepo dep - contains bazel package and target name
 
     Optional/may be None:
 
@@ -125,10 +122,6 @@ class AbstractDependency(object):
 
     @property
     def bazel_buildable(self):
-        raise Exception("must be implemented in subclass")
-
-    @property
-    def override_key(self):
         raise Exception("must be implemented in subclass")
 
     def __hash__(self):
@@ -225,10 +218,6 @@ class ThirdPartyDependency(AbstractDependency):
         return name
 
     @property
-    def override_key(self):
-        return self._bzl_artifact_name()
-
-    @property
     def bazel_buildable(self):
         return False
 
@@ -281,10 +270,6 @@ class MonorepoDependency(AbstractDependency):
     @property
     def references_artifact(self):
         return self._artifact_def.pom_generation_mode.produces_artifact
-
-    @property
-    def override_key(self):
-        return "@//" + self.bazel_package + ":" + self.bazel_target
 
     @classmethod
     def _init_target(clazz, bazel_package, bazel_target):

@@ -561,25 +561,6 @@ class DependencyTest(unittest.TestCase):
 
         self.assertTrue(dep.bazel_buildable)
 
-    def test_override_key_third_party_dep(self):
-        artifacts = ["com.google.guava:guava:20.0", "javax.activation:activation:1.1.1"]
-
-        deps = [dependency.new_dep_from_maven_art_str(artifacts[0], "name"), dependency.new_dep_from_maven_art_str(artifacts[1], "name")]
-
-        self.assertEqual("com_google_guava_guava", deps[0].override_key)
-        self.assertEqual("javax_activation_activation", deps[1].override_key)
-
-    def test_override_key_monorepo_dep(self):
-        group_id = "g1"
-        artifact_id = "a1"
-        version = "1.1.0"
-        package = "pack"
-        art_def = buildpom.MavenArtifactDef(group_id, artifact_id, version)
-        art_def = buildpom._augment_art_def_values(art_def, None, package, None, None, pomgenmode.DYNAMIC)
-
-        dep = dependency.new_dep_from_maven_artifact_def(art_def)
-
-        self.assertEqual("@//pack:pack", dep.override_key)
 
 if __name__ == '__main__':
     unittest.main()

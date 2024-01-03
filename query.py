@@ -89,14 +89,13 @@ if __name__ == "__main__":
     args = _parse_arguments(sys.argv[1:])
     repo_root = common.get_repo_root(args.repo_root)
     cfg = config.load(repo_root, args.verbose)
-    override_file_info = overridefileinfo.OverrideFileInfo(cfg.override_file_paths, repo_root)
+    dep_overrides = overridefileinfo.OverrideFileInfo(
+        cfg.override_file_paths, repo_root).label_to_overridden_fq_label
     mvn_install_info = maveninstallinfo.MavenInstallInfo(cfg.maven_install_paths)
     depmd = dependencymdm.DependencyMetadata(cfg.jar_artifact_classifier)    
-    ws = workspace.Workspace(repo_root, cfg,
-                             mvn_install_info,
-                             pomcontent.NOOP,
+    ws = workspace.Workspace(repo_root, cfg, mvn_install_info, pomcontent.NOOP,
                              dependency_metadata=depmd,
-                             override_file_info = override_file_info,
+                             label_to_overridden_fq_label=dep_overrides,
                              verbose=args.verbose)
 
     determine_packages_to_process = (args.list_libraries or 

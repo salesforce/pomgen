@@ -14,13 +14,15 @@ from crawl import bazel
 from crawl import buildpom
 from crawl import dependency
 
+
 class Workspace:
     """
-    Manages workspace-level information and translates between Bazel and 
+    Manages workspace-level entities and translates between Bazel and 
     Maven concepts.
     """
     def __init__(self, repo_root_path, config, maven_install_info,
-                 pom_content, dependency_metadata, override_file_info = [], verbose=False):
+                 pom_content, dependency_metadata, label_to_overridden_fq_label,
+                 verbose=False):
         self.repo_root_path = repo_root_path
         self.excluded_dependency_paths = config.excluded_dependency_paths
         self.excluded_dependency_labels = config.excluded_dependency_labels
@@ -29,17 +31,18 @@ class Workspace:
         self.verbose = verbose
         self.dependency_metadata = dependency_metadata
         self.change_detection_enabled = config.change_detection_enabled
-        self.override_file_info = override_file_info
-        self._external_dependencies, self._label_to_ext_dep = self._parse_maven_install(maven_install_info, repo_root_path)
+        self.label_to_overridden_fq_label = label_to_overridden_fq_label
+        self._label_to_ext_dep = self._parse_maven_install(
+            maven_install_info, repo_root_path, label_to_overridden_fq_label)
         self._package_to_artifact_def = {} # cache for artifact_def instances
 
     @property
     def external_dependencies(self):
         """
-        Returns a tuple for all external dependencies declared for this 
-        WORKSPACE.
+        Returns an iterable of all external dependencies (dependency.Dependency
+        instances), declared in this workspace.
         """
-        return self._external_dependencies
+        return tuple(self._label_to_ext_dep.values())
 
     def parse_maven_artifact_def(self, package):
         """
@@ -146,44 +149,23 @@ class Workspace:
         else:
             raise Exception("bad label [%s]" % dep_label)
 
-    def _parse_maven_install(self, maven_install_info, repo_root_path):
+    def _parse_maven_install(self, maven_install_info, repo_root_path, 
+                             label_to_overridden_fq_label):
         """
         Parses all pinned json files for the specified maven_install rules.
-
-        Returns a tuple containing the dependency labels (as used in BUILD
-        files) -> the corresponding dependency.Dependency instance.
         """
-        result = {}
-        transitives_list = []
-        for name_and_path in maven_install_info.get_maven_install_names_and_paths(repo_root_path):
-            mvn_install_name, json_file_path = name_and_path
-            parse_result = bazel.parse_maven_install(mvn_install_name, json_file_path)
-            for dep, transitives, exclusions in parse_result:
-                key = dep.bazel_label_name
-                if self.verbose:
-                    logger.debug("Registered dep %s" % key)
-                result[key] = dep
-                transitives_list.append({dep : transitives})
-                self.dependency_metadata.register_exclusions(dep, exclusions)
+        names_and_paths = maven_install_info.get_maven_install_names_and_paths(
+            repo_root_path)
 
-        # Overrides the direct deps mapping
-        overridden_result = {}
+        dep_to_transitives = bazel.parse_maven_install(
+            names_and_paths, label_to_overridden_fq_label)
 
-        if self.override_file_info == []:
-            overridden_result = result
-        else:
-            for key, dep in result.items():
-                overridden_dep = self.override_file_info.overridden_dep_value(dep)
-                if overridden_dep in overridden_result.keys():
-                    overridden_result[key] = result[overridden_dep]
-                else:
-                    overridden_result[key] = result[key]
+        label_to_dep = {}
+        for dep, transitives in dep_to_transitives:
+            label = dep.bazel_label_name
+            label_to_dep[label] = dep
+            if self.verbose:
+                logger.debug("Registered dep %s" % label)
+            self.dependency_metadata.register_transitives(dep, transitives)
 
-        # Registers the overridden transitives
-        for t in transitives_list:
-            for dep, transitives in t.items():
-                if not self.override_file_info == []:
-                    transitives = self.override_file_info.override_deps(transitives, overridden_result)
-                self.dependency_metadata.register_transitives(dep, transitives)
-
-        return tuple(result.values()), overridden_result
+        return label_to_dep

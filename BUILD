@@ -7,6 +7,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 
 python_version = "PY3"
 
+
 py_binary(
     name = "pomgen",
     srcs = [":pomgen_files"],
@@ -36,6 +37,7 @@ filegroup(
                  "crawl/*.py"]),
     visibility = ["//misc:__subpackages__",],
 )
+
 
 
 py_test(
@@ -217,7 +219,7 @@ py_test(
 
 py_test(
     name = "overridefileinfotest",
-    srcs = ["common/overridefileinfo.py", "tests/overridefileinfotest.py", "crawl/dependency.py"],
+    srcs = ["common/overridefileinfo.py", "tests/overridefileinfotest.py",],
     imports = ["."],
     size = "small",
     python_version = python_version,
