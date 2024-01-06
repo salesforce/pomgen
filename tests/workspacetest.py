@@ -32,7 +32,7 @@ class WorkspaceTest(unittest.TestCase):
             (f("com.google.guava:guava:23.0", "maven"), [],),
             (f("ch.qos.logback:logback-classic:1.2.3", "maven"), [],)
         ]
-        bazel.parse_maven_install = lambda name, path: query_result
+        bazel.parse_maven_install = lambda names, paths, verbose: query_result
     
     def tearDown(self):
         bazel.parse_maven_install = self.orig_bazel_parse_maven_install

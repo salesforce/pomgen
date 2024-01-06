@@ -98,7 +98,7 @@ def _normalize_dependency_string_to_group_id_artifact_id(dependency):
     return ":".join(dependency.split(":")[:2]) # remove classifier/package, so we can grab version from artifacts list
 
 
-def parse_maven_install(names_and_paths, label_to_overridden_fq_label={}):
+def parse_maven_install(names_and_paths, label_to_overridden_fq_label={}, verbose=False):
     """
     Parses the given maven_install pinned json files.
 
@@ -120,7 +120,7 @@ def parse_maven_install(names_and_paths, label_to_overridden_fq_label={}):
 
     # parse pinned files
     for name, pinned_file_path in names_and_paths:
-        for dep in _parse_pinned(name, pinned_file_path):
+        for dep in _parse_pinned(name, pinned_file_path, verbose):
             d = dep.dep # dep is a _DepWithDirects instance
             unqual_label_to_deps[d.unqualified_bazel_label_name].append(dep)
             assert d.bazel_label_name not in fq_label_to_dep
@@ -154,13 +154,15 @@ def parse_maven_install(names_and_paths, label_to_overridden_fq_label={}):
     return dep_and_transitives
 
 
-def _parse_pinned(mvn_install_name, pinned_file_path):
+def _parse_pinned(mvn_install_name, pinned_file_path, verbose=False):
     """
     Parses the maven_install pinned json file with the given name (ns) and path.
 
     Returns an iterable of _DepWithDirects instances, one for each top level
     encountered in the pinned file.
     """
+    if verbose:
+        logger.debug("Processing pinned file [%s]" % pinned_file_path)
     result = []
     with open(pinned_file_path, "r") as f:
         content = f.read()
@@ -194,8 +196,9 @@ def _parse_pinned(mvn_install_name, pinned_file_path):
     # for each top level dependency, find and associate direct transitives
     deps_with_directs = []
     for coord_wo_vers, dep in coord_wo_vers_to_dep.items():
-        for direct_dep_coord_wo_vers in direct_deps_json.get(coord_wo_vers, []):
-            dep.directs.append(coord_wo_vers_to_dep[direct_dep_coord_wo_vers])
+        direct_dep_coords_wo_vers = direct_deps_json.get(coord_wo_vers, [])
+        dep.directs = _get_direct_deps(direct_dep_coords_wo_vers,
+                                       coord_wo_vers_to_dep, verbose)
 
     return coord_wo_vers_to_dep.values()
 
@@ -274,6 +277,38 @@ def _parse_conflict_resolution(json_dep_tree, mvn_install_name):
             assert actual_dep not in conflict_resolution
             conflict_resolution[actual_dep] = wanted_dep
     return conflict_resolution
+
+
+def _get_direct_deps(direct_dep_coords_wo_vers, coord_wo_vers_to_dep, verbose):
+    direct_deps = []
+    for direct_dep_coord_wo_vers in direct_dep_coords_wo_vers:
+        direct_dep = None
+        if direct_dep_coord_wo_vers in coord_wo_vers_to_dep:
+            direct_dep = coord_wo_vers_to_dep[direct_dep_coord_wo_vers]
+        else:
+            alt_coords = _get_alt_lookup_coords(direct_dep_coord_wo_vers)
+            for alt_direct_dep_coord_wo_vers in alt_coords:
+                if alt_direct_dep_coord_wo_vers in coord_wo_vers_to_dep:
+                    if verbose:
+                        logger.debug("Found top level dep using alt coord [%s] instead of [%s]" % (alt_direct_dep_coord_wo_vers, direct_dep_coord_wo_vers))
+                    direct_dep = coord_wo_vers_to_dep[alt_direct_dep_coord_wo_vers]
+                    break
+        assert direct_dep is not None, "failed to find top level dependency instance for direct dep coord [%s]" % direct_dep_coord_wo_vers
+        direct_deps.append(direct_dep)
+    return direct_deps
+
+
+def _get_alt_lookup_coords(coord_wo_vers):
+    """
+    Covers the following observed edge cases in pinned files:
+      - the reference uses "test-jar" packaging and the top level
+        dep has "jar" packaging with "tests" classifier.
+    """
+    alternate_coords = []
+    dep = dependency.new_dep_from_maven_art_str(coord_wo_vers + ":-1", "unused")
+    if dep.packaging == "test-jar":
+        alternate_coords.append("%s:%s:jar:tests" % (dep.group_id, dep.artifact_id))
+    return alternate_coords
 
 
 def is_never_link_dep(repository_root_path, package):
