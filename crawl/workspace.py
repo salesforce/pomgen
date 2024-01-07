@@ -27,11 +27,11 @@ class Workspace:
         self.excluded_dependency_paths = config.excluded_dependency_paths
         self.excluded_dependency_labels = config.excluded_dependency_labels
         self.source_exclusions = config.all_src_exclusions
-        self.pom_content = pom_content
-        self.verbose = verbose
-        self.dependency_metadata = dependency_metadata
         self.change_detection_enabled = config.change_detection_enabled
+        self.pom_content = pom_content
+        self.dependency_metadata = dependency_metadata
         self.label_to_overridden_fq_label = label_to_overridden_fq_label
+        self.verbose = verbose
         self._label_to_ext_dep = self._parse_maven_install(
             maven_install_info, repo_root_path, label_to_overridden_fq_label)
         self._package_to_artifact_def = {} # cache for artifact_def instances
@@ -158,7 +158,7 @@ class Workspace:
             repo_root_path)
 
         dep_to_transitives = bazel.parse_maven_install(
-            names_and_paths, label_to_overridden_fq_label)
+            names_and_paths, label_to_overridden_fq_label, self.verbose)
 
         label_to_dep = {}
         for dep, transitives in dep_to_transitives:

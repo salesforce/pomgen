@@ -197,6 +197,17 @@ class BazelTest(unittest.TestCase):
         self.assertEqual(["//a", "//b", "//c"],
                           bazel._ensure_unique_deps(["//a", "//b", "//c", "//a"]))
 
+    def test_use_alt_lookup_coords(self):
+        d1 = dependency.new_dep_from_maven_art_str("com.salesforce.servicelibs:pki-security-impl:jar:tests:1.0.0", "maven")
+        top_level_deps = [d1]
+        coord_wo_vers_to_dep = {d.maven_coordinates_name:d for d in top_level_deps}
+        direct_dep_coords_wo_vers = ["com.salesforce.servicelibs:pki-security-impl:test-jar"]
+
+        direct_deps = bazel._get_direct_deps(direct_dep_coords_wo_vers,
+                                             coord_wo_vers_to_dep, True)
+
+        self.assertIn(d1, direct_deps)
+
     def _get_dep_and_transitives(self, result, group_id, artifact_id, rule_name):
         for t in result:
             d = t[0]

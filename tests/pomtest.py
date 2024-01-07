@@ -50,7 +50,7 @@ class PomTest(unittest.TestCase):
             (f("org.apache.maven:mult-versions:1.0.0", "maven"), []),
             (f("org.apache.maven:mult-versions:2.0.0", "maven2"), []),
         ]
-        bazel.parse_maven_install = lambda name, path: query_result
+        bazel.parse_maven_install = lambda paths, overrides, verbose: query_result
     
     def tearDown(self):
         bazel.parse_maven_install = self.orig_bazel_parse_maven_install
@@ -244,7 +244,7 @@ class PomTest(unittest.TestCase):
             (f("com.google.guava:guava:23.0", "maven"), []),
         ]
         orig_bazel_parse_maven_install = bazel.parse_maven_install
-        bazel.parse_maven_install = lambda name, path: query_result
+        bazel.parse_maven_install = lambda names, overrides, verbose: query_result
         artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3")
         artifact_def = buildpom._augment_art_def_values(artifact_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
