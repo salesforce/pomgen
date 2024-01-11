@@ -157,7 +157,7 @@ See the [example pom template](healthyfoods/parentpom/MVN-INF/pom.template).
 ##### Referencing versions
 
 The version of known artifacts, both external (maven_install) and internal (BUILD.pom) can be referenced in the pom template using the following syntax:
-```
+
 - For external artifacts: #{maven_install_label.version} for example:
   - #{@com_google//:com_google_guava_guava.version}
 - For interal artifacts: #{group_id:artifact_id:version}
