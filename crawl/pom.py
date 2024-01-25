@@ -724,7 +724,7 @@ def _query_dependencies(workspace, artifact_def, dependency):
             label = _build_bazel_label(artifact_def.bazel_package,
                                        dependency.bazel_target)
             dep_labels = bazel.query_java_library_deps_attributes(
-                workspace.repo_root_path, label)
+                workspace.repo_root_path, label, workspace.verbose)
             deps = workspace.parse_dep_labels(dep_labels)
             return workspace.normalize_deps(artifact_def, deps)
         except Exception as e:
