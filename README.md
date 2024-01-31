@@ -161,7 +161,7 @@ jar_classifier=
 
 ### transitives_versioning_mode
 
-(See [more information about transitives versioning](docs/ci.md#using-a-different-version-increment-mode-for-transitives))
+Please see [more information about transitives versioning](docs/ci.md#using-a-different-version-increment-mode-for-transitives).
 
 
 ### override_file_paths
