@@ -165,8 +165,9 @@ _use_libraries_hint_file() {
 _for_each_library() {
     local action=$1
     local repo_root_path=$2
-    local jar_artifact_classifier=$3
-    local library_path=$4
+    local $pom_base_filename=$3
+    local jar_artifact_classifier=$4
+    local library_path=$5
 
     if ! [[ "$action" =~ ^(install|build)$ ]]; then
         echo "ERROR: Unknown action $action" && exit 1
@@ -180,7 +181,7 @@ _for_each_library() {
     do
         echo "[INFO] Processing library: $library_path"
         if [ "$action" == "install" ]; then
-          _for_each_pom "install_main_artifact" $repo_root_path $jar_artifact_classifier "/$library_path"
+          _for_each_pom "install_main_artifact" $repo_root_path $pom_base_filename $jar_artifact_classifier "/$library_path"
         elif [ "$action" == "build" ]; then
           local cmd="bazel build ${library_path}/${BZL_BUILD_WILDCARD:-"..."}"
           echo "[INFO] Running $cmd"
@@ -292,6 +293,11 @@ fi
 # pom.xml files referencing those jars
 jar_artifact_classifier=$(bazel run @pomgen//misc:configvalueloader -- --key artifact.jar_classifier --default None)
 
+# also load the pom base filename - I guess we shouldn't keep adding these load
+# stmts, so if we end up adding a 3rd one, refactor to bulk load in a single
+# call
+pom_base_filename=$(bazel run @pomgen//misc:configvalueloader -- --key general.pom_base_filename)
+
 
 for action in $(echo $actions | tr "," "\n")
 do
@@ -304,7 +310,7 @@ do
     echo ""
 
     if [ "$action" == "clean" ]; then
-        _for_each_pom "clean_source_tree" $repo_root_path $jar_artifact_classifier $library_path
+        _for_each_pom "clean_source_tree" $repo_root_path $pom_base_filename $jar_artifact_classifier $library_path
 
     elif [ "$action" == "pomgen" ]; then
         extra_args=""
@@ -328,17 +334,17 @@ do
 
     elif [ "$action" == "install" ]; then
         if [ "$(_use_libraries_hint_file $repo_root_path $follow_references $library_path)" == "true" ]; then
-            _for_each_library $action $repo_root_path $jar_artifact_classifier $library_path
+            _for_each_library $action $repo_root_path $pom_base_filename $jar_artifact_classifier $library_path
         else
-            _for_each_pom "install_main_artifact" $repo_root_path $jar_artifact_classifier $library_path
+            _for_each_pom "install_main_artifact" $repo_root_path $pom_base_filename $jar_artifact_classifier $library_path
         fi
 
     elif [ "$action" == "install_all" ]; then
         # do not specify $library_path below because the javadoc maven plugin
         # looks for dependencies
-        _for_each_pom "install_main_artifact" $repo_root_path $jar_artifact_classifier
-        _for_each_pom "build_javadoc_jar" $repo_root_path $jar_artifact_classifier $library_path
-        _for_each_pom "install_sources_and_javadoc_jars" $repo_root_path $jar_artifact_classifier $library_path
+        _for_each_pom "install_main_artifact" $repo_root_path $pom_base_filename $jar_artifact_classifier
+        _for_each_pom "build_javadoc_jar" $repo_root_path $pom_base_filename $jar_artifact_classifier $library_path
+        _for_each_pom "install_sources_and_javadoc_jars" $repo_root_path $pom_base_filename $jar_artifact_classifier $library_path
 
     elif [ "$action" == "deploy_all" ]; then
         if [ -z "$REPOSITORY_URL" ]; then
@@ -348,20 +354,20 @@ do
 
         # no filter below because the javadoc maven plugin looks for
         # dependencies
-        _for_each_pom "install_main_artifact" $repo_root_path $jar_artifact_classifier
-        _for_each_pom "build_javadoc_jar" $repo_root_path $jar_artifact_classifier $library_path
-        _for_each_pom "upload_all_artifacts" $repo_root_path $jar_artifact_classifier $library_path
+        _for_each_pom "install_main_artifact" $repo_root_path $pom_base_filename $jar_artifact_classifier
+        _for_each_pom "build_javadoc_jar" $repo_root_path $pom_base_filename $jar_artifact_classifier $library_path
+        _for_each_pom "upload_all_artifacts" $repo_root_path $pom_base_filename $jar_artifact_classifier $library_path
 
     elif [ "$action" == "deploy_only" ]; then
         if [ -z "$REPOSITORY_URL" ]; then
             echo "[ERROR] REPOSITORY_URL must be set"
             exit 1
         fi
-        _for_each_pom "upload_all_artifacts" $repo_root_path $jar_artifact_classifier $library_path
+        _for_each_pom "upload_all_artifacts" $repo_root_path $pom_base_filename $jar_artifact_classifier $library_path
 
     elif [ "$action" == "build" ]; then
         if [ "$(_use_libraries_hint_file $repo_root_path $follow_references $library_path )" == "true" ]; then
-        _for_each_library $action $repo_root_path $jar_artifact_classifier $library_path
+        _for_each_library $action $repo_root_path $pom_base_filename $jar_artifact_classifier $library_path
         else
             echo "[ERROR] The 'build' action requires -l to point to a library"
             echo "        The 'pomgen' action must already have run for this library"

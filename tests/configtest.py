@@ -247,6 +247,10 @@ excluded_dependency_labels=  123    ,   444
         self.assertTrue(isinstance(cfg.excluded_src_file_extensions, tuple))
         self.assertEqual(0, len(cfg.excluded_src_file_extensions))
 
+    def test_pom_base_filename(self):
+        cfg = config.Config(pom_base_filename="foo")
+        self.assertEqual("foo", cfg.pom_base_filename)
+
     def _write_pomgenrc(self, repo_root, pom_template_path, maven_install_paths):
         content = """[general]
 pom_template_path=%s

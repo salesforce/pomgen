@@ -5,14 +5,16 @@
 
 # 1st arg: action to run for each pom found in the build directory
 # 2nd arg: path to root of repo
-# 3rd arg: custom classifier for jar artifacts, uses the placeholder "None" to 
+# 3rd arg: pom file basename (the files to look for, w/o ext, usually "pom")
+# 4th arg: custom classifier for jar artifacts, uses the placeholder "None" to 
 #          mean string 
-# 4th arg: optional relative repo path for a more targeted pom search, must start with a '/'
+# 5th arg: optional relative repo path for a more targeted pom search, must start with a '/'
 _for_each_pom() {
     local action=$1
     local repo_root_dir_path=$2
-    local custom_jar_classifier=$3
-    local pom_root_path=$4
+    local pom_base_filename=$3
+    local custom_jar_classifier=$4
+    local pom_root_path=$5
 
     if ! [[ "$action" =~ ^(install_main_artifact|build_javadoc_jar|install_sources_and_javadoc_jars|upload_all_artifacts|clean_source_tree)$ ]]; then
         echo "ERROR: Unknown action $action" && exit 1
@@ -28,9 +30,9 @@ _for_each_pom() {
 
     abs_pom_root_path=$repo_build_dir_path$pom_root_path
 
-    # look for pom files - the pom* glob is here so that we also find
+    # look for pom files - the ${basename}* glob is here so that we also find
     # files using the format "pom_companion.xml" (see pomgen.py)
-    find -L $abs_pom_root_path -name "pom*.xml"|while read pom_path; do
+    find -L $abs_pom_root_path -name "${pom_base_filename}*.xml"|while read pom_path; do
         echo "INFO: Processing pom: $pom_path"
         build_dir_package_path="$(dirname "$pom_path")"
         src_dir_rel_path=${build_dir_package_path#$repo_build_dir_path}

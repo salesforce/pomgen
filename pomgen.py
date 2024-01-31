@@ -83,12 +83,14 @@ def main(args):
                 logger.info("Wrote pom goldfile to [%s]" % pom_goldfile_path)
             else:
                 pom_content = pomgen.gen(pom.PomContentType.RELEASE)
-                pom_path = os.path.join(pom_dest_dir, "pom.xml")
+                pom_path = os.path.join(
+                    pom_dest_dir, "%s.xml" % cfg.pom_base_filename)
                 _write_file(pom_path, pom_content)
                 logger.info("Wrote pom file to [%s]" % pom_path)
                 for i, companion_pomgen in enumerate(pomgen.get_companion_generators()):
                     pom_content = companion_pomgen.gen(pom.PomContentType.RELEASE)
-                    pom_path = os.path.join(pom_dest_dir, "pom_companion%s.xml" % i)
+                    pom_path = os.path.join(pom_dest_dir, 
+                        "%s_companion%s.xml" % (cfg.pom_base_filename, i))
                     _write_file(pom_path, pom_content)
                     logger.info("Wrote companion pom file to [%s]" % pom_path)
 
