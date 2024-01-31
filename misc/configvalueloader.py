@@ -35,6 +35,8 @@ if __name__ == "__main__":
     # this isn't implemented for all config values yet ...
     if args.key == "artifact.jar_classifier":
         value = cfg.jar_artifact_classifier
+    elif args.key == "general.pom_base_filename":
+        value = cfg.pom_base_filename
     else:
         sys.exit("Unknown config key [%s], fix me if needed!" % args.key)
     if value is None:

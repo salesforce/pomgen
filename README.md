@@ -95,6 +95,10 @@ The file format is:
 # Default value: config/pom_template.xml
 pom_template_path=
 
+# The base filename (without extension) of the generated pom files.
+# Default value: pom
+pom_base_filename=
+
 # The list of all maven install json files with pinned dependencies, comma-separated. 
 # All dependencies that pomgen encounters in BUILD files must exist in one of the files
 # listed here.
