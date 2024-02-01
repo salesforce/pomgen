@@ -1,5 +1,7 @@
 # pomgen
 
+[![ci](https://github.com/salesforce/pomgen/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/salesforce/pomgen/actions/workflows/ci.yml)
+
 :octocat: Please do us a huge favor. If you think this project could be useful for you, now or in the future, please hit the **Star** button at the top. That helps us advocate for more resources on this project. Thanks!
 
 
