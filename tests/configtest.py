@@ -65,8 +65,7 @@ override_file_paths=override.bzl"""
     def test_transitives_versioning_mode__semver(self):
         repo_root = tempfile.mkdtemp("root")
         os.mkdir(os.path.join(repo_root, "config"))
-        pom_template_path = self._write_file(repo_root, "WORKSPACE", "foo")
-        pom_template_path = self._write_file(repo_root, "config/pom_template.xml", "foo")
+        self._write_file(repo_root, "config/pom_template.xml", "foo")
         self._write_file(repo_root, ".pomgenrc", """
 [artifact]
 transitives_versioning_mode=semver
@@ -79,8 +78,7 @@ transitives_versioning_mode=semver
     def test_transitives_versioning_mode__counter(self):
         repo_root = tempfile.mkdtemp("root")
         os.mkdir(os.path.join(repo_root, "config"))
-        pom_template_path = self._write_file(repo_root, "WORKSPACE", "foo")
-        pom_template_path = self._write_file(repo_root, "config/pom_template.xml", "foo")
+        self._write_file(repo_root, "config/pom_template.xml", "foo")
         self._write_file(repo_root, ".pomgenrc", """
 [artifact]
 transitives_versioning_mode=counter
@@ -93,8 +91,8 @@ transitives_versioning_mode=counter
     def test_transitives_versioning_mode__invalid_value(self):
         repo_root = tempfile.mkdtemp("root")
         os.mkdir(os.path.join(repo_root, "config"))
-        pom_template_path = self._write_file(repo_root, "WORKSPACE", "foo")
-        pom_template_path = self._write_file(repo_root, "config/pom_template.xml", "foo")
+        self._write_file(repo_root, "WORKSPACE", "foo")
+        self._write_file(repo_root, "config/pom_template.xml", "foo")
         self._write_file(repo_root, ".pomgenrc", """
 [artifact]
 transitives_versioning_mode=foo
@@ -109,8 +107,7 @@ transitives_versioning_mode=foo
     def test_classifier__unset(self):
         repo_root = tempfile.mkdtemp("root")
         os.mkdir(os.path.join(repo_root, "config"))
-        pom_template_path = self._write_file(repo_root, "WORKSPACE", "foo")
-        pom_template_path = self._write_file(repo_root, "config/pom_template.xml", "foo")
+        self._write_file(repo_root, "config/pom_template.xml", "foo")
         self._write_file(repo_root, ".pomgenrc", "")
 
         cfg = config.load(repo_root)
@@ -120,8 +117,7 @@ transitives_versioning_mode=foo
     def test_classifier__set_in_config(self):
         repo_root = tempfile.mkdtemp("root")
         os.mkdir(os.path.join(repo_root, "config"))
-        pom_template_path = self._write_file(repo_root, "WORKSPACE", "foo")
-        pom_template_path = self._write_file(repo_root, "config/pom_template.xml", "foo")
+        self._write_file(repo_root, "config/pom_template.xml", "foo")
         self._write_file(repo_root, ".pomgenrc", """
 [artifact]
 jar_classifier=jdk8
@@ -134,8 +130,7 @@ jar_classifier=jdk8
     def test_classifier__set_in_config__env_var_takes_precedence(self):
         repo_root = tempfile.mkdtemp("root")
         os.mkdir(os.path.join(repo_root, "config"))
-        pom_template_path = self._write_file(repo_root, "WORKSPACE", "foo")
-        pom_template_path = self._write_file(repo_root, "config/pom_template.xml", "foo")
+        self._write_file(repo_root, "config/pom_template.xml", "foo")
         self._write_file(repo_root, ".pomgenrc", """
 [artifact]
 jar_classifier=jdk8
@@ -152,8 +147,7 @@ jar_classifier=jdk8
     def test_change_detection__default(self):
         repo_root = tempfile.mkdtemp("root")
         os.mkdir(os.path.join(repo_root, "config"))
-        pom_template_path = self._write_file(repo_root, "WORKSPACE", "foo")
-        pom_template_path = self._write_file(repo_root, "config/pom_template.xml", "foo")
+        self._write_file(repo_root, "config/pom_template.xml", "foo")
         self._write_file(repo_root, ".pomgenrc", "")
 
         cfg = config.load(repo_root)
@@ -163,8 +157,7 @@ jar_classifier=jdk8
     def test_change_detection__enabled(self):
         repo_root = tempfile.mkdtemp("root")
         os.mkdir(os.path.join(repo_root, "config"))
-        pom_template_path = self._write_file(repo_root, "WORKSPACE", "foo")
-        pom_template_path = self._write_file(repo_root, "config/pom_template.xml", "foo")
+        self._write_file(repo_root, "config/pom_template.xml", "foo")
         self._write_file(repo_root, ".pomgenrc", """
 [artifact]
 change_detection_enabled=True
@@ -177,8 +170,7 @@ change_detection_enabled=True
     def test_change_detection__disabled(self):
         repo_root = tempfile.mkdtemp("root")
         os.mkdir(os.path.join(repo_root, "config"))
-        pom_template_path = self._write_file(repo_root, "WORKSPACE", "foo")
-        pom_template_path = self._write_file(repo_root, "config/pom_template.xml", "foo")
+        self._write_file(repo_root, "config/pom_template.xml", "foo")
         self._write_file(repo_root, ".pomgenrc", """
 [artifact]
 change_detection_enabled=False
@@ -191,8 +183,7 @@ change_detection_enabled=False
     def test_excluded_labels(self):
         repo_root = tempfile.mkdtemp("root")
         os.mkdir(os.path.join(repo_root, "config"))
-        pom_template_path = self._write_file(repo_root, "WORKSPACE", "foo")
-        pom_template_path = self._write_file(repo_root, "config/pom_template.xml", "foo")
+        self._write_file(repo_root, "config/pom_template.xml", "foo")
         self._write_file(repo_root, ".pomgenrc", """
 [crawler]
 excluded_dependency_labels=  123    ,   444
@@ -247,9 +238,30 @@ excluded_dependency_labels=  123    ,   444
         self.assertTrue(isinstance(cfg.excluded_src_file_extensions, tuple))
         self.assertEqual(0, len(cfg.excluded_src_file_extensions))
 
-    def test_pom_base_filename(self):
-        cfg = config.Config(pom_base_filename="foo")
-        self.assertEqual("foo", cfg.pom_base_filename)
+    def test_pom_base_filename__default(self):
+        repo_root = tempfile.mkdtemp("root")
+        os.mkdir(os.path.join(repo_root, "config"))
+        self._write_file(repo_root, "config/pom_template.xml", "foo")
+        self._write_file(repo_root, ".pomgenrc", """
+[general]
+""")
+
+        cfg = config.load(repo_root)
+
+        self.assertEqual("pom", cfg.pom_base_filename)
+
+    def test_pom_base_filename__custom(self):
+        repo_root = tempfile.mkdtemp("root")
+        os.mkdir(os.path.join(repo_root, "config"))
+        self._write_file(repo_root, "config/pom_template.xml", "foo")
+        self._write_file(repo_root, ".pomgenrc", """
+[general]
+pom_base_filename=glue-test
+""")
+
+        cfg = config.load(repo_root)
+
+        self.assertEqual("glue-test", cfg.pom_base_filename)
 
     def _write_pomgenrc(self, repo_root, pom_template_path, maven_install_paths):
         content = """[general]
