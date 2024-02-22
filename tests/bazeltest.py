@@ -172,7 +172,7 @@ class BazelTest(unittest.TestCase):
         _, transitives = self._get_dep_and_transitives(result, "ch.qos.logback", "logback-classic", "maven")
         self.assertEqual(1, len(transitives))
         transitive_guava = transitives[0]
-        # we expect to get the dep from conflict_resolution map        
+        # we expect to get the dep from conflict_resolution map
         self.assertEqual(expected_guava, transitive_guava)
         self.assertEqual(expected_guava.version, transitive_guava.version)
         guava, _ = self._get_dep_and_transitives(result, "com.google.guava", "guava", "maven")
@@ -204,7 +204,7 @@ class BazelTest(unittest.TestCase):
         direct_dep_coords_wo_vers = ["com.salesforce.servicelibs:pki-security-impl:test-jar"]
 
         direct_deps = bazel._get_direct_deps(direct_dep_coords_wo_vers,
-                                             coord_wo_vers_to_dep, True)
+                                             coord_wo_vers_to_dep, "test_install.bzl", True, True)
 
         self.assertIn(d1, direct_deps)
 

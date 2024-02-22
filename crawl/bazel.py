@@ -23,8 +23,8 @@ import json
 
 def query_java_library_deps_attributes(repository_root_path, target_pattern, verbose=False):
     """
-    Returns, as a list of strings, the combined values of the 'deps' and 
-    'runtime_deps' attributes on the java_library rule identified by the 
+    Returns, as a list of strings, the combined values of the 'deps' and
+    'runtime_deps' attributes on the java_library rule identified by the
     specified target_pattern.
 
     Example return value:
@@ -33,13 +33,13 @@ def query_java_library_deps_attributes(repository_root_path, target_pattern, ver
          "@com_github_ben_manes_caffeine_caffeine//jar",
          "//projects/libs/servicelibs/srpc/srpc-api"]
 
-    If the target name is not specified explicitly, it is defaulted based on 
+    If the target name is not specified explicitly, it is defaulted based on
     the package name.
 
     target_pattern examples:
-      - //projects/libs/foo:blah 
+      - //projects/libs/foo:blah
         -> look for a target called "blah" in the "foo" package
-      - //projects/libs/foo 
+      - //projects/libs/foo
         -> look for a target called "foo" in the "foo" package (the target name
            is defaulted based on the package name)
     """
@@ -195,13 +195,20 @@ def _parse_pinned(mvn_install_name, pinned_file_path, verbose=False):
         if dep.classifier != "sources":
             assert coord_wo_vers not in coord_wo_vers_to_dep
             coord_wo_vers_to_dep[coord_wo_vers] = _DepWithDirects(dep)
-    
+
     # for each top level dependency, find and associate direct transitives
     deps_with_directs = []
     for coord_wo_vers, dep in coord_wo_vers_to_dep.items():
         direct_dep_coords_wo_vers = direct_deps_json.get(coord_wo_vers, [])
         dep.directs = _get_direct_deps(direct_dep_coords_wo_vers,
-                                       coord_wo_vers_to_dep, verbose)
+                                       coord_wo_vers_to_dep, mvn_install_name,
+                                       verbose, False)
+        if len(dep.directs):
+            # something failed. rerun but this time with more logging
+            # and mark it to blow up when it hits the failure
+            dep.directs = _get_direct_deps(direct_dep_coords_wo_vers,
+                                           coord_wo_vers_to_dep, mvn_install_name,
+                                           True, True)
 
     return coord_wo_vers_to_dep.values()
 
@@ -282,21 +289,31 @@ def _parse_conflict_resolution(json_dep_tree, mvn_install_name):
     return conflict_resolution
 
 
-def _get_direct_deps(direct_dep_coords_wo_vers, coord_wo_vers_to_dep, verbose):
+def _get_direct_deps(direct_dep_coords_wo_vers, coord_wo_vers_to_dep, maven_install_filename, verbose, fail_on_missing):
     direct_deps = []
     for direct_dep_coord_wo_vers in direct_dep_coords_wo_vers:
         direct_dep = None
         if direct_dep_coord_wo_vers in coord_wo_vers_to_dep:
             direct_dep = coord_wo_vers_to_dep[direct_dep_coord_wo_vers]
+            if verbose:
+                logger.debug("Found top level dep in [%s] as [%s]" %
+                    (maven_install_filename, direct_dep_coord_wo_vers))
         else:
             alt_coords = _get_alt_lookup_coords(direct_dep_coord_wo_vers)
             for alt_direct_dep_coord_wo_vers in alt_coords:
                 if alt_direct_dep_coord_wo_vers in coord_wo_vers_to_dep:
                     if verbose:
-                        logger.debug("Found top level dep using alt coord [%s] instead of [%s]" % (alt_direct_dep_coord_wo_vers, direct_dep_coord_wo_vers))
+                        logger.debug("Found top level dep in [%s] using alt coord [%s] instead of [%s]" %
+                            (maven_install_filename, alt_direct_dep_coord_wo_vers, direct_dep_coord_wo_vers))
                     direct_dep = coord_wo_vers_to_dep[alt_direct_dep_coord_wo_vers]
                     break
-        assert direct_dep is not None, "failed to find top level dependency instance for direct dep coord [%s]" % direct_dep_coord_wo_vers
+
+        if direct_dep is None:
+            msg = "Failed to find top level dependency instance for [{0}] with direct dep coord [{1}]".format(
+                maven_install_filename, direct_dep_coord_wo_vers)
+            logger.warn(msg)
+            assert not fail_on_missing, msg
+            return []
         direct_deps.append(direct_dep)
     return direct_deps
 
@@ -340,7 +357,7 @@ class _DepWithDirects:
         transitive_closure = []
         _DepWithDirects._collect_directs(self, transitive_closure)
         return transitive_closure
-    
+
     @classmethod
     def _collect_directs(clazz, current_dep, all_deps):
         for d in current_dep.directs:
