@@ -311,7 +311,7 @@ def _get_direct_deps(direct_dep_coords_wo_vers, coord_wo_vers_to_dep, maven_inst
         if direct_dep is None:
             msg = "Failed to find top level dependency instance for [{0}] with direct dep coord [{1}]".format(
                 maven_install_filename, direct_dep_coord_wo_vers)
-            logger.warn(msg)
+            logger.warning(msg)
             assert not fail_on_missing, msg
             return []
         direct_deps.append(direct_dep)
