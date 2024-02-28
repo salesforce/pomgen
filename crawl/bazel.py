@@ -202,13 +202,14 @@ def _parse_pinned(mvn_install_name, pinned_file_path, verbose=False):
         direct_dep_coords_wo_vers = direct_deps_json.get(coord_wo_vers, [])
         dep.directs = _get_direct_deps(direct_dep_coords_wo_vers,
                                        coord_wo_vers_to_dep, mvn_install_name,
-                                       verbose, False)
-        if len(dep.directs):
+                                       verbose, fail_on_missing=False)
+        if len(dep.directs) == 0:
             # something failed. rerun but this time with more logging
             # and mark it to blow up when it hits the failure
             dep.directs = _get_direct_deps(direct_dep_coords_wo_vers,
-                                           coord_wo_vers_to_dep, mvn_install_name,
-                                           True, True)
+                                           coord_wo_vers_to_dep,
+                                           mvn_install_name, verbose=True,
+                                           fail_on_missing=True)
 
     return coord_wo_vers_to_dep.values()
 
