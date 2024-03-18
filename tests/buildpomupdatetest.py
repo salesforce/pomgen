@@ -9,7 +9,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 from crawl import git
 from common.os_util import run_cmd
 from config import exclusions
-from update import buildpomupdate
+from pomupdate import buildpomupdate
 import os
 import tempfile
 import unittest

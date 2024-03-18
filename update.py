@@ -16,7 +16,7 @@ from common import mdfiles
 from common import version_increment_strategy as vis
 from config import config
 from crawl import bazel
-from update import buildpomupdate
+from pomupdate import buildpomupdate
 import argparse
 import os
 import sys
