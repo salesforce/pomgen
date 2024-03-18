@@ -31,6 +31,7 @@ py_binary(
 filegroup(
     name = "pomgen_files",
     srcs = glob(["*.py",
+                 "pomupdate/*.py",
                  "common/*.py",
                  "config/*.py",
                  "common/*.py",
@@ -111,7 +112,7 @@ py_test(
             "crawl/buildpom.py",
             "crawl/git.py",
             "tests/buildpomupdatetest.py",
-            "update/buildpomupdate.py"],
+            "pomupdate/buildpomupdate.py"],
     imports = ["."],
     size = "small",
     python_version = python_version,
