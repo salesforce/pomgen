@@ -150,7 +150,6 @@ if __name__ == "__main__":
             attrs["version"] = external_dependency.version
             attrs["classifier"] = external_dependency.classifier
             attrs["name"] = external_dependency.bazel_label_name
-            attrs["ancestors"] = sorted([d.bazel_label_name for d in ws.dependency_metadata.get_ancestors(external_dependency)])
             ext_deps.append(attrs)
         if args.filter is not None:
             # filter AFTER building result dict so that filtering on ancestors
