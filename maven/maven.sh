@@ -10,7 +10,7 @@ set -e
 print_usage() {
 cat << EOF
 
-Usage: maven.sh -a action(s) [-l path/to/library]
+Usage: bazel run @pomgen//maven.sh -a action(s) -l path/to/library/root/dir
 
   Required arguments:
 
@@ -179,6 +179,10 @@ _for_each_library() {
     echo ""
     while read library_path;
     do
+        if [[ "$library_path" == \#* ]]; then
+            # the line starts with the comment character
+            continue
+        fi
         echo "[INFO] Processing library: $library_path"
         if [ "$action" == "install" ]; then
           _for_each_pom "install_main_artifact" $repo_root_path $pom_base_filename $jar_artifact_classifier "/$library_path"
@@ -224,7 +228,7 @@ fi
 
 if [ -z "$actions" ] ; then
     echo "[ERROR] The action(s) to run must be specified using -a, for example:"
-    echo "        $ bazel run @pomgen//maven -- -a install"
+    echo "        $ bazel run @pomgen//maven -- -a pomgen,install"
     echo "        bazel run @pomgen//maven for usage information."
     exit 1
 fi
@@ -313,9 +317,11 @@ do
         _for_each_pom "clean_source_tree" $repo_root_path $pom_base_filename $jar_artifact_classifier $library_path
 
     elif [ "$action" == "pomgen" ]; then
-        extra_args=""
+        # this script uses the special libraries hint file, which contains
+        # the path to the upstream libraries
+        extra_args="--write_libraries_hint_file"
         if [ "$debug" = true ]; then
-            extra_args="--verbose"
+            extra_args="${extra_args} --verbose"
         fi
         if [ "$force_pomgen" = true ]; then
             extra_args="${extra_args} --force"

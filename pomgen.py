@@ -60,14 +60,16 @@ def main(args):
         output_dir = _get_output_dir(args)
 
         lib_paths = bazel.query_all_libraries(repo_root, packages)
-        if len(lib_paths) == 1:
-            # a single lib as a starting point is the common case,
-            # so we do not bother with the other cases for now
+        if args.write_libraries_hint_file:
             if not args.ignore_references:
                 # the libraries hint file contains the list of all upstream
                 # libs (including the current lib) - this only works when
                 # crawling is enabled (ignore_references disables crawling)
-                _write_all_libraries_hint_files(result, output_dir, lib_paths[0])
+                if len(lib_paths) == 1:
+                    # a single lib as a starting point is the common case,
+                    # so we do not bother with the other cases for now
+                    path = lib_paths[0]
+                    _write_all_libraries_hint_files(result, output_dir, path)
 
         for pomgen in result.pomgens:
             pom_dest_dir = os.path.join(output_dir, pomgen.bazel_package)
@@ -123,6 +125,8 @@ def _parse_arguments(args):
         help="Verbose output")
     parser.add_argument("--pom.description", type=str, required=False,
         dest="pom_description", help="Written as the pom's <description/>")
+    parser.add_argument("--write_libraries_hint_file", required=False, action="store_true",
+        help="The libraries hint file is used by the wrapper script in //maven, it is not needed when running pomgen directly")
 
     return parser.parse_args(args)
 
@@ -150,7 +154,8 @@ def _write_all_libraries_hint_files(crawler_result, output_dir, start_lib_path):
         if not os.path.exists(hint_file_dir):
             os.makedirs(hint_file_dir)
         hint_file_path = os.path.join(hint_file_dir, "libraries.txt")
-        _write_file(hint_file_path, "\n".join(lib_paths))
+        _write_file(hint_file_path, "\n".join(
+            ["# the root lib path, followed by the paths to its upstream dependencies"] + lib_paths))
         logger.info("Wrote libraries hint file to [%s]" % hint_file_path)
 
 
