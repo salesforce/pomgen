@@ -535,8 +535,6 @@ maven_artifact_update(
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-SNAPSHOT",
                               version_increment_strategy="major")
 
-        # not actually removed, since "SNAP" is a substring, but not a full
-        # version qualifier
         buildpomupdate.update_build_pom_file(
             repo_root, [pack1], version_qualifier_to_remove="SNAP")
 
@@ -556,8 +554,6 @@ maven_artifact_update(
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-foo-blah",
                               version_increment_strategy="major")
 
-        # not actually removed, since "SNAP" is a substring, but not a full
-        # version qualifier
         buildpomupdate.update_build_pom_file(
             repo_root, [pack1], version_qualifier_to_remove="fo")
 
@@ -574,13 +570,11 @@ maven_artifact_update(
         repo_root = tempfile.mkdtemp("monorepo")
         pack1_path = os.path.join(repo_root, pack1)
         os.makedirs(pack1_path)
-        self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-foo-blah",
+        self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-foo-rel9",
                               version_increment_strategy="major")
 
-        # not actually removed, since "SNAP" is a substring, but not a full
-        # version qualifier
         buildpomupdate.update_build_pom_file(
-            repo_root, [pack1], version_qualifier_to_remove="bl")
+            repo_root, [pack1], version_qualifier_to_remove="rel")
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
@@ -628,6 +622,46 @@ maven_artifact_update(
             self.assertIn('group_id = "p1g"', content)
             self.assertIn('artifact_id = "p1a"', content)
             self.assertIn('version = "3.2.1-rel1-rel2"', content)
+            self.assertIn(')', content)
+
+    def test_update_version_in_BUILD_pom__add_version_qualifier__duplicate_is_not_repeated(self):
+        pack1 = "somedir/p1"
+        repo_root = tempfile.mkdtemp("monorepo")
+        pack1_path = os.path.join(repo_root, pack1)
+        os.makedirs(pack1_path)
+        self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-casino",
+                              version_increment_strategy="major")
+
+        buildpomupdate.update_build_pom_file(
+            repo_root, [pack1], version_qualifier_to_add="casino")
+
+        with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
+            content = f.read()
+            self.assertIn('maven_artifact(', content)
+            self.assertIn('group_id = "p1g"', content)
+            self.assertIn('artifact_id = "p1a"', content)
+            # -casino is not appended if the version ends with -casino already
+            self.assertIn('version = "3.2.1-casino"', content)
+            self.assertIn(')', content)
+
+    def test_update_version_in_BUILD_pom__add_version_qualifier__no_duplicate_SNAPSHOT(self):
+        pack1 = "somedir/p1"
+        repo_root = tempfile.mkdtemp("monorepo")
+        pack1_path = os.path.join(repo_root, pack1)
+        os.makedirs(pack1_path)
+        self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-SNAPSHOT",
+                              version_increment_strategy="major")
+
+        buildpomupdate.update_build_pom_file(
+            repo_root, [pack1], version_qualifier_to_add="SNAPSHOT")
+
+        with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
+            content = f.read()
+            self.assertIn('maven_artifact(', content)
+            self.assertIn('group_id = "p1g"', content)
+            self.assertIn('artifact_id = "p1a"', content)
+            # -SNAPSHOT is not added if the version ends with -SNAPSHOT already
+            self.assertIn('version = "3.2.1-SNAPSHOT"', content)
             self.assertIn(')', content)
 
     def test_update_pom_generation_mode_in_BUILD_pom(self):

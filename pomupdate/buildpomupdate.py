@@ -236,12 +236,21 @@ def _sanitize_version_qualifier(version_qualifier):
 
 
 def _append_version_qualifier(current_version, version_qualifier):
-    return "%s-%s" % (current_version, version_qualifier)
+    if current_version.endswith(version_qualifier):
+        # we won't re-append the same qualifier ...
+        return current_version
+    else:
+        return "%s-%s" % (current_version, version_qualifier)
 
 
-def _insert_version_qualifier(version, version_qualifier):
-    i = version.rfind("-")
-    return "%s-%s-%s" % (version[0:i], version_qualifier, version[i+1:])
+def _insert_version_qualifier(current_version, version_qualifier):
+    if current_version.endswith(version_qualifier):
+        # we won't insert the same qualifier
+        return current_version
+    else:
+        i = current_version.rfind("-")
+        return "%s-%s-%s" % (current_version[0:i], version_qualifier,
+                             current_version[i+1:])
 
 
 def _remove_version_qualifier(current_version, version_qualifier):
@@ -252,8 +261,12 @@ def _remove_version_qualifier(current_version, version_qualifier):
     i = current_version.find(version_qualifier)
     if i == -1:
         return current_version
+    # current_version: abc-rel9
+    # version_qualifier: -rel
+    # i = 3
+    # end_index = 3 + 4 = 7
     end_index = i + len(version_qualifier)
-    if end_index == len(current_version) - 1 or current_version[end_index-1] == "-":
+    if end_index == len(current_version) or current_version[end_index-1] == "-":
         # the given version_qualifier matches a vq in the current version
         pass
     else:
