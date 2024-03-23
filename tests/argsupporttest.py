@@ -9,13 +9,17 @@ from common import argsupport
 from crawl import bazel
 import unittest
 
+
 PASTRY_PACKAGES = ["projects/libs/pastry/abstractions", 
-                  "projects/libs/pastry/pastry-metrics",]
+                   "projects/libs/pastry/pastry-metrics",]
+
 
 ZK_CONNECT_PACKAGES = ["projects/libs/servicelibs/zk-connect",]
 
+
 GRAIL_PACKAGES = ["projects/libs/servicelibs/grail/grail-admin-api",
                   "projects/libs/servicelibs/grail/grail-admin-impl",]
+
 
 ALL_PACKAGES_DICT = {"projects/libs" : PASTRY_PACKAGES + ZK_CONNECT_PACKAGES + GRAIL_PACKAGES,
                      "projects/libs/servicelibs" : ZK_CONNECT_PACKAGES + GRAIL_PACKAGES,
@@ -108,6 +112,19 @@ class ArgSupportTest(unittest.TestCase):
         self.assertNotIn("projects/libs/servicelibs/grail/grail-admin-api", packages)
         self.assertNotIn("projects/libs/servicelibs/grail/grail-admin-impl", packages)
         self.assertNotIn("projects/libs/servicelibs/zk-connect", packages)
-        
+
+
+    def test_exact_match_exclusions(self):
+        packages_str = "projects/libs,-projects/libs/servicelibs/zk,-projects/libs/servicelibs/grail/grail-admin-api/, -projects/libs/servicelibs/grail/"
+
+        packages = argsupport.get_all_packages("root", packages_str)
+
+        self.assertIn("projects/libs/pastry/abstractions", packages)
+        self.assertIn("projects/libs/pastry/pastry-metrics", packages)
+        self.assertNotIn("projects/libs/servicelibs/grail/grail-admin-api", packages)
+        self.assertIn("projects/libs/servicelibs/grail/grail-admin-impl", packages)
+        self.assertNotIn("projects/libs/servicelibs/zk-connect", packages)
+
+
 if __name__ == '__main__':
     unittest.main()

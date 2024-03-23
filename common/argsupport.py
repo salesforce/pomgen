@@ -46,8 +46,13 @@ def get_all_packages(repository_root_path, packages_str, verbose=False):
         packages = bazel.query_all_artifact_packages(repository_root_path, p, verbose)
         for package in packages:
             for exclusion_path in exclusion_paths:
+                prefix_match = True
+                if exclusion_path.endswith("/"):
+                    exclusion_path = exclusion_path[:-1]
+                    prefix_match = False
                 if package.startswith(exclusion_path):
-                    break
+                    if prefix_match or package.endswith(exclusion_path):
+                        break
             else:
                 if not package in all_packages:
                     all_packages.add(package)
