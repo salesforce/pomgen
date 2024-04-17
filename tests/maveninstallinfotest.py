@@ -43,6 +43,21 @@ class MavenInstallTest(unittest.TestCase):
         self.assertEquals("my_rules", files[1][0])
         self.assertEquals(os.path.join(repo_root, "tools", "my_rules_install.json"), files[1][1])
 
+    def test_path_with_glob_and_exclusions(self):
+        repo_root = tempfile.mkdtemp("monorepo")
+        self._touch_file_at_path(repo_root, "tools/my_rules_install.json")
+        self._touch_file_at_path(repo_root, "tools/maven_install.json")
+        self._touch_file_at_path(repo_root, "tools/maven_blah_install.json")
+        m = maveninstallinfo.MavenInstallInfo(("tools/*", "-tools/maven_install.json",))
+
+        files = m.get_maven_install_names_and_paths(repo_root)
+
+        self.assertEquals(2, len(files))
+        self.assertEquals("maven_blah", files[0][0])
+        self.assertEquals(os.path.join(repo_root, "tools", "maven_blah_install.json"), files[0][1])
+        self.assertEquals("my_rules", files[1][0])
+        self.assertEquals(os.path.join(repo_root, "tools", "my_rules_install.json"), files[1][1])
+
     def _touch_file_at_path(self, repo_root_path, file_path):
         path = os.path.join(repo_root_path, file_path)
         parent_dir = os.path.dirname(path)
