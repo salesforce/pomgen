@@ -17,14 +17,21 @@ class MavenInstallInfo:
         """
         Returns a list of tuples (mvn install name, mvn install path)
         """
+        # paths that start with '-' are excluded if found in glob expansions
+        excluded_paths = [p[1:].strip() for p in self.maven_install_paths if self._is_excluded_path(p)]
         names_and_paths = []
         for rel_path in self.maven_install_paths:
+            if self._is_excluded_path(rel_path):
+                # excluded paths are handled below
+                continue
             path = os.path.join(repository_root, rel_path)
             name_and_path = self._process_path(path)
             if name_and_path is None:
                 globbed_names_and_paths = []
                 if "*" in path:
                     for path in glob.glob(path):
+                        if path[len(repository_root)+1:] in excluded_paths:
+                            continue
                         name_and_path = self._process_path(path)
                         if name_and_path is not None:
                             globbed_names_and_paths.append(name_and_path)
@@ -35,6 +42,9 @@ class MavenInstallInfo:
             else:
                 names_and_paths.append(name_and_path)
         return names_and_paths
+
+    def _is_excluded_path(self, path):
+        return path.startswith("-")
 
     def _process_path(self, path):
         """
