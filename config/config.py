@@ -41,7 +41,7 @@ def load(repo_root, verbose=False):
     cfg_path = os.path.join(repo_root, ".pomgenrc")
     if os.path.exists(cfg_path):
         with open(cfg_path, 'r') as f:
-            parser.readfp(f)
+            parser.read_file(f)
 
     pom_template_p = gen("pom_template_path", ["config/pom_template.xml"])
 
