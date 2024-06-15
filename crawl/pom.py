@@ -274,7 +274,7 @@ class AbstractPomGen(object):
 
 class NoopPomGen(AbstractPomGen):
     """
-    A placeholder pom generator that doesn't generator anything, but still
+    A placeholder pom generator that doesn't generate anything, but still
     follows references.
     """
     def __init__(self, workspace, artifact_def, dependency):
@@ -723,8 +723,12 @@ def _query_dependencies(workspace, artifact_def, dependency):
         try:
             label = _build_bazel_label(artifact_def.bazel_package,
                                        dependency.bazel_target)
+
+            # the rule attributes to query for dependencies
+            dep_attrs=artifact_def.pom_generation_mode.dependency_attributes
             dep_labels = bazel.query_java_library_deps_attributes(
-                workspace.repo_root_path, label, workspace.verbose)
+                workspace.repo_root_path, label, dep_attrs,
+                workspace.verbose)
             deps = workspace.parse_dep_labels(dep_labels)
             return workspace.normalize_deps(artifact_def, deps)
         except Exception as e:

@@ -21,11 +21,12 @@ import os
 import json
 
 
-def query_java_library_deps_attributes(repository_root_path, target_pattern, verbose=False):
+def query_java_library_deps_attributes(repository_root_path, target_pattern,
+                                       dep_attributes, verbose=False):
     """
-    Returns, as a list of strings, the combined values of the 'deps' and
-    'runtime_deps' attributes on the java_library rule identified by the
-    specified target_pattern.
+    Returns, as a list of strings, the combined values of the dep_attributes
+    given, typically 'deps' and 'runtime_deps', of the (java_library) rule
+    identified by the specified target_pattern.
 
     Example return value:
 
@@ -46,7 +47,6 @@ def query_java_library_deps_attributes(repository_root_path, target_pattern, ver
     if target_pattern.endswith("..."):
         raise Exception("target_pattern must be more specific")
 
-    dep_attributes = ("deps", "runtime_deps")
     query_parts = ["labels(%s, %s)" % (attr, target_pattern) for attr in dep_attributes]
     query = "bazel query --noimplicit_deps --order_output full '%s'" % " union ".join(query_parts)
     if verbose:

@@ -73,7 +73,7 @@ class PomTest(unittest.TestCase):
 
         org_function = bazel.query_java_library_deps_attributes
         try:
-            bazel.query_java_library_deps_attributes = lambda r, p, v: ("@maven//:com_google_guava_guava", "@maven//:aopalliance_aopalliance", "@maven//:ch_qos_logback_logback_classic", "@maven//:gt2_t2" )
+            bazel.query_java_library_deps_attributes = lambda r, p, a, v: ("@maven//:com_google_guava_guava", "@maven//:aopalliance_aopalliance", "@maven//:ch_qos_logback_logback_classic", "@maven//:gt2_t2" )
             _, _, deps = pomgen.process_dependencies()
             deps = list(deps)
             # appending a dependency that is built in the shared-repo (should not have an exclusions block)
@@ -258,7 +258,7 @@ class PomTest(unittest.TestCase):
         pomgen = pom.DynamicPomGen(ws, artifact_def, dep, TEST_POM_TEMPLATE)
         org_function = bazel.query_java_library_deps_attributes
         try:
-            bazel.query_java_library_deps_attributes = lambda r, p, v: ("@maven//:com_google_guava_guava", )
+            bazel.query_java_library_deps_attributes = lambda r, p, a, v: ("@maven//:com_google_guava_guava", )
             _, _, deps = pomgen.process_dependencies()
             pomgen.register_dependencies(deps)
 
@@ -322,7 +322,7 @@ class PomTest(unittest.TestCase):
 
         org_function = bazel.query_java_library_deps_attributes
         try:
-            bazel.query_java_library_deps_attributes = lambda r, p, v: 1/0 # fails
+            bazel.query_java_library_deps_attributes = lambda r, p, a, v: 1/0 # fails
             pomgen.process_dependencies()
             generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
 
@@ -349,7 +349,7 @@ class PomTest(unittest.TestCase):
 
         org_function = bazel.query_java_library_deps_attributes
         try:
-            bazel.query_java_library_deps_attributes = lambda r, p, v: ("@maven//:com_google_guava_guava", "@maven//:aopalliance_aopalliance", )
+            bazel.query_java_library_deps_attributes = lambda r, p, a, v: ("@maven//:com_google_guava_guava", "@maven//:aopalliance_aopalliance", )
             _, _, deps = pomgen.process_dependencies()
             pomgen.register_dependencies(deps)
 
