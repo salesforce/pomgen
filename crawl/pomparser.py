@@ -11,12 +11,7 @@ pom.xml parsing.
 from collections import defaultdict
 from crawl import dependency
 import os
-try:
-    from lxml import etree
-except ImportError as ex:
-    print('Module lxml is not installed, please execute the following in your environment:')
-    print('$ pip install --user lxml')
-    raise ex
+
 
 # https://lxml.de/tutorial.html#namespaces
 XML_NS = "{http://maven.apache.org/POM/4.0.0}"
@@ -25,6 +20,7 @@ XML_NS = "{http://maven.apache.org/POM/4.0.0}"
 # for pom templates
 INDENT = 4 # spaces
 
+
 def format_for_comparison(pom_content):
     """
     Returns the pom as a string without:
@@ -32,6 +28,12 @@ def format_for_comparison(pom_content):
         - superfluous whitespace
         - the root <description> element
     """
+    etree = _import_lxml()
+    if etree is None:
+        # lxml import error, this isn't fatal but we can't process the pom
+        # as we'd like
+        return pom_content.strip()
+
     parser = etree.XMLParser(remove_blank_text=True)
     tree = etree.XML(pom_content.encode().strip(), parser=parser)
 
@@ -49,6 +51,7 @@ def format_for_comparison(pom_content):
 
     return _pretty_str(tree)
 
+
 def indent_xml(xml_content, indent):
     indented_xml = ""
     current_indent = indent
@@ -63,6 +66,7 @@ def indent_xml(xml_content, indent):
             current_indent += INDENT
             handled_indent = True
     return indented_xml
+
 
 class ParsedDependencies:
 
@@ -121,12 +125,15 @@ class ParsedDependencies:
                 missing.add(d)
         return missing
 
+
 def parse_dependencies(pom_content):
     """
     Parses the <dependencies> section in the specified pom_content.
     
     Returns a ParsedDependencies instance.
     """
+    etree = _import_lxml()
+    assert etree is not None, "cannot parse dependencies without lxml"
     if pom_content.startswith("<project xmlns"):
         # lets not deal with the xml ns complication
         i = pom_content.index(">")
@@ -151,6 +158,7 @@ def parse_dependencies(pom_content):
 
     return ParsedDependencies(dependencies, dependency_to_exclusions, dependency_to_str_repr)
 
+
 def _get_dependency_from_xml_element(el, version_must_be_set):
     group_id = _get_xpath_text_value(el, "groupId/text()", True)
     artifact_id = _get_xpath_text_value(el, "artifactId/text()", True)
@@ -169,11 +177,16 @@ def _get_dependency_from_xml_element(el, version_must_be_set):
                                            classifier=classifier,
                                            scope=scope)
 
+
 def _pretty_str(el):
     return _str(el, pretty=True)
 
+
 def _str(el, pretty=False):
+    etree = _import_lxml()
+    assert etree is not None, "cannot format xml without lxml"
     return etree.tostring(el, pretty_print=pretty).decode()
+
 
 def _get_xpath_text_value(el, xpath, must_not_be_empty):
     v = el.xpath(xpath)
@@ -182,8 +195,23 @@ def _get_xpath_text_value(el, xpath, must_not_be_empty):
         raise Exception("value of %s cannot be empty for %s" % (xpath, _str(el)))
     return text
 
+
 def _get_unindented_xml(element):
     xml = ""
     for line in _pretty_str(element).splitlines():
         xml += line.strip() + os.linesep
     return xml
+
+
+def _import_lxml():
+    """
+    If lxml has not been installed properly, we attempt to degrade
+    gracefully.
+    """
+    try:
+        from lxml import etree
+        return etree
+    except ImportError as ex:
+        print("Module lxml is not installed, please execute the following in your environment:")
+        print("pip install --user lxml")
+        return None
