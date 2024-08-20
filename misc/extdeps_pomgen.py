@@ -53,7 +53,7 @@ def _parse_arguments(args):
 
 class ThirdPartyDepsPomGen(pom.DynamicPomGen):
     def __init__(self, workspace, artifact_def, dependencies, pom_template):
-        super(ThirdPartyDepsPomGen, self).__init__(workspace, artifact_def, 
+        super(ThirdPartyDepsPomGen, self).__init__(workspace, artifact_def,
                                                    dependency=None,
                                                    pom_template=pom_template)
         self.dependencies = dependencies
@@ -68,12 +68,20 @@ def _starts_with_ignored_prefix(line):
             return True
     return False
 
-
 def main(args):
     args = _parse_arguments(args)
-    repo_root = common.get_repo_root(args.repo_root)    
+    repo_root = common.get_repo_root(args.repo_root)
     cfg = config.load(repo_root)
-    mvn_install_info = maveninstallinfo.MavenInstallInfo(cfg.maven_install_paths)
+
+    # For the primary function of pomgen (generating pom.xml files for publishing)
+    # there are sometimes maven_install namespaces that are ignored in .pomgenrc.
+    # These are identified as maven_install paths that begin with - .
+    # For extdeps, we need to have full access to all maven_install namespaces, so
+    # we tell maveninstallinfo to not honor the excludes.
+    allow_excludes = False
+
+    mvn_install_info = maveninstallinfo.MavenInstallInfo(cfg.maven_install_paths, allow_excludes)
+
     depmd = dependencymdm.DependencyMetadata(cfg.jar_artifact_classifier)
     ws = workspace.Workspace(repo_root, cfg, mvn_install_info,
                              pomcontent.NOOP, dependency_metadata=depmd,
@@ -82,7 +90,7 @@ def main(args):
     group_id = "all_ext_deps_group" if args.group_id is None else args.group_id
     artifact_id = "all_ext_deps_art" if args.artifact_id is None else args.artifact_id
     version = "0.0.1-SNAPSHOT" if args.version is None else args.version
-    
+
     artifact_def = buildpom.MavenArtifactDef(group_id=group_id,
                                              artifact_id=artifact_id,
                                              version=version)

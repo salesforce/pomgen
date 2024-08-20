@@ -10,15 +10,20 @@ import os
 
 class MavenInstallInfo:
 
-    def __init__(self, maven_install_paths):
+    def __init__(self, maven_install_paths, allow_excludes = True):
         self.maven_install_paths = maven_install_paths
+        self.allow_excludes = allow_excludes
 
     def get_maven_install_names_and_paths(self, repository_root):
         """
         Returns a list of tuples (mvn install name, mvn install path)
         """
         # paths that start with '-' are excluded if found in glob expansions
-        excluded_paths = [p[1:].strip() for p in self.maven_install_paths if self._is_excluded_path(p)]
+        # in some use cases, we don't want to exclude them, so it is conditional
+        excluded_paths = []
+        if self.allow_excludes:
+            excluded_paths = [p[1:].strip() for p in self.maven_install_paths if self._is_excluded_path(p)]
+
         names_and_paths = []
         for rel_path in self.maven_install_paths:
             if self._is_excluded_path(rel_path):
