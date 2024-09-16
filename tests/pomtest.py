@@ -521,10 +521,10 @@ v2 #{@maven2//:org_apache_maven_mult_versions.version}
         self.assertIn("has unresolvable references", str(ctx.exception))
         self.assertIn("['org.apache.maven:mult-versions:version']", str(ctx.exception))
 
-    def test_template_var_sub__conflicting_gav__ext_and_BUILDpom(self):
+    def test_template_var_sub__conflicting_gav__ext_and_BUILDpom_internal_dep(self):
         """
-        Verifies error handling when gavs are conflicting between external deps
-        and what is set in BUILD.pom files.
+        Verifies handling when gavs are conflicting between external deps
+        and what is set in BUILD.pom files when a Bazel Dep is in the transitive closure.
         """
         depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path",
@@ -535,19 +535,44 @@ v2 #{@maven2//:org_apache_maven_mult_versions.version}
                                  label_to_overridden_fq_label={})
         artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
-        artifact_def.custom_pom_template_content = "srpc #{g:a:version}"
+        artifact_def.custom_pom_template_content = "srpc #{com.google.guava:guava:version}"
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
-        # this guava dep is conflicting with an external dep
-        art = buildpom.MavenArtifactDef("com.google.guava","guava","26.0", bazel_package="a/b/c")
+
+        # this guava dep is conflicting with an external dep -- internal package called a/b/c
+        art = buildpom.MavenArtifactDef("com.google.guava","guava","29.0", bazel_package="a/b/c")
         d = dependency.MonorepoDependency(art, bazel_target=None)
         pomgen.register_dependencies_transitive_closure__library(set([d]))
 
-        with self.assertRaises(Exception) as ctx:
-            pomgen.gen(pom.PomContentType.RELEASE)
+        generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
 
-        self.assertIn("The internal dependency at [a/b/c]", str(ctx.exception))
-        self.assertIn("the same artifactId and groupId", str(ctx.exception))
-        self.assertIn("[com.google.guava:guava]", str(ctx.exception))
+        #The Bazel_package guava version should be picked
+        self.assertIn("29.0", generated_pom)
+
+    def test_template_var_sub__conflicting_gav__ext_and_BUILDpom_no_internal_dep(self):
+        """
+        Verifies handling when gavs are conflicting between external deps
+        and what is set in BUILD.pom files when no Bazel Dep is in the transitive closure.
+        """
+        depmd = dependencym.DependencyMetadata(None)
+        ws = workspace.Workspace("some/path",
+                                 self._get_config(),
+                                 self._mocked_mvn_install_info("maven"),
+                                 pomcontent.NOOP,
+                                 depmd,
+                                 label_to_overridden_fq_label={})
+        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        artifact_def.custom_pom_template_content = "srpc #{com.google.guava:guava:version}"
+        pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
+
+        # this guava dep is conflicting with an external dep -- internal package called a/b/c 
+        art = buildpom.MavenArtifactDef("com.google.guava","guava","29.0", bazel_package="a/b/c")
+        d = dependency.MonorepoDependency(art, bazel_target=None)
+
+        generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
+
+        #The maven_install guava version should be picked
+        self.assertIn("23.0", generated_pom)
 
     def test_template_genmode__goldfile(self):
         """

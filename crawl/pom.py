@@ -465,15 +465,8 @@ class TemplatePomGen(AbstractPomGen):
         elif dep1.bazel_package is not None and dep2.bazel_package is not None:
             # both deps are internal, it doesn't make sense to get here
             raise Exception("All internal dependencies must always be on the same versions! [%s] vs [%s]" % (dep1, dep2))
-        else:
-            if dep1.bazel_package is None and dep2.bazel_package is not None:
-                external_dep = dep1
-                internal_dep = dep2
-            else:
-                external_dep = dep2
-                internal_dep = dep1
 
-            raise Exception("The internal dependency at [%s] has the same artifactId and groupId as the external dependency [%s:%s] - this is unsupported" % (internal_dep.bazel_package, external_dep.group_id, external_dep.artifact_id))
+        return False
 
     def _build_template_only_deps_property_content(self, deps,
                                                    pom_template_parsed_deps,
