@@ -310,12 +310,20 @@ def _get_direct_deps(direct_dep_coords_wo_vers, coord_wo_vers_to_dep, maven_inst
                     break
 
         if direct_dep is None:
-            msg = "Failed to find top level dependency instance for [{0}] with direct dep coord [{1}]".format(
-                maven_install_filename, direct_dep_coord_wo_vers)
-            logger.warning(msg)
-            assert not fail_on_missing, msg
-            return []
-        direct_deps.append(direct_dep)
+            if direct_dep_coord_wo_vers.endswith(":pom"):
+                # this is an edge case where a dependency is a pom
+                # ex: org.kie.modules:org-apache-commons-lang3:pom
+                msg = "Direct dependency on a pom [{0}] in namespace [{1}] is ignored. Please depend on actual jar files instead.".format(
+                    direct_dep_coord_wo_vers, maven_install_filename)
+                logger.warning(msg)
+            else:
+                msg = "Failed to find top level dependency instance for [{0}] with direct dep coord [{1}]".format(
+                    maven_install_filename, direct_dep_coord_wo_vers)
+                logger.warning(msg)
+                assert not fail_on_missing, msg
+                return []
+        else:
+            direct_deps.append(direct_dep)
     return direct_deps
 
 
