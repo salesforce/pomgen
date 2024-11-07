@@ -277,7 +277,8 @@ MVN_INSTALL_JSON_CONTENT = """
             "google.guava:guava"
         ],
         "org.apache.kafka:kafka-clients:jar:test": [
-            "ch.qos.logback:logback-core"
+            "ch.qos.logback:logback-core",
+            "org.kie.modules:org-apache-commons-lang3:pom"
         ],
         "org.springframework.kafka:spring-kafka-test": [
             "org.apache.kafka:kafka-clients:jar:test"
