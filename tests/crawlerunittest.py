@@ -512,7 +512,8 @@ class CrawlerUnitTest(unittest.TestCase):
             "g1", artifact_id, "1.0.0",
             bazel_package=bazel_package,
             pom_generation_mode=pom_generation_mode,
-            library_path=library_path)
+            library_path=library_path,
+            bazel_target="t1")
         dep = dependency.new_dep_from_maven_artifact_def(art_def)
         return crawlerm.Node(parent=parent_node, artifact_def=art_def, dependency=dep)
 

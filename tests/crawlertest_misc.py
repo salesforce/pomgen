@@ -6,6 +6,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 """
 
 from common import maveninstallinfo
+from common import pomgenmode
 from config import config
 from crawl import crawler as crawlerm
 from crawl import dependencymd as dependencym
@@ -19,6 +20,7 @@ import unittest
 
 GROUP_ID = "group"
 POM_TEMPLATE_FILE = "foo.template"
+
 
 class CrawlerTest(unittest.TestCase):
     """
@@ -81,16 +83,17 @@ class CrawlerTest(unittest.TestCase):
         self.assertEqual("lib/a2", result.nodes[0].artifact_def.bazel_package)
         self.assertEqual(1, len(result.nodes[0].children))
         self.assertEqual("lib/a1", result.nodes[0].children[0].artifact_def.bazel_package)
+        self.assertEqual("a1", result.nodes[0].children[0].artifact_def.bazel_target)
 
-    def test_non_default_package_ref__not_allowed(self):
+    def test_non_default_package_ref(self):
         """
-        lib/a2 cannot reference lib/a1:foo - only default package refs
-        are allowed.
+        lib/a2 can reference lib/a1:foo.
         """
         depmd = dependencym.DependencyMetadata(None)
         repo_root_path = tempfile.mkdtemp("monorepo")
         self._write_library_root(repo_root_path, "lib")
-        self._add_artifact(repo_root_path, "lib/a1", "template", deps=[])
+        self._add_artifact(repo_root_path, "lib/a1", "template", deps=[],
+                           target_name="foo")
         self._add_artifact(repo_root_path, "lib/a2", "template", deps=["//lib/a1:foo"])
 
         ws = workspace.Workspace(repo_root_path,
@@ -101,15 +104,16 @@ class CrawlerTest(unittest.TestCase):
                                  label_to_overridden_fq_label={})
         crawler = crawlerm.Crawler(ws, pom_template="")
 
-        with self.assertRaises(Exception) as ctx:
-            crawler.crawl(["lib/a2"])
+        result = crawler.crawl(["lib/a2"])
 
-        self.assertIn("[lib/a2] can only reference [lib/a1]", str(ctx.exception))
+        self.assertEqual(1, len(result.nodes))
+        self.assertEqual("lib/a2", result.nodes[0].artifact_def.bazel_package)
+        self.assertEqual("lib/a1", result.nodes[0].children[0].artifact_def.bazel_package)
+        self.assertEqual("foo", result.nodes[0].children[0].artifact_def.bazel_target)
 
-    def test_non_default_package_ref__allowed_for_skip_pom_gen_mode(self):
+    def test_non_default_package_ref__skip_pom_gen_mode(self):
         """
-        lib/a2 is allowed to ref lib/a1:foo because lib/a1 has 
-        pom_gen_mode = "skip"
+        lib/a2 -> lib/a1:foo, lib/a1 has pom_gen_mode = "skip"
         https://github.com/salesforce/pomgen/tree/master/examples/skip-artifact-generation
         """
         repo_root_path = tempfile.mkdtemp("monorepo")
@@ -126,21 +130,32 @@ class CrawlerTest(unittest.TestCase):
                                  label_to_overridden_fq_label={})
         crawler = crawlerm.Crawler(ws, pom_template="")
 
-        crawler.crawl(["lib/a2"])
+        result = crawler.crawl(["lib/a2"])
+
+        self.assertEqual(1, len(result.nodes))
+        self.assertEqual("lib/a2", result.nodes[0].artifact_def.bazel_package)
+        self.assertEqual("lib/a1", result.nodes[0].children[0].artifact_def.bazel_package)
+        self.assertIs(pomgenmode.SKIP, result.nodes[0].children[0].artifact_def.pom_generation_mode)
 
     def _get_config(self):
         return config.Config()
 
-    def _add_artifact(self, repo_root_path, package_rel_path, 
-                      pom_generation_mode, deps=[]):
+    def _add_artifact(self, repo_root_path, package_rel_path,
+                      pom_generation_mode,
+                      target_name=None, deps=[]):
         self._write_build_pom(repo_root_path, package_rel_path, 
                               pom_generation_mode,
                               artifact_id=os.path.basename(package_rel_path),
                               group_id="g1",
                               version="1.0.0-SNAPSHOT",
+                              target_name=target_name,
                               deps=deps)
 
-    def _write_build_pom(self, repo_root_path, package_rel_path, pom_generation_mode, artifact_id, group_id, version, deps=None):
+    def _write_build_pom(self, repo_root_path, package_rel_path,
+                         pom_generation_mode,
+                         artifact_id, group_id, version,
+                         target_name=None,
+                         deps=None):
         build_pom = """
 maven_artifact(
     artifact_id = "%s",
@@ -149,6 +164,7 @@ maven_artifact(
     pom_generation_mode = "%s",
     pom_template_file = "%s",
     $deps$
+    $target_name$
 )
 
 maven_artifact_update(
@@ -162,7 +178,11 @@ maven_artifact_update(
         if deps is None:
             content = content.replace("$deps$", "")
         else:
-            content = content.replace("$deps$", "deps=[%s]" % ",".join(['"%s"' % d for d in deps]))
+            content = content.replace("$deps$", "deps=[%s]," % ",".join(['"%s"' % d for d in deps]))
+        if target_name is None:
+            content = content.replace("$target_name$", "")
+        else:
+            content = content.replace("$target_name$", "target_name = \"%s\"" % target_name)
         with open(os.path.join(path, "BUILD.pom"), "w") as f:
             f.write(content)
 
@@ -172,6 +192,7 @@ maven_artifact_update(
             os.makedirs(path)
         with open(os.path.join(path, "LIBRARY.root"), "w") as f:
            f.write("foo")
+
 
 if __name__ == '__main__':
     unittest.main()

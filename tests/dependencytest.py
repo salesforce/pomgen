@@ -184,7 +184,7 @@ class DependencyTest(unittest.TestCase):
         artifact_id = "a1"
         version = "1.1.0"
         package = "pack1"
-        art_def = buildpom.MavenArtifactDef(group_id, artifact_id, version)
+        art_def = buildpom.MavenArtifactDef(group_id, artifact_id, version, bazel_package="p1")
         art_def = buildpom._augment_art_def_values(art_def, None, package, None, None, pomgenmode.DYNAMIC)
 
         dep = dependency.new_dep_from_maven_artifact_def(art_def, None)
@@ -203,7 +203,7 @@ class DependencyTest(unittest.TestCase):
         art_def = buildpom.MavenArtifactDef(group_id, artifact_id, version)
         art_def = buildpom._augment_art_def_values(art_def, None, package, None, None, pomgenmode.DYNAMIC)
 
-        dep = dependency.new_dep_from_maven_artifact_def(art_def, None)
+        dep = dependency.new_dep_from_maven_artifact_def(art_def)
 
         self.assertEqual(group_id, dep.group_id)
         self.assertEqual(artifact_id, dep.artifact_id)
@@ -226,7 +226,8 @@ class DependencyTest(unittest.TestCase):
                                             bazel_package=package,
                                             requires_release=True,
                                             released_version="1.2.3",
-                                            released_artifact_hash="123456789")
+                                            released_artifact_hash="123456789",
+                                            bazel_target="t1")
 
         dep = dependency.new_dep_from_maven_artifact_def(art_def, None)
 
@@ -252,7 +253,8 @@ class DependencyTest(unittest.TestCase):
                                             bazel_package=package,
                                             requires_release=False,
                                             released_version=released_version,
-                                            released_artifact_hash="123456789")
+                                            released_artifact_hash="123456789",
+                                            bazel_target="t1")
 
         dep = dependency.new_dep_from_maven_artifact_def(art_def, None)
 
@@ -273,13 +275,15 @@ class DependencyTest(unittest.TestCase):
         released_version = "1.2.3"
         package = "pack1/pack2"
         art_def = buildpom.MavenArtifactDef(group_id, artifact_id, version,
-                                            bazel_package=package,
                                             requires_release=False,
                                             released_version=released_version,
                                             released_artifact_hash="123456789")
 
-        dep = dependency.new_dep_from_maven_artifact_def(art_def, target)
+        art_def = buildpom._augment_art_def_values(art_def, None, package, None, None, pomgenmode.DYNAMIC)
 
+        dep = dependency.new_dep_from_maven_artifact_def(art_def)
+
+        self.assertEqual("pack2", art_def.bazel_target)
         self.assertEqual("pack2", dep.bazel_target)
 
     def test_source_dependency__bazel_target__explicit(self):
@@ -296,9 +300,10 @@ class DependencyTest(unittest.TestCase):
                                             bazel_package=package,
                                             requires_release=False,
                                             released_version=released_version,
-                                            released_artifact_hash="123456789")
+                                            released_artifact_hash="123456789",
+                                            bazel_target=target)
 
-        dep = dependency.new_dep_from_maven_artifact_def(art_def, target)
+        dep = dependency.new_dep_from_maven_artifact_def(art_def)
 
         self.assertEqual(target, dep.bazel_target)
 
@@ -313,7 +318,8 @@ class DependencyTest(unittest.TestCase):
                                             bazel_package=package,
                                             requires_release=False,
                                             released_version=released_version,
-                                            released_artifact_hash="123456789")
+                                            released_artifact_hash="123456789",
+                                            bazel_target="t1")
 
         dep = dependency.new_dep_from_maven_artifact_def(art_def)
 
@@ -330,7 +336,8 @@ class DependencyTest(unittest.TestCase):
                                             bazel_package=package,
                                             requires_release=False,
                                             released_version=released_version,
-                                            released_artifact_hash="123456789")
+                                            released_artifact_hash="123456789",
+                                            bazel_target="t1")
 
         dep = dependency.new_dep_from_maven_artifact_def(art_def)
 
@@ -347,7 +354,8 @@ class DependencyTest(unittest.TestCase):
                                             bazel_package=package,
                                             requires_release=False,
                                             released_version=released_version,
-                                            released_artifact_hash="123456789")
+                                            released_artifact_hash="123456789",
+                                            bazel_target="t1")
 
         dep = dependency.new_dep_from_maven_artifact_def(art_def)
 
@@ -360,7 +368,7 @@ class DependencyTest(unittest.TestCase):
         """
         dep1 = dependency.new_dep_from_maven_art_str("com.google.guava:guava:20.0", "name")
         dep2 = dependency.new_dep_from_maven_art_str("com.google.guava:zoouava:20.0", "name")
-        art_def = buildpom.MavenArtifactDef("com.zoogle.guava", "art1", "1.0")
+        art_def = buildpom.MavenArtifactDef("com.zoogle.guava", "art1", "1.0", bazel_package="p1")
         art_def = buildpom._augment_art_def_values(art_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
         dep3 = dependency.new_dep_from_maven_artifact_def(art_def, None)
         art_def = buildpom.MavenArtifactDef("com.google.guava", "art1", "1.0")

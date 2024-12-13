@@ -76,8 +76,10 @@ class PomTest(unittest.TestCase):
             bazel.query_java_library_deps_attributes = lambda r, p, a, v: ("@maven//:com_google_guava_guava", "@maven//:aopalliance_aopalliance", "@maven//:ch_qos_logback_logback_classic", "@maven//:gt2_t2" )
             _, _, deps = pomgen.process_dependencies()
             deps = list(deps)
-            # appending a dependency that is built in the shared-repo (should not have an exclusions block)
-            artifact_def = buildpom.MavenArtifactDef("shared-repo", "my-dep", "1.2.3")
+            # appending a dependency that is built from soure
+            # (should not have an exclusions block)
+            artifact_def = buildpom.MavenArtifactDef(
+                "repo", "my-dep", "1.2.3", bazel_target="t1")
             dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
             deps.append(dep)
             deps = tuple(deps)
@@ -134,9 +136,10 @@ class PomTest(unittest.TestCase):
             </exclusions>
         </dependency>""", generated_pom)
 
-            # this dependency shouldn't have the exclusions block due to it having "bazel_buildable=True"
+            # this dependency shouldn't have the exclusions block due to it
+            # having "bazel_buildable=True"
             self.assertIn("""<dependency>
-            <groupId>shared-repo</groupId>
+            <groupId>repo</groupId>
             <artifactId>my-dep</artifactId>
             <version>1.2.3</version>
         </dependency>""", generated_pom)
@@ -197,7 +200,7 @@ class PomTest(unittest.TestCase):
 #{description}
 </project>
 """
-        artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3")
+        artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3", bazel_target="t1")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         pomgen = pom.DynamicPomGen(ws, artifact_def, dep, pom_template)
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
@@ -224,7 +227,7 @@ class PomTest(unittest.TestCase):
 #{description}
 </project>
 """
-        artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3")
+        artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3", bazel_target="t1")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         pomgen = pom.DynamicPomGen(ws, artifact_def, dep, pom_template)
 
@@ -245,7 +248,7 @@ class PomTest(unittest.TestCase):
         ]
         orig_bazel_parse_maven_install = bazel.parse_maven_install
         bazel.parse_maven_install = lambda names, overrides, verbose: query_result
-        artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3")
+        artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3", bazel_target="t2")
         artifact_def = buildpom._augment_art_def_values(artifact_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         depmd = dependencym.DependencyMetadata(None)
@@ -291,7 +294,7 @@ class PomTest(unittest.TestCase):
         root_dep = dependency.new_dep_from_maven_artifact_def(root_artifact_def)
 
         pomgen = pom.DynamicPomGen(ws, root_artifact_def, root_dep, TEST_POM_TEMPLATE)
-        dep_art_def = buildpom.MavenArtifactDef("class-group", "class-art", "1")
+        dep_art_def = buildpom.MavenArtifactDef("class-group", "class-art", "1", bazel_target="g1")
         dep = dependency.new_dep_from_maven_artifact_def(dep_art_def)
 
         dep_element, _ = pomgen._gen_dependency_element(
@@ -315,8 +318,8 @@ class PomTest(unittest.TestCase):
                                  pomcontent.NOOP,
                                  depmd,
                                  label_to_overridden_fq_label={})
-        artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3",
-                                                 include_deps=False)
+        artifact_def = buildpom.MavenArtifactDef(
+            "g1", "a2", "1.2.3", bazel_target="t1", include_deps=False)
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         pomgen = pom.DynamicPomGen(ws, artifact_def, dep, "")
 
@@ -341,7 +344,7 @@ class PomTest(unittest.TestCase):
                                  pomcontent.NOOP,
                                  depmd,
                                  label_to_overridden_fq_label={})
-        artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3")
+        artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3", bazel_target="t1")
         artifact_def = buildpom._augment_art_def_values(artifact_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
 
@@ -387,7 +390,7 @@ class PomTest(unittest.TestCase):
                                  pomcontent.NOOP,
                                  depmd,
                                  label_to_overridden_fq_label={})
-        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.4.4")
+        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.4.4", bazel_target="t1")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = """
 unqualified #{ch_qos_logback_logback_classic.version}
@@ -414,7 +417,7 @@ monorepo artifact version #{version}
                                  pomcontent.NOOP,
                                  depmd,
                                  label_to_overridden_fq_label={})
-        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
+        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3", bazel_target="t")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = "srpc #{com.grail.srpc:srpc-api:version}"
         srpc_artifact_def = buildpom.MavenArtifactDef(
@@ -440,7 +443,7 @@ monorepo artifact version #{version}
                                  pomcontent.NOOP,
                                  depmd,
                                  label_to_overridden_fq_label={})
-        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.4.4")
+        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.4.4", bazel_target="c")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = """
 1 v1 #{@maven//:org_apache_maven_same_version.version}
@@ -470,7 +473,7 @@ monorepo artifact version #{version}
                                  pomcontent.NOOP,
                                  depmd,
                                  label_to_overridden_fq_label={})
-        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.4.4")
+        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.4.4", bazel_target="t3")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = """
 v1 #{@maven//:org_apache_maven_mult_versions.version}
@@ -496,7 +499,7 @@ v2 #{@maven2//:org_apache_maven_mult_versions.version}
                                  pomcontent.NOOP,
                                  depmd,
                                  label_to_overridden_fq_label={})
-        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.4.4")
+        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.4.4", bazel_target="t2")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = """
 #{org_apache_maven_mult_versions.version}
@@ -533,7 +536,7 @@ v2 #{@maven2//:org_apache_maven_mult_versions.version}
                                  pomcontent.NOOP,
                                  depmd,
                                  label_to_overridden_fq_label={})
-        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
+        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3", bazel_target="t4")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = "srpc #{com.google.guava:guava:version}"
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
@@ -560,7 +563,7 @@ v2 #{@maven2//:org_apache_maven_mult_versions.version}
                                  pomcontent.NOOP,
                                  depmd,
                                  label_to_overridden_fq_label={})
-        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
+        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3", bazel_target="r")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = "srpc #{com.google.guava:guava:version}"
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
@@ -585,7 +588,7 @@ v2 #{@maven2//:org_apache_maven_mult_versions.version}
                                  pomcontent.NOOP,
                                  depmd,
                                  label_to_overridden_fq_label={})
-        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
+        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3", bazel_target="foo")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         srpc_artifact_def = buildpom.MavenArtifactDef("com.grail.srpc",
                                                       "srpc-api", "5.6.7")
@@ -639,7 +642,7 @@ __pomgen.end_dependency_customization__
                                  pomcontent.NOOP,
                                  depmd,
                                  label_to_overridden_fq_label={})
-        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
+        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3", bazel_target="t1")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = pom_template
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
@@ -702,7 +705,7 @@ __pomgen.end_dependency_customization__
                                  pomcontent.NOOP,
                                  depmd,
                                  label_to_overridden_fq_label={})
-        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
+        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3", bazel_target="d")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = pom_template
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
@@ -751,7 +754,7 @@ __pomgen.end_dependency_customization__
                                  pomcontent.NOOP,
                                  depmd,
                                  label_to_overridden_fq_label={})
-        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
+        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3", bazel_target="f")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = pom_template
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
@@ -830,7 +833,7 @@ __pomgen.end_dependency_customization__
                                  pomcontent.NOOP,
                                  depmd,
                                  label_to_overridden_fq_label={})
-        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
+        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3", bazel_target="123")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = pom_template
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
@@ -887,7 +890,7 @@ __pomgen.end_dependency_customization__
                                  pomcontent.NOOP,
                                  depmd,
                                  label_to_overridden_fq_label={})
-        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
+        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3", bazel_target="123")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = pom_template
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
@@ -911,7 +914,7 @@ __pomgen.end_dependency_customization__
                                  depmd,
                                  label_to_overridden_fq_label={})
         artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId",
-                                                 "1.2.3")
+                                                 "1.2.3", bazel_target="t")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = "my pom template with a bad ref #{bad1} and also #{bad2}"
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
@@ -934,7 +937,8 @@ __pomgen.end_dependency_customization__
                                  depmd,
                                  label_to_overridden_fq_label={})
         artifact_def = buildpom.MavenArtifactDef(
-            "g1", "a2", "1.2.3", gen_dependency_management_pom=True)
+            "g1", "a2", "1.2.3", bazel_target="t1",
+            gen_dependency_management_pom=True)
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         pomgen = pom.DependencyManagementPomGen(ws, artifact_def, dep, TEST_POM_TEMPLATE)
         guava = dependency.new_dep_from_maven_art_str("google:guava:1", "guav")

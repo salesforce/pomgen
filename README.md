@@ -10,6 +10,8 @@
 The set of scripts in this repository provides a solution for:
  - Generating pom.xml files for jars built by Bazel (typically ```java_library``` or ```java_binary``` rules)
  - Uploading the pom.xmls and jars to a Maven Artifact Repository such as Nexus (or installing them into the local Maven Repository at ~/.m2/repository)
+  - Handling the grouping of related jars into a "library", similar to a multi-module Maven project: all jars that are part of the same library are uploaded together
+  - Crawling library references and uploading those that have changed since they were last uploaded to Nexus
 
 pomgen does not run as part of the Bazel build - therefore Bazel BUILD files can remain free of pom.xml related metadata.
 
@@ -53,6 +55,7 @@ See [this doc](docs/change_detection.md) for more information on change detectio
 ## Example
 
 Please see the [hello-world example](examples/hello-world/README.md) to see how pomgen works.
+
 
 ## External Dependencies
 
@@ -175,6 +178,7 @@ Please see [more information about transitives versioning](docs/ci.md#using-a-di
 [rules_jvm_external](https://github.com/bazelbuild/rules_jvm_external#overriding-generated-targets) allows to override dependencies at runtime. pomgen provides an equivalent override mechanism: use `override_file_paths` in the `[general]` section of .pomgenrc file. The value of `override_file_paths` is one or more paths (comma-separated) to .bzl files, containing a dependency -> overriden dependency mapping.
 
 See [this example](examples/dep-overrides).
+
 
 ## CI setup
 

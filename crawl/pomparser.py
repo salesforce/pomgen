@@ -213,5 +213,5 @@ def _import_lxml():
         return etree
     except ImportError as ex:
         print("Module lxml is not installed, please execute the following in your environment:")
-        print("pip install --user lxml")
+        print("pip3 install --user lxml")
         return None

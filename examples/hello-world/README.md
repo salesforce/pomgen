@@ -5,13 +5,15 @@
 
 In the Maven world, a typical project setup consists of a top level pom.xml file with multiple modules in subdirectories. Each module produces a Maven Artifact (typically a jar or a pom.xml).
 
-The pomgen terminology for a top level project with modules is a "library". Subdirectories of the library (the modules) are Bazel Packages that each produce a Maven Artifact (jar or pom). pomgen processes all modules that are part of a library together.
+The pomgen terminology for a top level project with modules is a `library`. Subdirectories of the library (the modules) are Bazel Packages that each produce a Maven Artifact (jar or pom). pomgen processes all modules that are part of a library together.
 
 This example has 3 libraries. A library is defined by the presence of a [LIBRARY.root](healthyfoods/MVN-INF/LIBRARY.root) marker file.
 
-A Bazel Package that produces a Maven Artifact must have a [BUILD.pom](healthyfoods/fruit-api/MVN-INF/BUILD.pom) file that defines Maven specific metadata. Note that the `java_library` target that builds the jar Maven Artifact must be the default target, ie it must have the same name as the directory its BUILD file lives in.
+A Bazel Package that produces a Maven Artifact must have a [BUILD.pom](healthyfoods/fruit-api/MVN-INF/BUILD.pom) file that defines Maven specific metadata.
 
-The libraries in this example are, and reference each other in this order:
+The `java_library` target that builds the jar Maven Artifact is typically  the default target, ie it the target that the same name as the directory its BUILD file lives in. If the target is not the default target, its name must be explicitly specified in the BUILD.pom file using the `maven_artifact.target_name` attribute.
+
+The libraries in this example reference each other in this order:
 - [juicer](juicer)
 - [wintervegetables](wintervegetables)
 - [healthyfoods](healthyfoods)
@@ -67,7 +69,7 @@ The command above specifies:
 - The **library** to generate poms for: `examples/hello-world/juicer`
 
 
-pomgen follows refernces between libraries; since `juicer` depends on 2 other libraries `healthyfoods` and `wintervegerables`, pomgen generated pom.xml files for all 3 libraries, ie for all modules that are part of those libraries. Usually this is the right behavior, but if there a lot of upstream libraries, it may be desirable in some cases to not follow library references. This can be accomplished by setting `-i` (ignore references) flag:
+pomgen follows references between libraries; since `juicer` depends on 2 other libraries `healthyfoods` and `wintervegerables`, pomgen generated pom.xml files for all 3 libraries, ie for all modules that are part of those libraries. Usually this is the right behavior, but if there a lot of upstream libraries, it may be desirable in some cases to not follow library references. This can be accomplished by setting `-i` (ignore references) flag:
 
 ```
 bazel run @pomgen//maven -- -a pomgen -l examples/hello-world/juicer -i
