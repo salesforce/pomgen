@@ -164,7 +164,8 @@ class LibAggregatorTest(unittest.TestCase):
         artifact_def = MavenArtifactDef(group_id, artifact_id, dev_version,
                                         released_version=released_version,
                                         library_path=library_path,
-                                        requires_release=requires_release)
+                                        requires_release=requires_release,
+                                        bazel_target="t1")
         artifact_def.release_reason = release_reason
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         return Node(parent=None, artifact_def=artifact_def, dependency=dep)

@@ -220,12 +220,11 @@ class Crawler:
         # other, but these references are not guaranteed)
         artifacts = self.library_to_artifact[library_path]
         for art_def in artifacts:
-            all_deps.add(dependency.new_dep_from_maven_artifact_def(art_def, bazel_target=None))
-
+            all_deps.add(dependency.new_dep_from_maven_artifact_def(art_def))
         return all_deps
 
     def _get_crawled_packages_as_deps(self):
-        deps = [dependency.new_dep_from_maven_artifact_def(art_def, bazel_target=None) for art_def in self.package_to_artifact.values()]
+        deps = [dependency.new_dep_from_maven_artifact_def(art_def) for art_def in self.package_to_artifact.values()]
         deps = set(self._filter_non_artifact_referencing_deps(deps))
         return deps
 
@@ -510,7 +509,10 @@ class Crawler:
 
         Returns a Node instance for the crawled package.
         """
-        target_key = self._get_target_key(package, dep)
+        artifact_def = self.workspace.parse_maven_artifact_def(package)
+        if artifact_def is None:
+            raise Exception("No artifact defined at package %s" % package)
+        target_key = self._get_target_key(package, dep, artifact_def)
         if target_key in self.target_to_node:
             # if we have already processed this target, we can re-use the
             # children we discovered previously
@@ -532,13 +534,7 @@ class Crawler:
         else:
             if self.verbose:
                 logger.info("Processing [%s]" % target_key)
-            artifact_def = self.workspace.parse_maven_artifact_def(package)
-
-            if artifact_def is None:
-                raise Exception("No artifact defined at package %s" % package)
             
-            self._validate_default_target_dep(parent_node, dep, artifact_def)
-
             self.package_to_artifact[package] = artifact_def
             self.library_to_artifact[artifact_def.library_path].append(artifact_def)
             pomgen = self._get_pom_generator(artifact_def, dep)
@@ -563,20 +559,6 @@ class Crawler:
             self._store_if_leafnode(node)
             return node
 
-    def _validate_default_target_dep(self, parent_node, dep, artifact_def):
-        if dep is not None:
-            if artifact_def.pom_generation_mode.produces_artifact:
-                # if the current bazel target produces an artifact 
-                # (pom/jar that goes to Nexus), validate that the BUILD 
-                # file pointing at this target uses the default bazel 
-                # package target 
-                # this is a current pomgen requirement: 
-                # 1 bazel package produces one artifact, named after the 
-                # bazel package
-                dflt_package_name = os.path.basename(artifact_def.bazel_package)
-                if dep.bazel_target != dflt_package_name:
-                    raise Exception("Non default-package references are only supported to non-artifact producing packages: [%s] can only reference [%s], [%s:%s] is not allowed" % (parent_node.artifact_def.bazel_package, artifact_def.bazel_package, artifact_def.bazel_package, dep.bazel_target))
-
     def _get_pom_generator(self, artifact_def, dep):
         if dep is None:
             # make a real dependency instance here so we can pass it along
@@ -587,12 +569,15 @@ class Crawler:
                                      dep)
 
     @classmethod
-    def _get_target_key(clazz, package, dep):
+    def _get_target_key(clazz, package, dep, artifact_def=None):
         if dep is None:
-            target = os.path.basename(package)
+            # initial bootstrap - we start a bazel package and we don't
+            # have a dep pointing here
+            assert artifact_def is not None
+            target = artifact_def.bazel_target
         else:
             target = dep.bazel_target
-        assert target is not None, "Target is None for dep %s" % dep
+        assert target is not None, "Target is None for package %s" % package
         return "%s:%s" % (package, target)
 
     def _store_if_leafnode(self, node):

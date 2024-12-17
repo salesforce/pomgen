@@ -22,6 +22,7 @@ maven_artifact_update(
 )
 ```
 
+
 #### Required Attributes
 
 ##### maven_artifact.group_id
@@ -50,7 +51,12 @@ Given a current version of `1.2.3`, the `major`, `minor`, and `patch` incrementi
 
 Given a current version of `20230605.1`, the `calver` incrementing strategy would produce `<todaydate>.1` (or `<todaydate>.2` if the current version is already `<todaydate>.1`).
 
+
 #### Optional Attributes
+
+##### maven_artifact.target_name
+
+The name of the bazel target that builds the jar artifact pomgen will be processing. Defaults to the [default target](https://bazel.build/concepts/labels) of the bazel package (aka the target that has the same name as the directory the BUILD file, that defines the target, lives in).
 
 ##### maven_artifact.change_detection
 
@@ -84,6 +90,7 @@ If the jar artifact is not built by bazel (this is unusual), this attribute can 
 Default value: `None`
 
 See the `java_import` [example](../examples/java-import).
+
 
 ### LIBRARY.root (required)
 

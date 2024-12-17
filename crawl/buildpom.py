@@ -21,6 +21,7 @@ class MavenArtifactDef(object):
     Represents an instance of a maven_artifact rule defined in BUILD.pom file.
     Information from the BUILD.pom.released file is added, if that file exists.
 
+
     ==== Read out of the BUILD.pom file ====
 
     group_id: the maven artifact groupId of the bazel package.
@@ -64,6 +65,7 @@ class MavenArtifactDef(object):
     version_increment_strategy_name: specifies how this artifacts version should
         be incremented.
 
+
     ==== Read out of the optional BUILD.pom.released file ====
 
     released_version: the previously released version to Nexus
@@ -72,19 +74,22 @@ class MavenArtifactDef(object):
         previously released to Nexus
 
 
+
     ===== Internal attributes (never specified by the user) ====
 
     deps: additional targets this package depends on; list of Bazel labels.
         For example: deps = ["//projects/libs/servicelibs/srpc/srpc-thrift-svc-runtime"]
 
-        Only used by tests.
+        The deps attribute is only used by tests.
 
-    bazel_package: the bazel package the BUILD.pom file lives in 
+    bazel_package: the bazel package the BUILD (and MVN-INF/) files live in
 
-    library_path: the path to the root directory of the library this
-        monorepo package is part of
+    bazel_target: the bazel target that builds this artifact
 
-    requires_release: whether this monorepo package should be released (to Nexus
+    library_path: the path to the root directory of the library this artifact
+        is part of
+
+    requires_release: whether this artifact should be released (to Nexus
         or local Maven repository)
 
     release_reason: the reason for releasing this artifact
@@ -92,6 +97,7 @@ class MavenArtifactDef(object):
     released_pom_content: if the file pom.xml.released exists next to the 
         BUILD.pom file, the content of the pom.xml.released file
     =====
+
 
     Implementation notes:
         - properties are kept read-only whenever possible
@@ -115,6 +121,7 @@ class MavenArtifactDef(object):
                  released_version=None,
                  released_artifact_hash=None,
                  bazel_package=None,
+                 bazel_target=None,
                  library_path=None,
                  requires_release=None,
                  released_pom_content=None):
@@ -133,6 +140,7 @@ class MavenArtifactDef(object):
         self._released_version = released_version
         self._released_artifact_hash = released_artifact_hash
         self._bazel_package = bazel_package
+        self._bazel_target = bazel_target
         self._library_path = library_path
         self._requires_release = requires_release
         self._release_reason = None
@@ -207,6 +215,10 @@ class MavenArtifactDef(object):
         return self._bazel_package
 
     @property
+    def bazel_target(self):
+        return self._bazel_target
+
+    @property
     def library_path(self):
         return self._library_path
 
@@ -279,6 +291,7 @@ def parse_maven_artifact_def(root_path, package):
         additional_change_detected_packages=ma_attrs.get("additional_change_detected_packages", []),
         gen_dependency_management_pom=ma_attrs.get("generate_dependency_management_pom", False),
         jar_path=ma_attrs.get("jar_path", None),
+        bazel_target=ma_attrs.get("target_name", None),
         deps=ma_attrs.get("deps", []))
 
     template_path = ma_attrs.get("pom_template_file", None)
@@ -348,6 +361,7 @@ def _augment_art_def_values(user_art_def, rel_art_def, bazel_package,
         gen_dependency_management_pom=False if user_art_def.gen_dependency_management_pom is None else user_art_def.gen_dependency_management_pom,
         jar_path=None if user_art_def.jar_path is None else os.path.normpath(os.path.join(bazel_package, mdfiles.MD_DIR_NAME, user_art_def.jar_path)),
         deps=user_art_def.deps,
+        bazel_target=user_art_def.bazel_target if user_art_def.bazel_target is not None else os.path.basename(bazel_package),
         released_version=rel_art_def.version if rel_art_def is not None else None,
         released_artifact_hash=rel_art_def.artifact_hash if rel_art_def is not None else None,
         bazel_package=bazel_package,

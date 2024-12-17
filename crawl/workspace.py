@@ -126,7 +126,7 @@ class Workspace:
                 raise Exception("Unknown external dependency - please make sure all maven install json files have been registered with pomgen (by setting maven_install_paths in the pomgen config file): [%s]" % dep_label)
             return self._label_to_ext_dep[dep_label]
         elif dep_label.startswith("//"):
-            # monorepo src ref:
+            # src ref:
             package_path = dep_label[2:] # remove leading "//"
             target_name = None
             i = package_path.rfind(":")

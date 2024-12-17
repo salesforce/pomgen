@@ -77,7 +77,7 @@ class DependencyMetadataTest(unittest.TestCase):
         dependencymd = dependencymdmod.DependencyMetadata(jar_artifact_classifier=None)
         ext_dep = dependency.new_dep_from_maven_art_str("g1:a1:pack:class:2.0,0", "m1")
         art_def = buildpom.MavenArtifactDef("g1", "a1", "1.0.0")
-        int_dep = dependency.new_dep_from_maven_artifact_def(art_def, None)
+        int_dep = dependency.new_dep_from_maven_artifact_def(art_def, "t1")
 
         self.assertEqual("class", dependencymd.get_classifier(ext_dep))
         self.assertIsNone(dependencymd.get_classifier(int_dep))
@@ -86,7 +86,7 @@ class DependencyMetadataTest(unittest.TestCase):
         dependencymd = dependencymdmod.DependencyMetadata(jar_artifact_classifier="foo22")
         ext_dep = dependency.new_dep_from_maven_art_str("g1:a1:2.0,0", "m1")
         art_def = buildpom.MavenArtifactDef("g1", "a1", "1.0.0")
-        int_dep = dependency.new_dep_from_maven_artifact_def(art_def, None)
+        int_dep = dependency.new_dep_from_maven_artifact_def(art_def, "t1")
 
         self.assertIsNone(dependencymd.get_classifier(ext_dep))
         self.assertEqual("foo22", dependencymd.get_classifier(int_dep))

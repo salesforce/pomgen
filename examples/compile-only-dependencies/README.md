@@ -1,6 +1,5 @@
 # Compilation time only dependencies should not be evaluated by pomgen
 
-
 There are some dependencies that are needed only at compilation time, for example Lombok. To ensure compile-time only dependencies are not included at runtime, Bazel has the `neverlink` attribute, which can be added to `java_library` rules.
 Typically compile-time only dependencies won't have a `BUILD.pom` file, so they have to be ignored by `pomgen`.
 

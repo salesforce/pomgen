@@ -3,6 +3,7 @@ maven_artifact(
     artifact_id = "juicer",
     version = "10.0.0-qual1-SNAPSHOT",
     pom_generation_mode = "dynamic",
+    target_name = "juicer_lib",
 )
 
 maven_artifact_update(

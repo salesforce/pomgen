@@ -19,7 +19,7 @@ class BuildPomTest(unittest.TestCase):
         group_id = "group1"
         artifact_id = "art1"
         version = "1.2.3"
-        repo_root = tempfile.mkdtemp("monorepo")
+        repo_root = tempfile.mkdtemp("reporoot")
         repo_package = os.path.join(repo_root, package_rel_path)
         os.makedirs(repo_package)
         self._write_build_pom(repo_package, artifact_id, group_id, version,
@@ -38,6 +38,7 @@ class BuildPomTest(unittest.TestCase):
         self.assertFalse(art_def.include_deps)
         self.assertTrue(art_def.change_detection)
         self.assertEqual(package_rel_path, art_def.bazel_package)
+        self.assertEqual("package2", art_def.bazel_target)
         self.assertEqual(None, art_def.released_version)
         self.assertEqual(None, art_def.released_artifact_hash)
         self.assertEqual("major", art_def.version_increment_strategy_name)
@@ -49,7 +50,7 @@ class BuildPomTest(unittest.TestCase):
         group_id = "group1"
         artifact_id = "art1"
         version = "1.2.3"
-        repo_root = tempfile.mkdtemp("monorepo")
+        repo_root = tempfile.mkdtemp("reporoot")
         repo_package = os.path.join(repo_root, package_rel_path)
         os.makedirs(repo_package)
         self._write_build_pom(repo_package, artifact_id, group_id, version,
@@ -65,7 +66,7 @@ class BuildPomTest(unittest.TestCase):
         group_id = "group1"
         artifact_id = "art1"
         version = "1.2.3"
-        repo_root = tempfile.mkdtemp("monorepo")
+        repo_root = tempfile.mkdtemp("reporoot")
         repo_package = os.path.join(repo_root, package_rel_path)
         os.makedirs(repo_package)
 
@@ -86,7 +87,7 @@ class BuildPomTest(unittest.TestCase):
         group_id = "group1"
         artifact_id = "art1"
         version = "1.2.3"
-        repo_root = tempfile.mkdtemp("monorepo")
+        repo_root = tempfile.mkdtemp("reporoot")
         repo_package = os.path.join(repo_root, package_rel_path)
         os.makedirs(repo_package)
 
@@ -109,7 +110,7 @@ class BuildPomTest(unittest.TestCase):
         version = "1.2.3"
         released_version = "1.2.2"
         released_artifact_hash = "af5fe5cac7dfcfbc500283b111ea9e37083e5862"
-        repo_root = tempfile.mkdtemp("monorepo")
+        repo_root = tempfile.mkdtemp("reporoot")
         repo_package = os.path.join(repo_root, package_rel_path)
         os.makedirs(repo_package)
         self._write_build_pom(repo_package, artifact_id, group_id, version, "dynamic")
@@ -134,7 +135,7 @@ class BuildPomTest(unittest.TestCase):
         group_id = "group1"
         artifact_id = "art1"
         version = "1.2.3"
-        repo_root = tempfile.mkdtemp("monorepo")
+        repo_root = tempfile.mkdtemp("reporoot")
         repo_package = os.path.join(repo_root, package_rel_path)
         os.makedirs(repo_package)
         self._write_build_pom(repo_package, artifact_id, group_id, version, pom_gen_mode="dynamic")
@@ -148,7 +149,7 @@ class BuildPomTest(unittest.TestCase):
         group_id = "group1"
         artifact_id = "art1"
         version = "1.2.3"
-        repo_root = tempfile.mkdtemp("monorepo")
+        repo_root = tempfile.mkdtemp("reporoot")
         repo_package = os.path.join(repo_root, package_rel_path)
         os.makedirs(repo_package)
         self._write_build_pom(repo_package, artifact_id, group_id, version, pom_gen_mode="dynamic")
@@ -163,7 +164,7 @@ class BuildPomTest(unittest.TestCase):
         group_id = "group1"
         artifact_id = "art1"
         version = "1.2.3"
-        repo_root = tempfile.mkdtemp("monorepo")
+        repo_root = tempfile.mkdtemp("reporoot")
         repo_package = os.path.join(repo_root, package_rel_path)
         os.makedirs(repo_package)
         self._write_build_pom(repo_package, artifact_id, group_id, version, pom_gen_mode="template")
@@ -179,7 +180,7 @@ class BuildPomTest(unittest.TestCase):
         artifact_id = "art1"
         version = "1.2.3"
         more_packages = ["//root/a/b/c", "root/d/e/f"]
-        repo_root = tempfile.mkdtemp("monorepo")
+        repo_root = tempfile.mkdtemp("reporoot")
         repo_package = os.path.join(repo_root, package_rel_path)
         os.makedirs(repo_package)
         self._write_build_pom(
@@ -196,7 +197,7 @@ class BuildPomTest(unittest.TestCase):
         group_id = "group1"
         artifact_id = "art1"
         version = "1.2.3"
-        repo_root = tempfile.mkdtemp("monorepo")
+        repo_root = tempfile.mkdtemp("reporoot")
         repo_package = os.path.join(repo_root, package_rel_path)
         os.makedirs(repo_package)
         self._write_build_pom_skip_generation_mode(repo_package)
@@ -223,7 +224,7 @@ class BuildPomTest(unittest.TestCase):
         artifact_id = "art1"
         version = "1.2.3"
         jar_path = "../a-jar.jar"
-        repo_root = tempfile.mkdtemp("monorepo")
+        repo_root = tempfile.mkdtemp("reporoot")
         repo_package = os.path.join(repo_root, package_rel_path)
         os.makedirs(repo_package)
         self._write_build_pom(repo_package, artifact_id, group_id, version,
@@ -234,12 +235,29 @@ class BuildPomTest(unittest.TestCase):
 
         self.assertEqual("package1/package2/a-jar.jar", art_def.jar_path)
 
+    def test_parse_BUILD_pom__custom_target(self):
+        package_rel_path = "package1/package2"
+        group_id = "group1"
+        artifact_id = "art1"
+        version = "1.2.3"
+        target = "juicer_lib"
+        repo_root = tempfile.mkdtemp("reporoot")
+        repo_package = os.path.join(repo_root, package_rel_path)
+        os.makedirs(repo_package)
+        self._write_build_pom(repo_package, artifact_id, group_id, version,
+                              pom_gen_mode="template",
+                              bazel_target=target)
+
+        art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
+
+        self.assertEqual(target, art_def.bazel_target)
+
     def test_load_pom_xml_released(self):
         package_rel_path = "package1/package2"
         group_id = "group1"
         artifact_id = "art1"
         version = "1.2.3"
-        repo_root = tempfile.mkdtemp("monorepo")
+        repo_root = tempfile.mkdtemp("reporoot")
         repo_package = os.path.join(repo_root, package_rel_path)
         os.makedirs(repo_package)
         self._write_build_pom(repo_package, artifact_id, group_id, version, "dynamic")
@@ -255,7 +273,7 @@ class BuildPomTest(unittest.TestCase):
         group_id = "group1"
         artifact_id = "art1"
         version = "1.2.3"
-        repo_root = tempfile.mkdtemp("monorepo")
+        repo_root = tempfile.mkdtemp("reporoot")
         repo_package = os.path.join(repo_root, package_rel_path)
         os.makedirs(repo_package)
         self._write_build_pom(repo_package, artifact_id, group_id, version,
@@ -279,6 +297,7 @@ class BuildPomTest(unittest.TestCase):
                          deps=None,
                          jar_path=None,
                          pom_template_file=None,
+                         bazel_target=None,
                          generate_dependency_management_pom=None):
         build_pom = """
 maven_artifact(
@@ -286,6 +305,7 @@ maven_artifact(
     group_id = "%s",
     version = "%s",
     pom_generation_mode = '%s',
+    %s
     %s
     %s
     %s
@@ -305,6 +325,7 @@ maven_artifact_update(
        "" if deps is None else "deps = %s," % deps,
        "" if jar_path is None else 'jar_path = "%s",' % jar_path,
        "" if pom_template_file is None else 'pom_template_file = "%s",' % pom_template_file,
+       "" if bazel_target is None else 'target_name = "%s",' % bazel_target,
        "" if generate_dependency_management_pom is None else 'generate_dependency_management_pom = %s,' % generate_dependency_management_pom)
 
         path = os.path.join(package_path, "MVN-INF")

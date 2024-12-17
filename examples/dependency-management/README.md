@@ -4,6 +4,7 @@ This examples shows how pomgen can optionally generate a dependencyManagement "c
 
 The dependency management pom contains a `<dependencyManagement>` section with the transitive closure of all dependencies of the artifact it was generated for. It uses the `artifact_id` specified in the BUILD.pom file, suffixed with `.depmanagement`.
 
+
 ### Try this example
 
 From the root of the repository:

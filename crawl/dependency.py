@@ -314,8 +314,9 @@ def new_dep_from_maven_art_str(maven_artifact_str, name):
 
 
 def new_dep_from_maven_artifact_def(artifact_def, bazel_target=None):
-    if bazel_target is not None:
-        assert len(bazel_target) > 0, "bazel target must not be empty for artifact def %s" % artifact_def.bazel_package
+    if bazel_target  is None:
+        bazel_target = artifact_def.bazel_target
+    assert bazel_target is not None
     return MonorepoDependency(artifact_def, bazel_target)
 
 
