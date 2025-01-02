@@ -191,7 +191,7 @@ excluded_dependency_labels=  123    ,   444
 
         cfg = config.load(repo_root)
 
-        self.assertEquals(("123", "444"), cfg.excluded_dependency_labels)
+        self.assertEqual(("123", "444"), cfg.excluded_dependency_labels)
 
     def test_str(self):
         repo_root = tempfile.mkdtemp("root")
