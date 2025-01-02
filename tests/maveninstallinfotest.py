@@ -22,11 +22,11 @@ class MavenInstallTest(unittest.TestCase):
 
         files = m.get_maven_install_names_and_paths(repo_root)
 
-        self.assertEquals(2, len(files))
-        self.assertEquals("my_rules", files[0][0])
-        self.assertEquals(os.path.join(repo_root, "my_rules_install.json"), files[0][1])
-        self.assertEquals("maven", files[1][0])
-        self.assertEquals(os.path.join(repo_root, "tools", "maven_install.json"), files[1][1])
+        self.assertEqual(2, len(files))
+        self.assertEqual("my_rules", files[0][0])
+        self.assertEqual(os.path.join(repo_root, "my_rules_install.json"), files[0][1])
+        self.assertEqual("maven", files[1][0])
+        self.assertEqual(os.path.join(repo_root, "tools", "maven_install.json"), files[1][1])
 
     def test_path_with_glob(self):
         repo_root = tempfile.mkdtemp("monorepo")
@@ -37,11 +37,11 @@ class MavenInstallTest(unittest.TestCase):
 
         files = m.get_maven_install_names_and_paths(repo_root)
 
-        self.assertEquals(2, len(files))
-        self.assertEquals("maven", files[0][0])
-        self.assertEquals(os.path.join(repo_root, "tools", "maven_install.json"), files[0][1])
-        self.assertEquals("my_rules", files[1][0])
-        self.assertEquals(os.path.join(repo_root, "tools", "my_rules_install.json"), files[1][1])
+        self.assertEqual(2, len(files))
+        self.assertEqual("maven", files[0][0])
+        self.assertEqual(os.path.join(repo_root, "tools", "maven_install.json"), files[0][1])
+        self.assertEqual("my_rules", files[1][0])
+        self.assertEqual(os.path.join(repo_root, "tools", "my_rules_install.json"), files[1][1])
 
     def test_path_with_glob_and_exclusions(self):
         repo_root = tempfile.mkdtemp("monorepo")
@@ -52,11 +52,11 @@ class MavenInstallTest(unittest.TestCase):
 
         files = m.get_maven_install_names_and_paths(repo_root)
 
-        self.assertEquals(2, len(files))
-        self.assertEquals("maven_blah", files[0][0])
-        self.assertEquals(os.path.join(repo_root, "tools", "maven_blah_install.json"), files[0][1])
-        self.assertEquals("my_rules", files[1][0])
-        self.assertEquals(os.path.join(repo_root, "tools", "my_rules_install.json"), files[1][1])
+        self.assertEqual(2, len(files))
+        self.assertEqual("maven_blah", files[0][0])
+        self.assertEqual(os.path.join(repo_root, "tools", "maven_blah_install.json"), files[0][1])
+        self.assertEqual("my_rules", files[1][0])
+        self.assertEqual(os.path.join(repo_root, "tools", "my_rules_install.json"), files[1][1])
 
     def _touch_file_at_path(self, repo_root_path, file_path):
         path = os.path.join(repo_root_path, file_path)
