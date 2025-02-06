@@ -47,35 +47,11 @@ java_library(
 
 ## Build jars with Bazel and use them in a Maven project
 
-Similar to above, we can build jars using Bazel, so that they can be used in Maven projects. See below for detailed steps.
+Similar to above, we can build jars using Bazel, so that they can be used in Maven projects:
 
 1. Make code changes to the library which you want to release a jar for.
 1. Build the library by running `bazel build path/to/library/...`.
 1. Run `bazel run @pomgen//maven -- -a pomgen,install -l path/to/library` to generate poms and install the jars to `~/.m2/repository`.
 1. Update the pom.xml in the consuming Maven project to use the right jar version
 
-
-### Example
-
-Make some code changes in `examples/hello-world/healthyfoods/fruit-api`.
-
-Run bazel build.
-```
-bazel build //examples/hello-world/healthyfoods/...
-```
-
-Generate pom(s) and install artifacts into `~/.m2/repository`:
-```
-bazel run @pomgen//maven -- -a pomgen,install -l examples/hello-world/healthyfoods
-```
-
-Then, update the pom.xml of the consuming Maven project.
-```
-<dependency>
-    <groupId>com.pomgen.example</groupId>
-    <artifactId>fruit-api</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
-</dependency>
-```
-
-Now you can compile your Maven project, it will use the latest jars produced by Bazel.
+See [this example](../examples/hello-world#installing-maven-artifacts-into-the-local-maven-repository) for more information.
