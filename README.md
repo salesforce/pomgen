@@ -60,7 +60,7 @@ Please see the [hello-world example](examples/hello-world/README.md) to see how 
 ## External Dependencies
 
 - Bazel, ideally through [bazelisk](https://github.com/bazelbuild/bazelisk)
-    - This branch has been tested with Bazel 6.4.x
+    - This branch has been tested with Bazel 7.x
 - Python 3 is required and must be configured as a toolchain or available in your $PATH
 - You need to install [lxml](https://lxml.de): pip install --user lxml
 
