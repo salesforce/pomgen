@@ -140,11 +140,20 @@ def _write_file(path, content):
 def _get_output_dir(args):
     if not args.destdir:
         return None
-    if not os.path.exists(args.destdir):
-        os.makedirs(args.destdir)
-    if not os.path.isdir(args.destdir):
-        raise Exception("[%s] is not a directory %s" % args.out)
-    return os.path.realpath(args.destdir)
+    destdir = args.destdir
+    if os.path.isabs(destdir):
+        destdir = os.path.realpath(args.destdir)
+    else:
+        # resolve relative to workspace
+        ws = os.getenv("BUILD_WORKSPACE_DIRECTORY")
+        assert ws is not None, "not using bazel run"
+        destdir = os.path.join(ws, destdir)
+    if os.path.exists(destdir):
+        if not os.path.isdir(destdir):
+            raise Exception("[%s] is not a directory" % destdir)
+    else:
+        os.makedirs(destdir)
+    return destdir
 
 
 def _write_all_libraries_hint_files(crawler_result, output_dir, start_lib_path):
