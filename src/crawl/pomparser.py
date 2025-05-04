@@ -62,7 +62,7 @@ def indent_xml(xml_content, indent):
             current_indent -= INDENT
             handled_indent = True
         indented_xml += (' '*current_indent) + line + os.linesep
-        if not handled_indent and line.startswith("<") and not "</" in line:
+        if not handled_indent and line.startswith("<") and "</" not in line:
             current_indent += INDENT
             handled_indent = True
     return indented_xml
@@ -121,7 +121,7 @@ class ParsedDependencies:
                 specified.add((d.group_id, d.artifact_id))
         missing = set()
         for d in self._dependencies:
-            if not ((d.group_id, d.artifact_id)) in specified:
+            if ((d.group_id, d.artifact_id)) not in specified:
                 missing.add(d)
         return missing
 
@@ -211,7 +211,7 @@ def _import_lxml():
     try:
         from lxml import etree
         return etree
-    except ImportError as ex:
+    except ImportError:
         print("Module lxml is not installed, please execute the following in your environment:")
         print("pip3 install --user lxml")
         return None

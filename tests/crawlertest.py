@@ -19,7 +19,6 @@ from crawl import workspace
 import os
 import tempfile
 import unittest
-from unittest.mock import patch
 
 
 GROUP_ID = "group"

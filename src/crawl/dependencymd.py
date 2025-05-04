@@ -68,14 +68,14 @@ class DependencyMetadata:
     def register_transitives(self, dependency, transitives):
         key = self._get_key(dependency)
         assert key is not None, "no key for dependency: [%s]" % dependency
-        assert not key in self._dep_to_transitives, "duplicate key [%s] for dependency [%s]" % (key, dependency)
+        assert key not in self._dep_to_transitives, "duplicate key [%s] for dependency [%s]" % (key, dependency)
         self._dep_to_transitives[key] = transitives
         self._dep_key_to_dependency[key] = dependency
 
     def register_exclusions(self, dependency, exclusions):
         key = self._get_key(dependency)
         assert key is not None, "no key for dependency: [%s]" % dependency
-        assert not key in self._dep_to_exclusions, "duplicate key [%s] for dependency [%s]" % (key, dependency)
+        assert key not in self._dep_to_exclusions, "duplicate key [%s] for dependency [%s]" % (key, dependency)
         self._dep_to_exclusions[key] = exclusions
 
     def clear(self):

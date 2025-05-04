@@ -13,7 +13,6 @@ from pomupdate import buildpomupdate
 import os
 import tempfile
 import unittest
-import subprocess
 
 
 class BuildPomUpdateTest(unittest.TestCase):

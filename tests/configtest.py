@@ -99,7 +99,7 @@ transitives_versioning_mode=foo
 """)
 
         with self.assertRaises(Exception) as ctx:
-            cfg = config.load(repo_root)
+            config.load(repo_root)
 
         self.assertIn("Invalid value", str(ctx.exception))
         self.assertIn("valid values are: ('semver', 'counter')", str(ctx.exception))

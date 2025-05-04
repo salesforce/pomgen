@@ -11,17 +11,11 @@ BUILD.pom.released files.
 
 from common import argsupport
 from common import common
-from common import logger
-from common import mdfiles
 from common import version_increment_strategy as vis
 from config import config
-from crawl import bazel
 from pomupdate import buildpomupdate
 import argparse
-import os
 import sys
-
-
 
 
 def _parse_arguments(args):

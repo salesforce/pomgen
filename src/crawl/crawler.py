@@ -13,10 +13,8 @@ from crawl import dependency
 from crawl import bazel
 from crawl import pom
 from crawl import pomparser
-from crawl import workspace
 from crawl.releasereason import ReleaseReason
 import difflib
-import os
 
 
 class Node:
@@ -193,7 +191,6 @@ class Crawler:
 
         # register the transitive closure of dependencies belonging to the
         # artifact
-        deps = self._get_crawled_packages_as_deps()
         for p in self.pomgens:
 
             target_key = self._get_target_key(p.artifact_def.bazel_package, p.dependency)
@@ -242,7 +239,7 @@ class Crawler:
         missing_packages = []
         for artifact_def in all_artifacts:
             library_path = artifact_def.library_path
-            if not library_path in processed_libraries:
+            if library_path not in processed_libraries:
                 processed_libraries.add(library_path)
                 all_library_packages = set(bazel.query_all_artifact_packages(self.workspace.repo_root_path, library_path))
                 missing_packages += all_library_packages.difference(all_packages_already_processed)
@@ -400,7 +397,7 @@ class Crawler:
         processed = set()
         for li in list_of_lists:
             for item in li:
-                if not item in processed:
+                if item not in processed:
                     flattened.append(item)
                     processed.add(item)
         return flattened

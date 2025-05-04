@@ -183,3 +183,14 @@ See [this example](examples/dep-overrides).
 ## CI setup
 
 [This document](docs/ci.md) goes over the CI setup.
+
+
+## Linting
+
+pomgen uses [ruff](https://github.com/astral-sh/ruff). Follow the installation instructions, then run:
+
+```
+ruff check src tests
+```
+
+Currently, we just use the default ruff linting configuration.

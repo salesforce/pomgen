@@ -282,7 +282,7 @@ class MonorepoDependency(AbstractDependency):
     def _use_previously_released_artifact(self):
         if self._artifact_def.requires_release is not None:
             # better to be explicit here: requires_release has been set
-            if self._artifact_def.requires_release == False:
+            if self._artifact_def.requires_release == False: # noqa: E712
                 return True
         return False
 

@@ -54,7 +54,7 @@ def get_all_packages(repository_root_path, packages_str, verbose=False):
                     if prefix_match or package.endswith(exclusion_path):
                         break
             else:
-                if not package in all_packages:
+                if package not in all_packages:
                     all_packages.add(package)
                     packages_list.append(package)
 
