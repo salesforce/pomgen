@@ -5,7 +5,6 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
-from common.os_util import run_cmd
 import os
 import pomgen
 import unittest
@@ -20,7 +19,9 @@ class PomGenTest(unittest.TestCase):
     """
 
     def test_dynamic_pomgen(self):
-        group_id = "g1"; artifact_id = "a1"; version = "1.0.0"
+        group_id = "g1"
+        artifact_id = "a1"
+        version = "1.0.0"
         self._setup_workspace()
         package_rel_path = "mypackage"
         self._add_package(package_rel_path, group_id, artifact_id, version)
@@ -70,7 +71,7 @@ class PomGenTest(unittest.TestCase):
     <version>#{version}</version>
 </project>
 """
-        self._write_file("config", "", "pom_template.xml", content)
+        self._write_file("src", "config", "pom_template.xml", content)
 
     def _add_package(self, package_rel_path, group_id, artifact_id, version):
         self._add_BUILD_file(package_rel_path)

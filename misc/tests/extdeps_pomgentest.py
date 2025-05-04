@@ -81,7 +81,7 @@ class ExtDepsPomgenTest(unittest.TestCase):
 
     def _add_pom_template(self):
         content = "#{dependencies}"
-        self._write_file("config", "", "pom_template.xml", content)
+        self._write_file("src", "config", "pom_template.xml", content)
 
     def _write_file(self, package_rel_path, rel_path, filename, content):
         path = os.path.join(self.repo_root_path, package_rel_path, rel_path, 

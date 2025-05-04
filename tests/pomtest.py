@@ -36,7 +36,6 @@ class PomTest(unittest.TestCase):
         f = dependency.new_dep_from_maven_art_str
         t1_dep = f("gt1:t1:1.0.0", "maven")
         t2_dep = f("gt2:t2:1.0.0", "maven")
-        e1_dep = f("ge1:e1:-1.0.0", "maven")
         self.orig_bazel_parse_maven_install = bazel.parse_maven_install
         query_result = [
             (f("com.google.guava:guava:23.0", "maven"), [t1_dep, t2_dep]),
@@ -246,7 +245,6 @@ class PomTest(unittest.TestCase):
         query_result = [
             (f("com.google.guava:guava:23.0", "maven"), []),
         ]
-        orig_bazel_parse_maven_install = bazel.parse_maven_install
         bazel.parse_maven_install = lambda names, overrides, verbose: query_result
         artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3", bazel_target="t2")
         artifact_def = buildpom._augment_art_def_values(artifact_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
@@ -567,11 +565,6 @@ v2 #{@maven2//:org_apache_maven_mult_versions.version}
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         artifact_def.custom_pom_template_content = "srpc #{com.google.guava:guava:version}"
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
-
-        # this guava dep is conflicting with an external dep -- internal package called a/b/c 
-        art = buildpom.MavenArtifactDef("com.google.guava","guava","29.0", bazel_package="a/b/c")
-        d = dependency.MonorepoDependency(art, bazel_target=None)
-
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
 
         #The maven_install guava version should be picked
@@ -920,7 +913,7 @@ __pomgen.end_dependency_customization__
         pomgen = pom.TemplatePomGen(ws, artifact_def, dep)
 
         with self.assertRaises(Exception) as ctx:
-            generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
+            pomgen.gen(pom.PomContentType.RELEASE)
 
         self.assertIn("bad1", str(ctx.exception))
         self.assertIn("bad2", str(ctx.exception))

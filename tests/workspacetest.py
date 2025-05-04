@@ -118,7 +118,7 @@ class WorkspaceTest(unittest.TestCase):
                                  label_to_overridden_fq_label={})
 
         with self.assertRaises(Exception) as ctx:
-            deps = ws.parse_dep_labels(["@maven//:bad_qos_logback_logback_classic"])
+            ws.parse_dep_labels(["@maven//:bad_qos_logback_logback_classic"])
         self.assertIn("json files have been registered", str(ctx.exception))
         self.assertIn("maven_install_paths in the pomgen config file", str(ctx.exception))
 
@@ -266,7 +266,7 @@ class WorkspaceTest(unittest.TestCase):
                                  label_to_overridden_fq_label={})
 
         with self.assertRaises(Exception) as ctx:
-            deps = ws.parse_dep_labels(["//%s" % package_name,
+            ws.parse_dep_labels(["//%s" % package_name,
                                         "//%s:%s" % (bad_package_name, bad_package_name)])
 
         self.assertIn("no BUILD.pom", str(ctx.exception))
@@ -313,7 +313,7 @@ class WorkspaceTest(unittest.TestCase):
                                  label_to_overridden_fq_label={})
 
         with self.assertRaises(Exception) as ctx:
-            deps = ws.parse_dep_labels(["this is a label"])
+            ws.parse_dep_labels(["this is a label"])
 
         self.assertIn("bad label", str(ctx.exception))
         self.assertIn("this is a label", str(ctx.exception))
@@ -474,7 +474,7 @@ java_library(
     exported_plugins = [":lombok-plugin"],
     visibility = ["//visibility:public"],
 )
-""" % (0 if neverlink_attr_enabled == False else 1)
+""" % (0 if not neverlink_attr_enabled else 1)
 
         path = os.path.join(repo_root_path, package_rel_path)
         if not os.path.exists(path):

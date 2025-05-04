@@ -60,7 +60,7 @@ Please see the [hello-world example](examples/hello-world/README.md) to see how 
 ## External Dependencies
 
 - Bazel, ideally through [bazelisk](https://github.com/bazelbuild/bazelisk)
-    - This branch has been tested with Bazel 6.4.x
+    - This branch has been tested with Bazel 7.x
 - Python 3 is required and must be configured as a toolchain or available in your $PATH
 - You need to install [lxml](https://lxml.de): pip install --user lxml
 
@@ -183,3 +183,14 @@ See [this example](examples/dep-overrides).
 ## CI setup
 
 [This document](docs/ci.md) goes over the CI setup.
+
+
+## Linting
+
+pomgen uses [ruff](https://github.com/astral-sh/ruff). Follow the installation instructions, then run:
+
+```
+ruff check src tests
+```
+
+Currently, we just use the default ruff linting configuration.

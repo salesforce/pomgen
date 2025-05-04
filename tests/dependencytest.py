@@ -9,7 +9,7 @@ from common import pomgenmode
 from crawl import buildpom
 from crawl import dependency
 import unittest
-import sys
+
 
 class DependencyTest(unittest.TestCase):
 
@@ -268,7 +268,6 @@ class DependencyTest(unittest.TestCase):
         """
         If bazel_target is not set, it is defaulted based on the package.
         """
-        target = None
         group_id = "g1"
         artifact_id = "a1"
         version = "1.1.0"
@@ -375,12 +374,12 @@ class DependencyTest(unittest.TestCase):
         art_def = buildpom._augment_art_def_values(art_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
         dep4 = dependency.new_dep_from_maven_artifact_def(art_def, None)
         
-        l = [dep3, dep2, dep1, dep4]
-        l.sort()
-        self.assertIs(dep4, l[0])
-        self.assertIs(dep3, l[1])
-        self.assertIs(dep1, l[2])
-        self.assertIs(dep2, l[3])
+        lst = [dep3, dep2, dep1, dep4]
+        lst.sort()
+        self.assertIs(dep4, lst[0])
+        self.assertIs(dep3, lst[1])
+        self.assertIs(dep1, lst[2])
+        self.assertIs(dep2, lst[3])
 
     def test_sort_order_includes_classifier__one_dep_without_classifier(self):
         """
@@ -391,11 +390,11 @@ class DependencyTest(unittest.TestCase):
         dep2 = dependency.new_dep_from_maven_art_str("com.grail.services:arthur-common-thrift-api:jar:idl:2.2.17", "name2")
         dep3 = dependency.new_dep_from_maven_art_str("com.grail.services:arthur-common-thrift-api:jar:aaa:2.2.17", "name3")
 
-        l = [dep1, dep2, dep3]
-        l.sort()
-        self.assertIs(dep1, l[0])
-        self.assertIs(dep3, l[1])
-        self.assertIs(dep2, l[2])
+        lst = [dep1, dep2, dep3]
+        lst.sort()
+        self.assertIs(dep1, lst[0])
+        self.assertIs(dep3, lst[1])
+        self.assertIs(dep2, lst[2])
 
     def test_sort_order_includes_classifier__all_deps_with_classifier(self):
         """
@@ -406,11 +405,11 @@ class DependencyTest(unittest.TestCase):
         dep2 = dependency.new_dep_from_maven_art_str("com.grail.services:arthur-common-thrift-api:jar:zzz:2.2.17", "name2")
         dep3 = dependency.new_dep_from_maven_art_str("com.grail.services:arthur-common-thrift-api:jar:aaa:2.2.17", "name3")
 
-        l = [dep1, dep2, dep3,]
-        l.sort()
-        self.assertIs(dep3, l[0])
-        self.assertIs(dep1, l[1])
-        self.assertIs(dep2, l[2])
+        lst = [dep1, dep2, dep3,]
+        lst.sort()
+        self.assertIs(dep3, lst[0])
+        self.assertIs(dep1, lst[1])
+        self.assertIs(dep2, lst[2])
 
     def test_sort_order_includes_packaging__all_deps_with_packaging(self):
         """
@@ -421,11 +420,11 @@ class DependencyTest(unittest.TestCase):
         dep2 = dependency.new_dep_from_maven_art_str("com.grail.services:arthur-common-thrift-api:jar3:classifier:2.2.17", "name2")
         dep3 = dependency.new_dep_from_maven_art_str("com.grail.services:arthur-common-thrift-api:jar1:classifier:2.2.17", "name3")
 
-        l = [dep1, dep2, dep3,]
-        l.sort()
-        self.assertIs(dep3, l[0])
-        self.assertIs(dep1, l[1])
-        self.assertIs(dep2, l[2])
+        lst = [dep1, dep2, dep3,]
+        lst.sort()
+        self.assertIs(dep3, lst[0])
+        self.assertIs(dep1, lst[1])
+        self.assertIs(dep2, lst[2])
 
     def test_sort_order_includes_packaging__one_dep_without_packaging(self):
         """
@@ -436,11 +435,11 @@ class DependencyTest(unittest.TestCase):
         dep2 = dependency.new_dep_from_maven_art_str("com.grail.services:arthur-common-thrift-api:2.2.17", "name2")
         dep3 = dependency.new_dep_from_maven_art_str("com.grail.services:arthur-common-thrift-api:jar1:2.2.17", "name3")
 
-        l = [dep1, dep2, dep3,]
-        l.sort()
-        self.assertIs(dep2, l[0])
-        self.assertIs(dep3, l[1])
-        self.assertIs(dep1, l[2])
+        lst = [dep1, dep2, dep3,]
+        lst.sort()
+        self.assertIs(dep2, lst[0])
+        self.assertIs(dep3, lst[1])
+        self.assertIs(dep1, lst[2])
 
     def test_sort_order_includes_scope__all_deps_with_scope(self):
         """
@@ -454,11 +453,11 @@ class DependencyTest(unittest.TestCase):
         dep3 = dependency.new_dep_from_maven_art_str("com.grail.services:arthur-common-thrift-api:jar:hhh:2.2.17", "name3")
         dep3.scope = "s2"
 
-        l = [dep1, dep2, dep3,]
-        l.sort()
-        self.assertIs(dep1, l[0])
-        self.assertIs(dep3, l[1])
-        self.assertIs(dep2, l[2])
+        lst = [dep1, dep2, dep3,]
+        lst.sort()
+        self.assertIs(dep1, lst[0])
+        self.assertIs(dep3, lst[1])
+        self.assertIs(dep2, lst[2])
 
     def test_sort_order_includes_scope__all_deps_with_scope__no_classifier(self):
         """
@@ -472,11 +471,11 @@ class DependencyTest(unittest.TestCase):
         dep3 = dependency.new_dep_from_maven_art_str("com.grail.services:arthur-common-thrift-api:jar:2.2.17", "name3")
         dep3.scope = "s2"
 
-        l = [dep1, dep2, dep3,]
-        l.sort()
-        self.assertIs(dep1, l[0])
-        self.assertIs(dep3, l[1])
-        self.assertIs(dep2, l[2])
+        lst = [dep1, dep2, dep3,]
+        lst.sort()
+        self.assertIs(dep1, lst[0])
+        self.assertIs(dep3, lst[1])
+        self.assertIs(dep2, lst[2])
 
     def test_equals_hash_code(self):
         dep1 = dependency.new_dep_from_maven_art_str("com.google.guava:guava:20.0", "name")

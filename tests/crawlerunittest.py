@@ -13,7 +13,6 @@ from crawl import crawler as crawlerm
 from crawl import dependency
 from crawl import dependencymd as dependencymdm
 from crawl import workspace
-import os
 import unittest
 
 

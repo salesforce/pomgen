@@ -11,7 +11,6 @@ from common import pomgenmode
 import copy
 from crawl import bazel
 from crawl import pomparser
-from crawl import workspace
 import os
 import re
 
@@ -643,7 +642,7 @@ class DependencyManagementPomGen(AbstractPomGen):
         # we assume the template specified <packaging>jar</packaging>
         # there's room for improvement here for sure
         expected_packaging = "<packaging>jar</packaging>"
-        if not expected_packaging in content:
+        if expected_packaging not in content:
             raise Exception("The pom template must have %s" % expected_packaging)
         content = content.replace(expected_packaging, expected_packaging.replace("jar", "pom"))
         
@@ -700,9 +699,9 @@ def _sort(s):
     Converts the specified set to a list, and returns the list, sorted.
     """
     assert isinstance(s, set), "Expected a set"
-    l = list(s)
-    l.sort()
-    return l
+    the_list = list(s)
+    the_list.sort()
+    return the_list
 
 
 # this method delegates to bazel query to get the value of a bazel target's 

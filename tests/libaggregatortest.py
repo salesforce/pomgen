@@ -85,8 +85,6 @@ class LibAggregatorTest(unittest.TestCase):
                                                   requires_release=True)
         l2a1 = self._create_library_artifact_node("g2", "a1", "2.0.0", "mylib2",
                                                   requires_release=True)
-        l2a2 = self._create_library_artifact_node("g2", "a2", "2.0.0", "mylib2",
-                                                  requires_release=True)
 
         l1a2.children = [l2a1]
         l2a1.parent = l1a2        

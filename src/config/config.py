@@ -43,7 +43,7 @@ def load(repo_root, verbose=False):
         with open(cfg_path, 'r') as f:
             parser.read_file(f)
 
-    pom_template_p = gen("pom_template_path", ["config/pom_template.xml"])
+    pom_template_p = gen("pom_template_path", ["src/config/pom_template.xml"])
 
     cfg = Config(
         pom_template_path_and_content=_read_files(repo_root, pom_template_p)[0],

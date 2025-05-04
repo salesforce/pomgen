@@ -1,2 +1,2 @@
 [general]
-maven_install_paths=maven_install.json,antlr_install.json
+maven_install_paths=examples/maven_install/*.json

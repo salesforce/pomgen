@@ -12,7 +12,6 @@ from collections import namedtuple
 from common import code
 from common import mdfiles
 from common import pomgenmode
-from common import version as versionm
 import os
 
 

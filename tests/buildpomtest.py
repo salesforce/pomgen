@@ -194,9 +194,6 @@ class BuildPomTest(unittest.TestCase):
 
     def test_parse_BUILD_pom__skip_pomgen_mode(self):
         package_rel_path = "package1/package2"
-        group_id = "group1"
-        artifact_id = "art1"
-        version = "1.2.3"
         repo_root = tempfile.mkdtemp("reporoot")
         repo_package = os.path.join(repo_root, package_rel_path)
         os.makedirs(repo_package)

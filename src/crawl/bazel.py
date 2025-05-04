@@ -14,7 +14,6 @@ requested data.
 from common import logger
 from common import mdfiles
 from common.os_util import run_cmd
-from common import logger
 from collections import defaultdict
 from crawl import dependency
 import os
@@ -166,7 +165,6 @@ def _parse_pinned(mvn_install_name, pinned_file_path, verbose=False):
     """
     if verbose:
         logger.debug("Processing pinned file [%s]" % pinned_file_path)
-    result = []
     with open(pinned_file_path, "r") as f:
         content = f.read()
     install_json = json.loads(content)
@@ -197,7 +195,6 @@ def _parse_pinned(mvn_install_name, pinned_file_path, verbose=False):
             coord_wo_vers_to_dep[coord_wo_vers] = _DepWithDirects(dep)
 
     # for each top level dependency, find and associate direct transitives
-    deps_with_directs = []
     for coord_wo_vers, dep in coord_wo_vers_to_dep.items():
         direct_dep_coords_wo_vers = direct_deps_json.get(coord_wo_vers, [])
         dep.directs = _get_direct_deps(direct_dep_coords_wo_vers,

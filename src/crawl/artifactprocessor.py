@@ -12,7 +12,6 @@ too heavy (things like running git...). Separating it into its own module also
 helps with testing.
 """
 
-from common import logger
 from common import mdfiles
 from crawl import git
 from crawl import releasereason
