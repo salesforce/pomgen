@@ -7,283 +7,242 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 
 python_version = "PY3"
 
+py_library(
+    name = "pomgen_lib",
+    srcs = glob(["src/pomupdate/*.py",
+                 "src/common/*.py",
+                 "src/config/*.py",
+                 "src/common/*.py",
+                 "src/crawl/*.py"]),
+    data = ["src/config/pom_template.xml"],
+    visibility = ["//misc:__pkg__",],
+)
 
 py_binary(
     name = "pomgen",
-    srcs = [":pomgen_files"],
+    srcs = ["src/pomgen.py"],
+    deps = [":pomgen_lib"],
     python_version = python_version,
 )
 
 py_binary(
     name = "query",
-    main = "query.py",
-    srcs = [":pomgen_files"],
+    srcs = ["src/query.py"],
+    deps = [":pomgen_lib"],    
     python_version = python_version,
 )
 
 py_binary(
     name = "update",
-    main = "update.py",
-    srcs = [":pomgen_files"],
+    srcs = ["src/update.py"],
+    deps = [":pomgen_lib"],
     python_version = python_version,
 )
 
-filegroup(
-    name = "pomgen_files",
-    srcs = glob(["*.py",
-                 "pomupdate/*.py",
-                 "common/*.py",
-                 "config/*.py",
-                 "common/*.py",
-                 "crawl/*.py"]),
-    visibility = ["//misc:__subpackages__",],
-)
-
-
-
 py_test(
     name = "argsupporttest",
-    srcs = ["common/argsupport.py",
-            "common/mdfiles.py",
-            "common/logger.py",
-            "common/os_util.py",
-            "crawl/bazel.py",
-            "crawl/dependency.py",
-            "tests/argsupporttest.py"],
-    imports = ["."],
+    srcs = ["tests/argsupporttest.py"],
+    deps = [":pomgen_lib"],
+    imports = ["src"],
     size = "small",
     python_version = python_version,
 )
 
 py_test(
     name = "artifactprocessortest",
-    srcs = ["common/code.py",
-            "common/logger.py",
-            "common/mdfiles.py",
-            "common/os_util.py",
-            "common/pomgenmode.py",
-            "common/version.py",
-            "config/exclusions.py",
-            "crawl/artifactprocessor.py",
-            "crawl/buildpom.py",
-            "crawl/git.py",
-            "crawl/releasereason.py",
-            "tests/artifactprocessortest.py"],
-    imports = ["."],
+    srcs = ["tests/artifactprocessortest.py"],
+    deps = [":pomgen_lib"],
+    imports = ["src"],
     size = "small",
     python_version = python_version,
 )
 
 py_test(
     name = "bazeltest",
-    srcs = ["common/mdfiles.py",
-            "common/os_util.py",
-            "common/logger.py",
-            "crawl/bazel.py",
-            "crawl/dependency.py",
-            "tests/bazeltest.py"],
-    imports = ["."],
+    srcs = ["tests/bazeltest.py"],
+    deps = [":pomgen_lib"],
+    imports = ["src"],
     size = "small",
     python_version = python_version,
 )
 
 py_test(
     name = "buildpomtest",
-    srcs = ["common/code.py",
-            "common/mdfiles.py",
-            "common/pomgenmode.py",
-            "common/version.py",
-            "crawl/buildpom.py",
-            "tests/buildpomtest.py"],
-    imports = ["."],
+    srcs = ["tests/buildpomtest.py"],
+    deps = [":pomgen_lib"],
+    imports = ["src"],
     size = "small",
     python_version = python_version,
 )
 
 py_test(
     name = "buildpomupdatetest",
-    srcs = ["common/code.py",
-            "common/mdfiles.py",
-            "common/os_util.py",
-            "common/pomgenmode.py",
-            "common/version.py",
-            "common/version_increment_strategy.py",
-            "config/exclusions.py",
-            "crawl/buildpom.py",
-            "crawl/git.py",
-            "tests/buildpomupdatetest.py",
-            "pomupdate/buildpomupdate.py"],
-    imports = ["."],
+    srcs = ["tests/buildpomupdatetest.py"],
+    deps = [":pomgen_lib"],
+    imports = ["src"],
     size = "small",
     python_version = python_version,
 )
 
 py_test(
     name = "codetest",
-    srcs = ["common/code.py",
-            "tests/codetest.py"],
-    imports = ["."],
+    srcs = ["tests/codetest.py"],
+    deps = [":pomgen_lib"],
+    imports = ["src"],
     size = "small",
     python_version = python_version,
 )
 
 py_test(
     name = "configtest",
-    srcs = ["common/logger.py",
-            "config/config.py",
-            "config/exclusions.py",
-            "tests/configtest.py"],
-    imports = ["."],
+    srcs = ["tests/configtest.py"],
+    deps = [":pomgen_lib"],
+    imports = ["src"],
     size = "small",
     python_version = python_version,
 )
 
 py_test(
     name = "crawlertest",
-    srcs = [":pomgen_files", "tests/crawlertest.py"],
-    imports = ["."],
+    srcs = ["tests/crawlertest.py"],
+    deps = [":pomgen_lib"],    
+    imports = ["src"],
     size = "small",
     python_version = python_version,
 )
 
 py_test(
     name = "crawlerunittest",
-    srcs = [":pomgen_files", "tests/crawlerunittest.py"],
-    imports = ["."],
+    srcs = ["tests/crawlerunittest.py"],
+    deps = [":pomgen_lib"],
+    imports = ["src"],
     size = "small",
     python_version = python_version,
 )
 
 py_test(
     name = "crawlertest_misc",
-    srcs = [":pomgen_files", "tests/crawlertest_misc.py"],
-    imports = ["."],
+    srcs = ["tests/crawlertest_misc.py"],
+    deps = [":pomgen_lib"],
+    imports = ["src"],
     size = "small",
     python_version = python_version,
 )
 
 py_test(
     name = "dependencytest",
-    srcs = ["common/code.py",
-            "common/logger.py",
-            "common/mdfiles.py",
-            "common/pomgenmode.py",
-            "common/version.py",
-            "crawl/buildpom.py",
-            "crawl/dependency.py",
-            "tests/dependencytest.py"],
-    imports = ["."],
+    srcs = ["tests/dependencytest.py"],
+    deps = [":pomgen_lib"],
+    imports = ["src"],
     size = "small",
     python_version = python_version,
 )
 
 py_test(
     name = "dependencymdtest",
-    srcs = ["common/code.py",
-            "common/mdfiles.py",
-            "common/pomgenmode.py",
-            "common/version.py",
-            "crawl/buildpom.py",
-            "crawl/dependency.py",
-            "crawl/dependencymd.py",
-            "tests/dependencymdtest.py"],
-    imports = ["."],
+    srcs = ["tests/dependencymdtest.py"],
+    deps = [":pomgen_lib"],
+    imports = ["src"],
     size = "small",
     python_version = python_version,
 )
 
 py_test(
     name = "instancequerytest",
-    srcs = ["common/instancequery.py",
-            "tests/instancequerytest.py"],
-    imports = ["."],
+    srcs = ["tests/instancequerytest.py"],
+    deps = [":pomgen_lib"],
+    imports = ["src"],
     size = "small",
     python_version = python_version,
 )
 
 py_test(
     name = "libaggregatortest",
-    srcs = [":pomgen_files",
-            "tests/libaggregatortest.py"],
-    imports = ["."],
+    srcs = ["tests/libaggregatortest.py"],
+    deps = [":pomgen_lib"],
+    imports = ["src"],
     size = "small",
     python_version = python_version,
 )
 
 py_test(
     name = "maveninstallinfotest",
-    srcs = ["common/maveninstallinfo.py", "tests/maveninstallinfotest.py",],
-    imports = ["."],
+    srcs = ["tests/maveninstallinfotest.py",],
+    deps = [":pomgen_lib"],
+    imports = ["src"],
     size = "small",
     python_version = python_version,
 )
 
 py_test(
     name = "overridefileinfotest",
-    srcs = ["common/overridefileinfo.py", "tests/overridefileinfotest.py",],
-    imports = ["."],
+    srcs = ["tests/overridefileinfotest.py",],
+    deps = [":pomgen_lib"],
+    imports = ["src"],
     size = "small",
     python_version = python_version,
 )
 
 py_test(
     name = "mdfilestest",
-    srcs = ["common/mdfiles.py", "tests/mdfilestest.py",],
-    imports = ["."],
+    srcs = ["tests/mdfilestest.py",],
+    deps = [":pomgen_lib"],
+    imports = ["src"],
     size = "small",
     python_version = python_version,
 )
 
 py_test(
     name = "pomgentest",
-    srcs = [":pomgen_files", "tests/pomgentest.py"],
-    imports = ["."],
+    srcs = ["src/pomgen.py", "tests/pomgentest.py"],
+    deps = [":pomgen_lib"],
+    imports = ["src"],
     size = "small",
     python_version = python_version,
 )
 
 py_test(
     name = "pomtest",
-    srcs = [":pomgen_files",
-            "tests/pomtest.py"],
-    imports = ["."],
+    srcs = ["tests/pomtest.py"],
+    deps = [":pomgen_lib"],
+    imports = ["src"],
     size = "small",
     python_version = python_version,
 )
 
 py_test(
     name = "pomparsertest",
-    srcs = ["common/logger.py",
-            "crawl/dependency.py", 
-            "crawl/pomparser.py", 
-            "tests/pomparsertest.py"],
-    imports = ["."],
+    srcs = ["tests/pomparsertest.py"],
+    deps = [":pomgen_lib"],
+    imports = ["src"],
     size = "small",
     python_version = python_version,
 )
 
 py_test(
     name = "workspacetest",
-    srcs = [":pomgen_files",
-            "tests/workspacetest.py"],
-    imports = ["."],
+    srcs = ["tests/workspacetest.py"],
+    deps = [":pomgen_lib"],
+    imports = ["src"],
     size = "small",
     python_version = python_version,
 )
 
 py_test(
     name = "versiontest",
-    srcs = ["common/code.py", "common/version.py", "tests/versiontest.py"],
-    imports = ["."],
+
+    srcs = ["tests/versiontest.py"],
+    deps = [":pomgen_lib"],
+    imports = ["src"],
     size = "small",
     python_version = python_version,
 )
 
 py_test(
     name = "version_increment_strategy_test",
-    srcs = ["common/version_increment_strategy.py", 
-            "tests/version_increment_strategy_test.py"],
-    imports = ["."],
+    srcs = ["tests/version_increment_strategy_test.py"],
+    deps = [":pomgen_lib"],            
+    imports = ["src"],
     size = "small",
     python_version = python_version,
 )

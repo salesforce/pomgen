@@ -70,7 +70,7 @@ class PomGenTest(unittest.TestCase):
     <version>#{version}</version>
 </project>
 """
-        self._write_file("config", "", "pom_template.xml", content)
+        self._write_file("src", "config", "pom_template.xml", content)
 
     def _add_package(self, package_rel_path, group_id, artifact_id, version):
         self._add_BUILD_file(package_rel_path)

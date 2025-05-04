@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 Copyright (c) 2018, salesforce.com, inc.
 All rights reserved.
