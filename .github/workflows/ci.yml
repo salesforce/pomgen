@@ -9,7 +9,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: bazelbuild/setup-bazelisk@v2
+      - uses: bazelbuild/setup-bazelisk@v3
       - run: pip install --user lxml
+
       - run: bazel build //...
       - run: bazel test //...
+
+      - run: pip install ruff --user lxml
+      - run: python -m ruff check src tests
