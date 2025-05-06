@@ -135,7 +135,7 @@ Then run `mvn dependency:tree`:
 [INFO]    |  \- antlr:antlr:jar:2.7.6:compile
 [INFO]    +- com.pomgen.example:vegetable-api:jar:1.0.0-SNAPSHOT:compile
 [INFO]    +- com.pomgen.example:wintervegetables:jar:20200416.1-SNAPSHOT:compile
-[INFO]    \- com.google.guava:guava:jar:23.0:compile
+[INFO]    \- com.google.guava:guava:jar:33.4.8-jre:compile
 ```
 
 
