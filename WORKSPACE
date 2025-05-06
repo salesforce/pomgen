@@ -24,7 +24,7 @@ rules_jvm_external_setup()
 maven_install(
     name = "maven",
     artifacts = [
-        maven.artifact(group = "com.google.guava", artifact = "guava", version = "23.0", exclusions = ["*:*"]),
+        maven.artifact(group = "com.google.guava", artifact = "guava", version = "33.4.8-jre", exclusions = ["*:*"]),
         maven.artifact(group = "org.apache.commons", artifact = "commons-lang3", version = "3.9", exclusions = ["*:*"]),
         maven.artifact(group = "org.apache.commons", artifact = "commons-math3", version = "3.6.1", exclusions = ["*:*"]),
         maven.artifact(group = "org.antlr", artifact = "ST4", version = "4.0.7",exclusions = ["antlr:antlr"]),
