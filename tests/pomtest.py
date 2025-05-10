@@ -34,14 +34,17 @@ class PomTest(unittest.TestCase):
 
     def setUp(self):
         f = dependency.new_dep_from_maven_art_str
-        t1_dep = f("gt1:t1:1.0.0", "maven")
-        t2_dep = f("gt2:t2:1.0.0", "maven")
+        self.t1_dep = f("gt1:t1:1.0.0", "maven")
+        self.t2_dep = f("gt2:t2:1.0.0", "maven")
+        self.guava_dep = f("com.google.guava:guava:23.0", "maven")
+        self.logback_dep = f("ch.qos.logback:logback-classic:1.2.3", "maven")
+        self.aop_dep = f("aopalliance:aopalliance:jar:1.0.0", "maven")
         self.orig_bazel_parse_maven_install = bazel.parse_maven_install
         query_result = [
-            (f("com.google.guava:guava:23.0", "maven"), [t1_dep, t2_dep]),
-            (f("ch.qos.logback:logback-classic:1.2.3", "maven"), []),
-            (f("aopalliance:aopalliance:jar:1.0.0", "maven"), []),
-            (t2_dep, []),
+            (self.guava_dep, [self.t1_dep, self.t2_dep]),
+            (self.logback_dep, []),
+            (self.aop_dep, []),
+            (self.t2_dep, []),
             # same version, different maven_install rules
             (f("org.apache.maven:same-version:1.0.0", "maven"), []),
             (f("org.apache.maven:same-version:1.0.0", "maven2"), []),
@@ -70,27 +73,27 @@ class PomTest(unittest.TestCase):
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         pomgen = pom.DynamicPomGen(ws, artifact_def, dep, TEST_POM_TEMPLATE)
 
-        org_function = bazel.query_java_library_deps_attributes
-        try:
-            bazel.query_java_library_deps_attributes = lambda r, p, a, v: ("@maven//:com_google_guava_guava", "@maven//:aopalliance_aopalliance", "@maven//:ch_qos_logback_logback_classic", "@maven//:gt2_t2" )
-            _, _, deps = pomgen.process_dependencies()
-            deps = list(deps)
-            # appending a dependency that is built from soure
-            # (should not have an exclusions block)
-            artifact_def = buildpom.MavenArtifactDef(
-                "repo", "my-dep", "1.2.3", bazel_target="t1")
-            dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
-            deps.append(dep)
-            deps = tuple(deps)
-            pomgen.register_dependencies(deps)
-            generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
+        deps = [self.guava_dep,
+                self.logback_dep,
+                self.aop_dep,
+                self.t2_dep,
+        ]
+        # appending a dependency that is built from soure
+        # (should not have an exclusions block)
+        artifact_def = buildpom.MavenArtifactDef(
+            "repo", "my-dep", "1.2.3", bazel_target="t1")
+        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+        deps.append(dep)
+        deps = tuple(deps)
+        pomgen.register_dependencies(deps)
+        generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
 
-            self.assertIn("""<groupId>g1</groupId>
+        self.assertIn("""<groupId>g1</groupId>
     <artifactId>a2</artifactId>
     <version>1.2.3</version>
     <packaging>jar</packaging>""", generated_pom)
             
-            self.assertIn("""<groupId>com.google.guava</groupId>
+        self.assertIn("""<groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>23.0</version>
             <exclusions>
@@ -100,7 +103,7 @@ class PomTest(unittest.TestCase):
                 </exclusion>
             </exclusions>""", generated_pom)
 
-            self.assertIn("""<groupId>aopalliance</groupId>
+        self.assertIn("""<groupId>aopalliance</groupId>
             <artifactId>aopalliance</artifactId>
             <version>1.0.0</version>
             <exclusions>
@@ -110,7 +113,7 @@ class PomTest(unittest.TestCase):
                 </exclusion>
             </exclusions>""", generated_pom)
 
-            self.assertIn("""<dependency>
+        self.assertIn("""<dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>1.2.3</version>
@@ -122,8 +125,8 @@ class PomTest(unittest.TestCase):
             </exclusions>
         </dependency>""", generated_pom)
 
-            # transitive of guava, but also top-level
-            self.assertIn("""<dependency>
+        # transitive of guava, but also top-level
+        self.assertIn("""<dependency>
             <groupId>gt2</groupId>
             <artifactId>t2</artifactId>
             <version>1.0.0</version>
@@ -135,16 +138,16 @@ class PomTest(unittest.TestCase):
             </exclusions>
         </dependency>""", generated_pom)
 
-            # this dependency shouldn't have the exclusions block due to it
-            # having "bazel_buildable=True"
-            self.assertIn("""<dependency>
+        # this dependency shouldn't have the exclusions block due to it
+        # having "bazel_buildable=True"
+        self.assertIn("""<dependency>
             <groupId>repo</groupId>
             <artifactId>my-dep</artifactId>
             <version>1.2.3</version>
         </dependency>""", generated_pom)
 
-            # transitive of guava
-            self.assertIn("""<dependency>
+        # transitive of guava
+        self.assertIn("""<dependency>
             <groupId>gt1</groupId>
             <artifactId>t1</artifactId>
             <version>1.0.0</version>
@@ -156,25 +159,24 @@ class PomTest(unittest.TestCase):
             </exclusions>
         </dependency>""", generated_pom)
 
-            # deps are BUILD file order
-            aop_index = generated_pom.index("<artifactId>aopalliance</artifactId>")
-            guava_index = generated_pom.index("<artifactId>guava</artifactId>")
-            self.assertTrue(guava_index < aop_index)
+        # deps are BUILD file order
+        aop_index = generated_pom.index("<artifactId>aopalliance</artifactId>")
+        guava_index = generated_pom.index("<artifactId>guava</artifactId>")
+        self.assertTrue(guava_index < aop_index)
 
-            transitives_start_index = generated_pom.index("<!-- The transitives of the dependencies above -->")
-            # gt1:t1 is a transitive of guava and not top level, it should be
-            # in the transitives section
-            t1_index = generated_pom.index("<artifactId>t1</artifactId>")
-            self.assertTrue(t1_index > transitives_start_index)
-            self.assertEqual(1, generated_pom.count("<artifactId>t1</artifactId>"))
+        transitives_start_index = generated_pom.index("<!-- The transitives of the dependencies above -->")
+        # gt1:t1 is a transitive of guava and not top level, it should be
+        # in the transitives section
+        t1_index = generated_pom.index("<artifactId>t1</artifactId>")
+        self.assertTrue(t1_index > transitives_start_index)
+        self.assertEqual(1, generated_pom.count("<artifactId>t1</artifactId>"))
 
-            # gt2:t2 is a transitive of guava but because it is also top-level
-            # it does not appear in the transitives section
-            t2_index = generated_pom.index("<artifactId>t2</artifactId>")
-            self.assertTrue(t2_index < transitives_start_index)
-            self.assertEqual(1, generated_pom.count("<artifactId>t2</artifactId>"))
-        finally:
-            bazel.query_java_library_deps_attributes = org_function
+        # gt2:t2 is a transitive of guava but because it is also top-level
+        # it does not appear in the transitives section
+        t2_index = generated_pom.index("<artifactId>t2</artifactId>")
+        self.assertNotEqual(-1, t2_index)
+        self.assertTrue(t2_index < transitives_start_index)
+        self.assertEqual(1, generated_pom.count("<artifactId>t2</artifactId>"))
 
     def test_dynamic_pom__gen_description(self):
         """
@@ -241,9 +243,8 @@ class PomTest(unittest.TestCase):
         """
         # we need to overwrite what the default setUp method did to remove all
         # transitives
-        f = dependency.new_dep_from_maven_art_str
         query_result = [
-            (f("com.google.guava:guava:23.0", "maven"), []),
+            (self.guava_dep, []),
         ]
         bazel.parse_maven_install = lambda names, overrides, verbose: query_result
         artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3", bazel_target="t2")
@@ -257,23 +258,16 @@ class PomTest(unittest.TestCase):
                                  depmd,
                                  label_to_overridden_fq_label={})
         pomgen = pom.DynamicPomGen(ws, artifact_def, dep, TEST_POM_TEMPLATE)
-        org_function = bazel.query_java_library_deps_attributes
-        try:
-            bazel.query_java_library_deps_attributes = lambda r, p, a, v: ("@maven//:com_google_guava_guava", )
-            _, _, deps = pomgen.process_dependencies()
-            pomgen.register_dependencies(deps)
+        pomgen.register_dependencies([self.guava_dep])
 
-            generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
+        generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
 
-            self.assertIn("""<dependency>
+        self.assertIn("""<dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>23.0</version>""", generated_pom)
             # check that the special "explicit transitives" comment isn't there
-            self.assertNotIn("<!-- The transitives of the dependencies above -->", generated_pom)
-
-        finally:
-            bazel.query_java_library_deps_attributes = org_function
+        self.assertNotIn("<!-- The transitives of the dependencies above -->", generated_pom)
 
     def test_dynamic_pom__classifier(self):
         """
@@ -321,15 +315,9 @@ class PomTest(unittest.TestCase):
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         pomgen = pom.DynamicPomGen(ws, artifact_def, dep, "")
 
-        org_function = bazel.query_java_library_deps_attributes
-        try:
-            bazel.query_java_library_deps_attributes = lambda r, p, a, v: 1/0 # fails
-            pomgen.process_dependencies()
-            generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
+        generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
 
-            self.assertNotIn("dependencies", generated_pom)
-        finally:
-            bazel.query_java_library_deps_attributes = org_function
+        self.assertNotIn("dependencies", generated_pom)
 
     def test_dynamic_pom_genmode__goldfile(self):
         """
@@ -345,23 +333,18 @@ class PomTest(unittest.TestCase):
         artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3", bazel_target="t1")
         artifact_def = buildpom._augment_art_def_values(artifact_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
-
         pomgen = pom.DynamicPomGen(ws, artifact_def, dep, TEST_POM_TEMPLATE)
+        deps = [self.guava_dep, self.aop_dep]
+        pomgen.register_dependencies(deps)
 
-        org_function = bazel.query_java_library_deps_attributes
-        try:
-            bazel.query_java_library_deps_attributes = lambda r, p, a, v: ("@maven//:com_google_guava_guava", "@maven//:aopalliance_aopalliance", )
-            _, _, deps = pomgen.process_dependencies()
-            pomgen.register_dependencies(deps)
+        generated_pom = pomgen.gen(pom.PomContentType.GOLDFILE)
 
-            generated_pom = pomgen.gen(pom.PomContentType.GOLDFILE)
-
-            self.assertIn("""<groupId>g1</groupId>
+        self.assertIn("""<groupId>g1</groupId>
     <artifactId>a2</artifactId>
     <version>***</version>
     <packaging>jar</packaging>""", generated_pom)
 
-            self.assertIn("""<groupId>com.google.guava</groupId>
+        self.assertIn("""<groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>23.0</version>
             <exclusions>
@@ -371,15 +354,13 @@ class PomTest(unittest.TestCase):
                 </exclusion>
             </exclusions>""", generated_pom)
 
-            aop_index = generated_pom.index("aopalliance")
-            guava_index = generated_pom.index("guava")
-            self.assertTrue(guava_index > aop_index) # deps are sorted
-        finally:
-            bazel.query_java_library_deps_attributes = org_function
+        aop_index = generated_pom.index("aopalliance")
+        guava_index = generated_pom.index("guava")
+        self.assertTrue(guava_index > aop_index) # deps are sorted
 
     def test_template_var_sub(self):
         """
-        Verifies variable substitution in a pom template.
+        Verifies references of 3rd party dependency versions in a pom template.
         """
         depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path",
@@ -406,7 +387,7 @@ monorepo artifact version #{version}
 
     def test_template_var_sub__monorepo_deps(self):
         """
-        Verifies references to monorepo versions in a pom template.
+        Verifies references of source dependency versions in a pom template.
         """
         depmd = dependencym.DependencyMetadata(None)
         ws = workspace.Workspace("some/path",

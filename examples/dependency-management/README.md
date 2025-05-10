@@ -1,6 +1,6 @@
 # Dependency Management POM Example
 
-This examples shows how pomgen can optionally generate a dependencyManagement "companion" pom. This pom file is generate in addition to the regular pom.xml, when the attribute `generate_dependency_management_pom` is to to `True` in the [BUILD.pom file](juicer/MVN-INF/BUILD.pom).
+This examples shows how pomgen can optionally generate a dependencyManagement "companion" pom. This pom file is generated in addition to the regular pom.xml, when the attribute `generate_dependency_management_pom` is to to `True` in the [BUILD.pom file](juicer/MVN-INF/BUILD.pom).
 
 The dependency management pom contains a `<dependencyManagement>` section with the transitive closure of all dependencies of the artifact it was generated for. It uses the `artifact_id` specified in the BUILD.pom file, suffixed with `.depmanagement`.
 

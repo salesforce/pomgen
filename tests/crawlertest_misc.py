@@ -10,7 +10,6 @@ from common import pomgenmode
 from config import config
 from crawl import crawler as crawlerm
 from crawl import dependencymd as dependencym
-from crawl import pom
 from crawl import pomcontent
 from crawl import workspace
 
@@ -26,13 +25,6 @@ class CrawlerTest(unittest.TestCase):
     """
     Various one-off crawler related test cases that require file-system setup.
     """
-
-    def setUp(self):
-        self.org_query_method = pom._query_dependencies
-        pom._query_dependencies = lambda ws, art_def, dep: ()
-
-    def tearDown(self):
-        pom._query_dependencies = self.org_query_method
 
     def test_default_package_ref(self):
         """

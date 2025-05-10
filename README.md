@@ -75,9 +75,10 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 git_repository(
     name = "pomgen",
     remote = "https://github.com/salesforce/pomgen.git",
-    commit = "<git-commit-sha>"
+    commit = "<current master HEAD commit-sha>"
 )
 ```
+The `master` branch is always releasable - use the current `HEAD` commit.
 
 You can then run pomgen commands [as documented](examples/hello-world/README.md#before-running-pomgen), for example:
 

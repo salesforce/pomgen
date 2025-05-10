@@ -9,7 +9,6 @@ This module contains pom.xml generation logic.
 
 from common import pomgenmode
 import copy
-from crawl import bazel
 from crawl import pomparser
 import os
 import re
@@ -90,38 +89,6 @@ class AbstractPomGen(object):
     def dependency(self):
         return self._dependency
 
-    def process_dependencies(self):
-        """
-        Discovers the dependencies of this artifact (bazel target).
-
-        This method *must* be called before requesting this instance to generate
-        a pom.
-
-        This method returns a tuple of 3 (!) lists of Dependency instances: 
-            (l1, l2, l3)
-            l1: all source dependencies (== references to other bazel packages)
-            l2: all external dependencies (maven jars)
-            l3: l1 and l2 together, in "discovery order"
-
-        This method is not meant to be overwritten by subclasses.
-        """
-        all_deps = ()
-        if self._artifact_def.deps is not None:
-            all_deps = self._workspace.parse_dep_labels(self._artifact_def.deps)
-        all_deps += self._load_additional_dependencies_hook()
-
-        source_dependencies = []
-        ext_dependencies = []
-        for dep in all_deps:
-            if dep.bazel_package is None:
-                ext_dependencies.append(dep)
-            else:
-                source_dependencies.append(dep)
-        
-        return (tuple(source_dependencies), 
-                tuple(ext_dependencies), 
-                tuple(all_deps))
-
     def register_dependencies(self, dependencies):
         """
         Registers the dependencies the backing artifact references explicitly.
@@ -159,15 +126,6 @@ class AbstractPomGen(object):
         outputs.
 
         Subclasses may implement.
-        """
-        return ()
-
-    def _load_additional_dependencies_hook(self):
-        """
-        Returns a list of dependency instances referenced by the current 
-        package.
-
-        Only meant to be overridden by subclasses.
         """
         return ()
 
@@ -278,10 +236,6 @@ class NoopPomGen(AbstractPomGen):
     """
     def __init__(self, workspace, artifact_def, dependency):
         super(NoopPomGen, self).__init__(workspace, artifact_def, dependency)
-
-    def _load_additional_dependencies_hook(self):
-        return _query_dependencies(self._workspace, self._artifact_def, 
-                                   self._dependency)
 
 
 class TemplatePomGen(AbstractPomGen):
@@ -543,10 +497,6 @@ class DynamicPomGen(AbstractPomGen):
                 "#{dependencies}", self._gen_dependencies(pomcontenttype))
         return content
 
-    def _load_additional_dependencies_hook(self):
-        return _query_dependencies(self._workspace, self._artifact_def,
-                                   self._dependency)
-
     def _gen_dependencies(self, pomcontenttype):
         content = ""
         content, indent = self._xml(content, "dependencies", indent=_INDENT)
@@ -687,9 +637,6 @@ class PomWithCompanionDependencyManagementPomGen(AbstractPomGen):
     def get_companion_generators(self):
         return (self.depmanpomgen,)
 
-    def _load_additional_dependencies_hook(self):
-        return self.pomgen._load_additional_dependencies_hook()
-
 
 _INDENT = pomparser.INDENT
 
@@ -702,34 +649,3 @@ def _sort(s):
     the_list = list(s)
     the_list.sort()
     return the_list
-
-
-# this method delegates to bazel query to get the value of a bazel target's 
-# "deps" and "runtime_deps" attributes. it really doesn't belong in this module,
-# because it has nothing to do with generating a pom.xml file.
-# it could move into common.pomgenmode or live closer to the crawler
-def _query_dependencies(workspace, artifact_def, dependency):
-    if not artifact_def.include_deps:
-        return ()
-    else:
-        try:
-            label = _build_bazel_label(artifact_def.bazel_package,
-                                       dependency.bazel_target)
-
-            # the rule attributes to query for dependencies
-            dep_attrs=artifact_def.pom_generation_mode.dependency_attributes
-            dep_labels = bazel.query_java_library_deps_attributes(
-                workspace.repo_root_path, label, dep_attrs,
-                workspace.verbose)
-            deps = workspace.parse_dep_labels(dep_labels)
-            return workspace.normalize_deps(artifact_def, deps)
-        except Exception as e:
-            msg = e.message if hasattr(e, "message") else type(e)
-            raise Exception("Error while processing dependencies: %s %s caused by %s\nOne possible cause for this error is that the java_libary rule that builds the jar artifact is not the default bazel package target (same name as dir it lives in)" % (msg, artifact_def, repr(e)))
-
-
-def _build_bazel_label(package, target):
-    assert package is not None, "package should not be None"
-    assert target is not None, "target should not be None"
-    assert len(target) > 0, "target should not be an empty string for package [%s]" % package
-    return "%s:%s" % (package, target)
