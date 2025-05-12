@@ -17,7 +17,7 @@ import os
 
 class MavenArtifactDef(object):
     """
-    Represents an instance of a maven_artifact rule defined in BUILD.pom file.
+    Represents an instance of a maven_artifact rule defined in a BUILD.pom file.
     Information from the BUILD.pom.released file is added, if that file exists.
 
 
@@ -67,34 +67,39 @@ class MavenArtifactDef(object):
 
     ==== Read out of the optional BUILD.pom.released file ====
 
-    released_version: the previously released version to Nexus
+    released_version: the previously released version to Nexus.
 
     released_artifact_hash: the hash of the artifact at the time it was 
-        previously released to Nexus
+        previously released to Nexus.
 
 
-
-    ===== Internal attributes (never specified by the user) ====
+    ===== Internal attributes (never specified by the user in config/md files)
 
     deps: additional targets this package depends on; list of Bazel labels.
-        For example: deps = ["//projects/libs/servicelibs/srpc/srpc-thrift-svc-runtime"]
+        For example: deps = ["//projects/libs/srpc/srpc-thrift-svc-runtime"]
+        The deps attribute is typically only used by tests, that's why it is
+        listed here under "internal attributes", although it is specified in the
+        BUILD.pom file.
 
-        The deps attribute is only used by tests.
+    bazel_package: the bazel package (relative path to the directory) where the 
+        MVN-INF directory and the build file live. The build file is not
+        guaranteed to exist (see attr below) because pomgen supports "pom only"
+        artifacts, which are foreign to bazel.
 
-    bazel_package: the bazel package the BUILD (and MVN-INF/) files live in
+    has_build_file: whether the bazel package actually has a build file.
 
-    bazel_target: the bazel target that builds this artifact
+    bazel_target: the bazel target that builds this artifact.
 
     library_path: the path to the root directory of the library this artifact
-        is part of
+        is part of.
 
     requires_release: whether this artifact should be released (to Nexus
-        or local Maven repository)
+        or local Maven repository).
 
-    release_reason: the reason for releasing this artifact
+    release_reason: the reason for releasing this artifact.
 
     released_pom_content: if the file pom.xml.released exists next to the 
-        BUILD.pom file, the content of the pom.xml.released file
+        BUILD.pom file, the content of the pom.xml.released file.
     =====
 
 
@@ -144,6 +149,7 @@ class MavenArtifactDef(object):
         self._requires_release = requires_release
         self._release_reason = None
         self._released_pom_content = released_pom_content
+        self._has_build_file = False
 
         # data cleanup/verification/sanitization
         # these are separate methods for better readability
@@ -212,6 +218,10 @@ class MavenArtifactDef(object):
     @property
     def bazel_package(self):
         return self._bazel_package
+
+    @property
+    def has_build_file(self):
+        return self._has_build_file
 
     @property
     def bazel_target(self):

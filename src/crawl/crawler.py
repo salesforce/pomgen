@@ -534,9 +534,15 @@ class Crawler:
             
             self.package_to_artifact[package] = artifact_def
             self.library_to_artifact[artifact_def.library_path].append(artifact_def)
-            pomgen = self._get_pom_generator(artifact_def, dep)
+            if dep is None:
+                # make a real dependency instance here
+                # this is a bootstrapping problem: the root
+                # artifacts (that we start with) have nothing pointing at them
+                dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
+            pomgen = pom.get_pom_generator(self.workspace, self.pom_template,
+                                           artifact_def, dep)
             self.pomgens.append(pomgen)
-            source_deps, ext_deps, all_deps = pomgen.process_dependencies()
+            source_deps, ext_deps, all_deps = self._discover_dependencies(artifact_def, dep)
             self.target_to_dependencies[target_key] = all_deps
             if self.verbose:
                 logger.debug("Determined deps for artifact: [%s] with target key [%s]" % (artifact_def, target_key))
@@ -556,14 +562,58 @@ class Crawler:
             self._store_if_leafnode(node)
             return node
 
-    def _get_pom_generator(self, artifact_def, dep):
-        if dep is None:
-            # make a real dependency instance here so we can pass it along
-            # into the pom generator
-            dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
-        return pom.get_pom_generator(self.workspace, 
-                                     self.pom_template, artifact_def,
-                                     dep)
+    def _discover_dependencies(self, artifact_def, dep):
+        """
+        Discovers the dependencies of the given artifact (bazel target).
+
+        This method returns a tuple of 3 (!) lists of Dependency instances:
+            (l1, l2, l3)
+            l1: all source dependencies (== references to other bazel packages)
+            l2: all external dependencies (maven jars)
+            l3: l1 and l2 together, in "discovery order"
+        """
+        assert artifact_def is not None
+        assert dep is not None, "dep is None for artifact %s" % artifact_def
+        all_deps = ()
+        if artifact_def.deps is not None:
+            all_deps = self.workspace.parse_dep_labels(artifact_def.deps)
+        if artifact_def.has_build_file:
+            all_deps += self._query_dependencies(artifact_def, dep)
+
+        source_dependencies = []
+        ext_dependencies = []
+        for dep in all_deps:
+            if dep.bazel_package is None:
+                ext_dependencies.append(dep)
+            else:
+                source_dependencies.append(dep)
+        
+        return (tuple(source_dependencies), 
+                tuple(ext_dependencies), 
+                tuple(all_deps))
+
+    # this method delegates to bazel query to get the value of a bazel target's 
+    # "deps" and "runtime_deps" attributes
+    def _query_dependencies(self, artifact_def, dependency):
+        if not artifact_def.include_deps:
+            return ()
+        else:
+            assert artifact_def.bazel_package is not None
+            assert dependency.bazel_target is not None
+            assert len(dependency.bazel_target) > 0
+            label = "%s:%s" % (artifact_def.bazel_package, dependency.bazel_target)
+            try:
+                # the rule attributes to query for dependencies, typically
+                # "deps" and "runtime_deps"
+                attrs = artifact_def.pom_generation_mode.dependency_attributes
+                dep_labels = bazel.query_java_library_deps_attributes(
+                    self.workspace.repo_root_path, label, attrs,
+                    self.workspace.verbose)
+                deps = self.workspace.parse_dep_labels(dep_labels)
+                return self.workspace.normalize_deps(artifact_def, deps)
+            except Exception as e:
+                msg = e.message if hasattr(e, "message") else type(e)
+                raise Exception("Error while processing dependencies: %s %s caused by %s\nOne possible cause for this error is that the java_libary rule that builds the jar artifact is not the default bazel package target (same name as dir it lives in)" % (msg, artifact_def, repr(e)))
 
     @classmethod
     def _get_target_key(clazz, package, dep, artifact_def=None):

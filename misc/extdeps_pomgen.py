@@ -50,14 +50,12 @@ def _parse_arguments(args):
 
 
 class ThirdPartyDepsPomGen(pom.DynamicPomGen):
+
     def __init__(self, workspace, artifact_def, dependencies, pom_template):
         super(ThirdPartyDepsPomGen, self).__init__(workspace, artifact_def,
                                                    dependency=None,
                                                    pom_template=pom_template)
         self.dependencies = dependencies
-
-    def _load_additional_dependencies_hook(self):
-        return self.dependencies
 
 
 def _starts_with_ignored_prefix(line):
@@ -71,11 +69,12 @@ def main(args):
     repo_root = common.get_repo_root(args.repo_root)
     cfg = config.load(repo_root)
 
-    # For the primary function of pomgen (generating pom.xml files for publishing)
-    # there are sometimes maven_install namespaces that are ignored in .pomgenrc.
-    # These are identified as maven_install paths that begin with - .
-    # For extdeps, we need to have full access to all maven_install namespaces, so
-    # we tell maveninstallinfo to not honor the excludes.
+    # For the primary function of pomgen, generating pom.xml files for
+    # publishing to Nexus or similar, there are sometimes maven_install
+    # namespaces that are ignored in .pomgenrc
+    # These are identified as maven_install paths that begin with -
+    # For extdeps, we need to have full access to all maven_install namespaces,
+    # so we tell maveninstallinfo to not honor those excludes
     allow_excludes = False
 
     mvn_install_info = maveninstallinfo.MavenInstallInfo(cfg.maven_install_paths, allow_excludes)
@@ -141,7 +140,7 @@ def main(args):
 
     pomgen = ThirdPartyDepsPomGen(ws, artifact_def, dependencies,
                                   cfg.pom_template)
-    pomgen.process_dependencies()
+
     return pomgen.gen(pom.PomContentType.RELEASE)
 
 

@@ -22,8 +22,14 @@ def augment_artifact_def(repo_root_path,
                          art_def,
                          source_exclusions,
                          change_detection_enabled):
+
+    # library path
     art_def.library_path = _get_library_path(repo_root_path, art_def)
 
+    # build file exists?
+    art_def._has_build_file = _has_build_file(repo_root_path, art_def)
+
+    # release state
     if art_def.released_version is None or art_def.released_artifact_hash is None:
         # never released?
         art_def.requires_release = True
@@ -47,6 +53,15 @@ def augment_artifact_def(repo_root_path,
             art_def.requires_release = True
             art_def.release_reason = releasereason.ReleaseReason.ALWAYS
     return art_def
+
+
+def _has_build_file(repo_root_path, art_def):
+    path = os.path.join(repo_root_path, art_def.bazel_package)
+    if os.path.exists(os.path.join(path, "BUILD")):
+        return True
+    if os.path.exists(os.path.join(path, "BUILD.bazel")):
+        return True
+    return False
 
 
 def _get_library_path(repo_root_path, art_def):
