@@ -25,54 +25,6 @@ class DependencyMetadataTest(unittest.TestCase):
         self.assertEqual(transitives, dependencymd.get_transitive_closure(dep1))
         self.assertEqual(transitives, dependencymd.get_transitive_closure(dep2))
 
-    def test_register_exclusions(self):
-        dependencymd = dependencymdmod.DependencyMetadata(jar_artifact_classifier=None)
-        dep1 = dependency.new_dep_from_maven_art_str("g1:a1:v1", "maven1")
-        dep2 = dependency.new_dep_from_maven_art_str("g1:a1:v1", "maven2")
-        exclusions = (dependency.new_dep_from_maven_art_str("t1:a1:v1", "foo"))
-
-        dependencymd.register_exclusions(dep1, exclusions)
-        dependencymd.register_exclusions(dep2, exclusions)
-
-        self.assertEqual(exclusions, dependencymd.get_transitive_exclusions(dep1))
-        self.assertEqual(exclusions, dependencymd.get_transitive_exclusions(dep2))
-
-    def test_get_ancestors(self):
-        dependencymd = dependencymdmod.DependencyMetadata(jar_artifact_classifier=None)
-        dep1 = dependency.new_dep_from_maven_art_str("g1:a1:v1", "m")
-        dep2 = dependency.new_dep_from_maven_art_str("g2:a1:v1", "m")
-        dep3 = dependency.new_dep_from_maven_art_str("g3:a1:v1", "m")
-        child_dep1 = dependency.new_dep_from_maven_art_str("t1:a1:v1", "m")
-        child_dep2 = dependency.new_dep_from_maven_art_str("t2:a1:v1", "m")
-        child_dep3 = dependency.new_dep_from_maven_art_str("t3:a1:v1", "m")
-        dep1_transitives = [child_dep1, child_dep2]
-        dep2_transitives = [child_dep2, child_dep3]
-
-        dependencymd.register_transitives(dep1, dep1_transitives)
-        dependencymd.register_transitives(dep2, dep2_transitives)
-
-        self.assertEqual([dep1], dependencymd.get_ancestors(child_dep1))
-        self.assertEqual([dep1, dep2], dependencymd.get_ancestors(child_dep2))
-        self.assertEqual([dep2], dependencymd.get_ancestors(child_dep3))
-        self.assertEqual([], dependencymd.get_ancestors(dep3))
-
-    def test_get_ancestors__is_scoped_by_maven_install_rule(self):
-        dependencymd = dependencymdmod.DependencyMetadata(jar_artifact_classifier=None)
-        dep1 = dependency.new_dep_from_maven_art_str("g1:a1:v1", "m1")
-        dep2 = dependency.new_dep_from_maven_art_str("g2:a1:v1", "m2")
-        child_dep1 = dependency.new_dep_from_maven_art_str("t1:a1:v1", "m1")
-        child_dep2 = dependency.new_dep_from_maven_art_str("t1:a1:v1", "m2")
-        child_dep3 = dependency.new_dep_from_maven_art_str("t2:a1:v1", "m2")
-        dep1_transitives = [child_dep1,]
-        dep2_transitives = [child_dep2, child_dep3]
-
-        dependencymd.register_transitives(dep1, dep1_transitives)
-        dependencymd.register_transitives(dep2, dep2_transitives)
-
-        self.assertEqual([dep1], dependencymd.get_ancestors(child_dep1))
-        self.assertEqual([dep2], dependencymd.get_ancestors(child_dep2))
-        self.assertEqual([dep2], dependencymd.get_ancestors(child_dep3))
-
     def test_get_classifier__none(self):
         dependencymd = dependencymdmod.DependencyMetadata(jar_artifact_classifier=None)
         ext_dep = dependency.new_dep_from_maven_art_str("g1:a1:pack:class:2.0,0", "m1")

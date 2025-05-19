@@ -533,12 +533,11 @@ class Crawler:
             artifactctx = artifactgenctx.ArtifactGenerationContext(
                 self.workspace, self.pom_template, artifact_def, dep)
             self.genctxs.append(artifactctx)
-            source_deps, ext_deps, all_deps = self._discover_dependencies(artifact_def, dep)
+            source_deps, all_deps = self._discover_dependencies(artifact_def, dep)
             self.target_to_dependencies[target_key] = all_deps
             if self.verbose:
                 logger.debug("Determined deps for artifact: [%s] with target key [%s]" % (artifact_def, target_key))
                 logger.debug("Source deps: %s" % "\n".join([str(d) for d in source_deps]))
-                logger.debug("Ext deps: %s" % "\n".join([str(d) for d in ext_deps]))
                 logger.debug("All deps: %s" % "\n".join([str(d) for d in all_deps]))
             node = Node(parent_node, artifact_def, dep)
             if follow_references:
@@ -557,11 +556,10 @@ class Crawler:
         """
         Discovers the dependencies of the given artifact (bazel target).
 
-        This method returns a tuple of 3 (!) lists of Dependency instances:
-            (l1, l2, l3)
+        This method returns a tuple of 2 lists of Dependency instances:
+            (l1, l2)
             l1: all source dependencies (== references to other bazel packages)
-            l2: all external dependencies (maven jars)
-            l3: l1 and l2 together, in "discovery order"
+            l2: l1 + all external dependencies
         """
         assert artifact_def is not None
         assert dep is not None, "dep is None for artifact %s" % artifact_def
@@ -579,9 +577,7 @@ class Crawler:
             else:
                 source_dependencies.append(dep)
         
-        return (tuple(source_dependencies), 
-                tuple(ext_dependencies), 
-                tuple(all_deps))
+        return (tuple(source_dependencies), tuple(all_deps))
 
     # this method delegates to bazel query to get the value of a bazel target's 
     # "deps" and "runtime_deps" attributes
