@@ -344,7 +344,7 @@ class TemplatePomGen(AbstractPomGen):
                 del key_to_version[key]
             version_from_dep = self._dep_version(pomcontenttype, dep)
             if not version_ref_must_be_fq:
-                # the key (groupId:artficatId:version) is not fully qualified,
+                # the key (groupId:artifactId:version) is not fully qualified,
                 # only the name prefixed with the maven_install rule name is
                 key_to_version[key] = version_from_dep
             key_to_dep[key] = dep
@@ -578,7 +578,7 @@ class DependencyManagementPomGen(AbstractPomGen):
         content = self.pom_template.replace("#{group_id}", self._artifact_def.group_id)
         # by convention, we add the suffix ".depmanagement" to the artifactId
         # so com.blah is the real jar artifact and com.blah.depmanagement
-        # is the dependency management pom for that artficat
+        # is the dependency management pom for that artifact
         content = content.replace("#{artifact_id}", "%s.depmanagement" % self._artifact_def.artifact_id)
         version = self._artifact_def_version(pomcontenttype)
         content = content.replace("#{version}", version)
