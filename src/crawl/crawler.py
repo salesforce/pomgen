@@ -9,9 +9,9 @@ Crawls Bazel BUILD file dependencies and builds a DAG.
 """
 from collections import defaultdict
 from common import logger
+from crawl import artifactgenctx
 from crawl import dependency
 from crawl import bazel
-from crawl import pom
 from crawl import pomparser
 from crawl.releasereason import ReleaseReason
 import difflib
@@ -50,11 +50,10 @@ class CrawlerResult:
     """
     Useful bits and pieces that are the outcome of crawling Bazel BUILD files.
     """
+    def __init__(self, genctxs, nodes, crawled_bazel_packages):
 
-    def __init__(self, pomgens, nodes, crawled_bazel_packages):
-
-        # list of pom generators, for poms that need to be generated:
-        self.pomgens = pomgens
+        # artifactgenctx.ArtifactGenerationContext instances
+        self.artifact_generation_contexts = genctxs
 
         # list of root nodes
         self.nodes = nodes
@@ -75,7 +74,7 @@ class Crawler:
         self.target_to_node = {} # bazel target -> Node for that target
         self.target_to_dependencies = {} # bazel_target -> target's deps
 
-        self.pomgens = [] # all pomgen instances
+        self.genctxs = [] # ArtifactGenerationContext instances
         self.leafnodes = [] # all leafnodes discovered while crawling
 
     def crawl(self, packages, follow_references=True, force_release=False):
@@ -149,14 +148,14 @@ class Crawler:
         target_to_transitive_closure_deps = self._compute_transitive_closures_of_deps()
 
 
-        # augment pom generators with deps discovered while crawling
-        self._register_dependencies_with_pomgen_instances(target_to_transitive_closure_deps)
+        # add discovered deps to artifact generation contexts
+        self._register_dependencies(target_to_transitive_closure_deps)
 
 
-        # for each artifact, if its pom changed since the last release
-        # (tracked by pom.xml.released), mark the artifact is requiring to be
-        # released
-        self._check_for_pom_changes()
+        # for each artifact, if its manifest (for ex pom.xml) has changed since
+        # the last release (tracked by pom.xml.released), mark the artifact as
+        # requiring to be released
+        self._check_for_artifact_manifest_changes()
 
 
         # figure out whether artifacts need to be released because a transitive
@@ -164,44 +163,34 @@ class Crawler:
         self._calculate_artifact_release_flag(force_release)
 
 
-        # only pomgen instances for artifacts that need to be released are
+        # include only contexts for artifacts that need to be released
         # included in the result
-        result_pomgens = []
-        for p in self.pomgens:
-            if p.artifact_def.requires_release:
-                result_pomgens.append(p)
+        ctxs = [ctx for ctx in self.genctxs if ctx.artifact_def.requires_release]
 
         crawled_bazel_packages = self._get_crawled_packages_as_deps()
 
-        return CrawlerResult(result_pomgens, nodes, crawled_bazel_packages)
+        return CrawlerResult(ctxs, nodes, crawled_bazel_packages)
 
-    def _register_dependencies_with_pomgen_instances(self, target_to_transitive_closure_deps):
+    def _register_dependencies(self, target_to_transitive_closure_deps):
         """
-        This method sets various dependency lists on all pomgen instances:
+        This method sets dependency lists on generaton contexts:
 
-        - the direct dependencies that typically go into the generated pom
+        - the direct dependencies of the artifact
         - the transitive closure of the direct dependenices
         - the transitive closure of the library's dependencies
         """
-        # register the direct dependencies
-        for p in self.pomgens:
-            target_key = self._get_target_key(p.bazel_package, p.dependency)
-            dependencies = self.target_to_dependencies[target_key]
-            p.register_dependencies(dependencies)
-
-        # register the transitive closure of dependencies belonging to the
-        # artifact
-        for p in self.pomgens:
-
-            target_key = self._get_target_key(p.artifact_def.bazel_package, p.dependency)
-            art_deps = target_to_transitive_closure_deps[target_key]
-            p.register_dependencies_transitive_closure__artifact(art_deps)
-
-        # register the transitive closure of dependencies belonging to the
-        # library
-        for p in self.pomgens:
-            lib_deps = self._get_deps_transitive_closure_for_library(p.artifact_def.library_path, target_to_transitive_closure_deps)
-            p.register_dependencies_transitive_closure__library(lib_deps)
+        for ctx in self.genctxs:
+            target_key = self._get_target_key(
+                ctx.artifact_def.bazel_package, ctx.dependency)
+            directs = self.target_to_dependencies[target_key]
+            ctx.register_artifact_directs(directs)
+            transitive_closure = target_to_transitive_closure_deps[target_key]
+            ctx.register_artifact_transitive_closure(transitive_closure)
+            lib_transitive_closure = self\
+                ._get_deps_transitive_closure_for_library(
+                    ctx.artifact_def.library_path,
+                    target_to_transitive_closure_deps)
+            ctx.register_library_transitive_closure(lib_transitive_closure)
 
     def _get_deps_transitive_closure_for_library(self, library_path,
                                                  target_to_transitive_closure_deps):
@@ -245,31 +234,33 @@ class Crawler:
                 missing_packages += all_library_packages.difference(all_packages_already_processed)
         return missing_packages
 
-    def _check_for_pom_changes(self):
+    def _check_for_artifact_manifest_changes(self):
         """
         For each artifact def not flagged as needing to be released, check 
-        whether its current pom is different than the previously released pom.
-        If the pom has changed, mark the artifact def as needing to be released.
+        whether its current manifest (for ex pom.xml) is different the
+        previously released manifest. If it has changed, mark the artifact def
+        as needing to be released.
         """
-
-        for pomgen in self.pomgens:
-            art_def = pomgen.artifact_def
+        for ctx in self.genctxs:
+            art_def = ctx.artifact_def
             if not art_def.requires_release and art_def.released_pom_content is not None:
-                current_pom = pomparser.format_for_comparison(pomgen.gen(pom.PomContentType.GOLDFILE))
-                previous_pom = pomparser.format_for_comparison(art_def.released_pom_content)
-                pom_changed = current_pom != previous_pom
-                if pom_changed:
+                # TODO pomparser
+                current_manifest = pomparser.format_for_comparison(ctx.gen_goldfile_manifest())
+                previous_manifest = pomparser.format_for_comparison(art_def.released_pom_content)
+                manifest_changed = current_manifest != previous_manifest
+                if manifest_changed:
                     art_def.requires_release = True
+                    # TODO release reason
                     art_def.release_reason = ReleaseReason.POM
 
                     if self.verbose:
                         logger.debug("pom diff %s %s" % (art_def, art_def.bazel_package))
-                        diff = difflib.unified_diff(previous_pom.splitlines(True), current_pom.splitlines(True))
+                        diff = difflib.unified_diff(previous_manifest.splitlines(True), current_manifest.splitlines(True))
                         logger.raw(''.join(diff))
-                        logger.debug("%s computed pom:" % art_def)
-                        logger.raw(current_pom)
-                        logger.debug("%s released pom:" % art_def)
-                        logger.raw(previous_pom)
+                        logger.debug("%s computed manifest:" % art_def)
+                        logger.raw(current_manifest)
+                        logger.debug("%s released manifest:" % art_def)
+                        logger.raw(previous_manifest)
 
 
     def _compute_transitive_closures_of_deps(self):
@@ -539,9 +530,9 @@ class Crawler:
                 # this is a bootstrapping problem: the root
                 # artifacts (that we start with) have nothing pointing at them
                 dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
-            pomgen = pom.get_pom_generator(self.workspace, self.pom_template,
-                                           artifact_def, dep)
-            self.pomgens.append(pomgen)
+            artifactctx = artifactgenctx.ArtifactGenerationContext(
+                self.workspace, self.pom_template, artifact_def, dep)
+            self.genctxs.append(artifactctx)
             source_deps, ext_deps, all_deps = self._discover_dependencies(artifact_def, dep)
             self.target_to_dependencies[target_key] = all_deps
             if self.verbose:
@@ -549,7 +540,7 @@ class Crawler:
                 logger.debug("Source deps: %s" % "\n".join([str(d) for d in source_deps]))
                 logger.debug("Ext deps: %s" % "\n".join([str(d) for d in ext_deps]))
                 logger.debug("All deps: %s" % "\n".join([str(d) for d in all_deps]))
-            node = Node(parent_node, artifact_def, pomgen.dependency)
+            node = Node(parent_node, artifact_def, dep)
             if follow_references:
                 # crawl BUILD file dependencies
                 for source_dep in source_deps:

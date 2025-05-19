@@ -54,7 +54,7 @@ def main(args):
     crawler = crawlerm.Crawler(ws, cfg.pom_template, args.verbose)
     result = crawler.crawl(packages, follow_references=not args.ignore_references, force_release=args.force)
 
-    if len(result.pomgens) == 0:
+    if len(result.artifact_generation_contexts) == 0:
         logger.info("No releases are required. pomgen will not generate any pom files. To force pom generation, use pomgen's --force option.")
     else:
         output_dir = _get_output_dir(args)
@@ -71,7 +71,10 @@ def main(args):
                     path = lib_paths[0]
                     _write_all_libraries_hint_files(result, output_dir, path)
 
-        for pomgen in result.pomgens:
+        # hardcoded to pom.xml files right here, but in the future pluggable?
+        pomgens = [ctx.generator for ctx in result.artifact_generation_contexts]
+
+        for pomgen in pomgens:
             pom_dest_dir = os.path.join(output_dir, pomgen.bazel_package)
             if not os.path.exists(pom_dest_dir):
                 os.makedirs(pom_dest_dir)
