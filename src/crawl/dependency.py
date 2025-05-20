@@ -22,8 +22,8 @@ class AbstractDependency(object):
     version: the maven artifact version of this depdendency.
 
     external: True -> this dependency references a Nexus artifact 
-              (which could be a previously uploaded monorepo artifact)
-              False -> this is a monorepo source dependency
+              (which could be a previously uploaded repository artifact)
+              False -> this is a repository source dependency
 
     references_artifact: True -> this dependency references another maven
                          artifact
@@ -42,7 +42,7 @@ class AbstractDependency(object):
     scope: the maven scope of the dependency
     
     bazel_package: The bazel package this dependency lives in, None for 
-        artifacts that are not built out of the monorepo (for example Guava).
+        artifacts that are not built out of the repository (for example Guava).
 
     bazel_target: If bazel_packge is not None, the specific target for this
         dependency.
@@ -158,15 +158,15 @@ class AbstractDependency(object):
                                      other_packaging,
                                      other_scope)
             else:
-                # other is a monorepo dep, 3rd party goes last
+                # other is a repository dep, 3rd party goes last
                 return False
         else:
-            # self is a monorepo dep
+            # self is a repository dep
             if other.bazel_package is None:
-                # other is a 3rd party dep, monorepo goes first
+                # other is a 3rd party dep, repository goes first
                 return True
             else:
-                # other is also a monorepo dep, compare based on name
+                # other is also a repository dep, compare based on name
                 return (self.group_id, self.artifact_id) < (other.group_id, other.artifact_id)
 
     def __str__(self):
@@ -235,6 +235,7 @@ class ThirdPartyDependency(AbstractDependency):
         n = n.replace('-', '_')
         n = n.replace('.', '_')
         return n
+
 
 class MonorepoDependency(AbstractDependency):
 
