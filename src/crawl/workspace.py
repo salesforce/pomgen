@@ -80,31 +80,6 @@ class Workspace:
                 deps.append(dep)
         return deps
 
-    def normalize_deps(self, artifact_def, deps):
-        """
-        Normalizes the specified deps, in the context of the specified 
-        owning artifact_def.
-
-        This method performs the following steps:
-
-          - removes deps that point back to the artifact that references them
-
-        Specifically, this method handles the case where, in the BUILD file, 
-        a java_library has a dependency on a (private) target defined in the 
-        same Bazel Package. This configuration is generally not supported,
-        except when the referenced targets are gRPC related.
-        """
-        updated_deps = []
-        for dep in deps:
-            if dep.bazel_package is not None and dep.bazel_package == artifact_def.bazel_package:
-                # this dep has the same bazel_package as the artifact 
-                # referencing the dep, skip it, unless this bazel package
-                # actually does not produce artifacts
-                if artifact_def.pom_generation_mode.produces_artifact:
-                    continue
-            updated_deps.append(dep)
-        return updated_deps
-
     def filter_artifact_producing_packages(self, packages):
         """
         Given a list of packages, returns those that are actually producing

@@ -157,6 +157,15 @@ py_test(
 )
 
 py_test(
+    name = "labeltest",
+    srcs = ["tests/labeltest.py"],
+    deps = [":pomgen_lib"],
+    imports = ["src"],
+    size = "small",
+    python_version = python_version,
+)
+
+py_test(
     name = "libaggregatortest",
     srcs = ["tests/libaggregatortest.py"],
     deps = [":pomgen_lib"],
@@ -230,7 +239,6 @@ py_test(
 
 py_test(
     name = "versiontest",
-
     srcs = ["tests/versiontest.py"],
     deps = [":pomgen_lib"],
     imports = ["src"],

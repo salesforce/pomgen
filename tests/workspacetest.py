@@ -7,11 +7,9 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 
 from common.os_util import run_cmd
 from common import maveninstallinfo
-from common import pomgenmode
 from config import config
 from config import exclusions
 from crawl import bazel
-from crawl import buildpom
 from crawl import dependency
 from crawl import dependencymd as dependencym
 from crawl import git
@@ -36,52 +34,6 @@ class WorkspaceTest(unittest.TestCase):
     
     def tearDown(self):
         bazel.parse_maven_install = self.orig_bazel_parse_maven_install
-
-    def test_normalize_deps__default_removes_refs_to_same_package(self):
-        depmd = dependencym.DependencyMetadata(None)
-        ws = workspace.Workspace("so/path",
-                                 self._get_config(),
-                                 maveninstallinfo.NOOP, 
-                                 pom_content=pomcontent.NOOP,
-                                 dependency_metadata=depmd,
-                                 label_to_overridden_fq_label={})
-        package = "a/b/c"
-        art1 = buildpom.MavenArtifactDef("g1", "a1", "1", bazel_package=package,
-                                         pom_generation_mode=pomgenmode.DYNAMIC)
-        dep1 = dependency.MonorepoDependency(art1, bazel_target=None)
-        art2 = buildpom.MavenArtifactDef("g2", "a2", "1", bazel_package=package)
-        dep2 = dependency.MonorepoDependency(art2, bazel_target=None)
-        art3 = buildpom.MavenArtifactDef("g1", "a1", "1", bazel_package="d/e/f")
-        dep3 = dependency.MonorepoDependency(art3, bazel_target=None)
-        dep4 = dependency.ThirdPartyDependency("name", "g101", "a101", "1")
-
-        # the result of this method is based on bazel_package comparison
-        deps = ws.normalize_deps(art1, [dep1, dep2, dep3, dep4])
-
-        self.assertEqual([dep3, dep4], deps)
-
-    def test_normalize_deps__skip_pomgen_mode_allows_refs_to_same_package(self):
-        depmd = dependencym.DependencyMetadata(None)
-        ws = workspace.Workspace("so/path",
-                                 self._get_config(),
-                                 maveninstallinfo.NOOP,
-                                 pom_content=pomcontent.NOOP,
-                                 dependency_metadata=depmd,
-                                 label_to_overridden_fq_label={})
-        package = "a/b/c"
-        art1 = buildpom.MavenArtifactDef("g1", "a1", "1", bazel_package=package,
-                                         pom_generation_mode=pomgenmode.SKIP)
-        dep1 = dependency.MonorepoDependency(art1, bazel_target=None)
-        art2 = buildpom.MavenArtifactDef("g2", "a2", "1", bazel_package=package)
-        dep2 = dependency.MonorepoDependency(art2, bazel_target=None)
-        art3 = buildpom.MavenArtifactDef("g1", "a1", "1", bazel_package="d/e/f")
-        dep3 = dependency.MonorepoDependency(art3, bazel_target=None)
-        dep4 = dependency.ThirdPartyDependency("name", "g101", "a101", "1")
-
-        # the result of this method is based on bazel_package comparison
-        deps = ws.normalize_deps(art1, [dep1, dep2, dep3, dep4])
-
-        self.assertEqual([dep1, dep2, dep3, dep4], deps)
 
     def test_parse_ext_dep(self):
         """

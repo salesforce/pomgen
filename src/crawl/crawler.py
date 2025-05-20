@@ -8,6 +8,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 Crawls Bazel BUILD file dependencies and builds a DAG.
 """
 from collections import defaultdict
+from common import label as labelm
 from common import logger
 from crawl import artifactgenctx
 from crawl import dependency
@@ -533,20 +534,30 @@ class Crawler:
             artifactctx = artifactgenctx.ArtifactGenerationContext(
                 self.workspace, self.pom_template, artifact_def, dep)
             self.genctxs.append(artifactctx)
-            source_deps, all_deps = self._discover_dependencies(artifact_def, dep)
+            labels = self._discover_dependencies(artifact_def, dep)
+            
+            # TODO abstract this, as it assumes maven_install
+            all_deps = self.workspace.parse_dep_labels([lbl.name for lbl in labels])
             self.target_to_dependencies[target_key] = all_deps
+
             if self.verbose:
-                logger.debug("Determined deps for artifact: [%s] with target key [%s]" % (artifact_def, target_key))
-                logger.debug("Source deps: %s" % "\n".join([str(d) for d in source_deps]))
-                logger.debug("All deps: %s" % "\n".join([str(d) for d in all_deps]))
+                logger.debug("Determined labels for artifact: [%s] with target key [%s]" % (artifact_def, target_key))
+                logger.debug("Labels: %s" % "\n".join([lbl.name for lbl in labels]))
+                logger.debug("Dependencies: %s" % "\n".join([str(d) for d in all_deps]))
             node = Node(parent_node, artifact_def, dep)
             if follow_references:
-                # crawl BUILD file dependencies
-                for source_dep in source_deps:
-                    child_node = self._crawl(source_dep.bazel_package,
-                                             source_dep, node, 
-                                             follow_references)
-                    node.children.append(child_node)
+                # this is where we crawl is source label:
+                for label in labels:
+                    if label.is_source_ref:
+                        deps = self.workspace.parse_dep_labels([label.name])
+                        if len(deps) == 0:
+                            # there is some filtering we have to pull out of
+                            # the parse method above
+                            continue
+                        child_node = self._crawl(
+                            label.package_path, deps[0], node, 
+                            follow_references)
+                        node.children.append(child_node)
             self.target_to_node[target_key] = node
             self.library_to_nodes[node.artifact_def.library_path].append(node)
             self._store_if_leafnode(node)
@@ -554,53 +565,66 @@ class Crawler:
 
     def _discover_dependencies(self, artifact_def, dep):
         """
-        Discovers the dependencies of the given artifact (bazel target).
+        Discovers the dependencies of the given artifact (==bazel target).
 
-        This method returns a tuple of 2 lists of Dependency instances:
-            (l1, l2)
-            l1: all source dependencies (== references to other bazel packages)
-            l2: l1 + all external dependencies
+        This method returns a list of common.label.Label instances.
         """
         assert artifact_def is not None
         assert dep is not None, "dep is None for artifact %s" % artifact_def
-        all_deps = ()
+        labels = ()
         if artifact_def.deps is not None:
-            all_deps = self.workspace.parse_dep_labels(artifact_def.deps)
+            labels = [labelm.Label(lbl) for lbl in artifact_def.deps]
         if artifact_def.has_build_file:
-            all_deps += self._query_dependencies(artifact_def, dep)
+            labels += self._query_labels(artifact_def, dep)
+        return labels
 
-        source_dependencies = []
-        ext_dependencies = []
-        for dep in all_deps:
-            if dep.bazel_package is None:
-                ext_dependencies.append(dep)
-            else:
-                source_dependencies.append(dep)
-        
-        return (tuple(source_dependencies), tuple(all_deps))
-
-    # this method delegates to bazel query to get the value of a bazel target's 
-    # "deps" and "runtime_deps" attributes
-    def _query_dependencies(self, artifact_def, dependency):
+    def _query_labels(self, artifact_def, dependency):
+        """
+        Delegates to bazel query to get the value of a bazel target's  "deps"
+        and "runtime_deps" attributes. Returns an iterable of common.label.Label
+        instances.
+        """
         if not artifact_def.include_deps:
             return ()
         else:
             assert artifact_def.bazel_package is not None
             assert dependency.bazel_target is not None
             assert len(dependency.bazel_target) > 0
-            label = "%s:%s" % (artifact_def.bazel_package, dependency.bazel_target)
+            artifact_def_label = "%s:%s" % (artifact_def.bazel_package, dependency.bazel_target)
             try:
-                # the rule attributes to query for dependencies, typically
-                # "deps" and "runtime_deps"
-                attrs = artifact_def.pom_generation_mode.dependency_attributes
-                dep_labels = bazel.query_java_library_deps_attributes(
-                    self.workspace.repo_root_path, label, attrs,
+                labels = bazel.query_java_library_deps_attributes(
+                    self.workspace.repo_root_path,
+                    artifact_def_label,
+                    artifact_def.pom_generation_mode.dependency_attributes,
                     self.workspace.verbose)
-                deps = self.workspace.parse_dep_labels(dep_labels)
-                return self.workspace.normalize_deps(artifact_def, deps)
+                labels = [labelm.Label(lbl) for lbl in labels]
+                return Crawler._remove_package_private_labels(labels, artifact_def)
             except Exception as e:
                 msg = e.message if hasattr(e, "message") else type(e)
                 raise Exception("Error while processing dependencies: %s %s caused by %s\nOne possible cause for this error is that the java_libary rule that builds the jar artifact is not the default bazel package target (same name as dir it lives in)" % (msg, artifact_def, repr(e)))
+
+    @classmethod
+    def _remove_package_private_labels(clazz, labels, owning_artifact_def):
+        """
+        This method removes labels that point back to the bazel package
+        of the current artifact (so private targets in the same build file),
+        except when no actual artifact is produced (-> the special "skip"
+        generation mode).
+
+        Specifically, this method handles the case where, in the BUILD file, 
+        a java_library has a dependency on a (private) target defined in the 
+        same Bazel Package. This configuration is generally not supported.
+        """
+        updated_labels = []
+        for label in labels:
+            if label.package_path == owning_artifact_def.bazel_package:
+                # this label has the same package as the artifact referencing it
+                # is is therefore a private target ref - skip it unless this
+                # package does not produce any artifact
+                if owning_artifact_def.pom_generation_mode.produces_artifact:
+                    continue
+            updated_labels.append(label)
+        return updated_labels
 
     @classmethod
     def _get_target_key(clazz, package, dep, artifact_def=None):
