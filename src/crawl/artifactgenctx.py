@@ -16,7 +16,7 @@ class ArtifactGenerationContext:
 
         # TODO remove/make this factory/config based
         self._generator = crawl.pom.get_pom_generator(
-            workspace, pom_template, artifact_def, dependency)
+            workspace, pom_template, artifact_def)
 
     @property
     def artifact_def(self):

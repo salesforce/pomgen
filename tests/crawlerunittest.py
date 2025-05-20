@@ -5,6 +5,8 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
+
+from common import label
 from common import maveninstallinfo
 from common import pomgenmode
 from config import config
@@ -503,6 +505,32 @@ class CrawlerUnitTest(unittest.TestCase):
 
         self.assertTrue(a1_node.artifact_def.requires_release)
         self.assertIn("transitive", a1_node.artifact_def.release_reason)
+
+    def test_remove_package_private_labels(self):
+        package = "a/b/c"
+        art = buildpom.MavenArtifactDef("g1", "a1", "1", bazel_package=package,
+                                        pom_generation_mode=pomgenmode.DYNAMIC)
+        l1 = label.Label(package)
+        l2 = label.Label("%s:foo" % package)
+        l3 = label.Label("//something_else:foo")
+        l4 = label.Label("@maven_install//:guava")
+
+        labels = crawlerm.Crawler._remove_package_private_labels([l1, l2, l3, l4], art)
+
+        self.assertEqual([l3, l4], labels)
+
+    def test_remove_package_private_labels__skip_mode_allows_them(self):
+        package = "a/b/c"
+        art = buildpom.MavenArtifactDef("g1", "a1", "1", bazel_package=package,
+                                        pom_generation_mode=pomgenmode.SKIP)
+        l1 = label.Label(package)
+        l2 = label.Label("%s:foo" % package)
+        l3 = label.Label("//something_else:foo")
+        l4 = label.Label("@maven_install//:guava")
+
+        labels = crawlerm.Crawler._remove_package_private_labels([l1, l2, l3, l4], art)
+
+        self.assertEqual([l1, l2, l3, l4], labels)
 
     def _build_node(self, artifact_id, bazel_package,
                     pom_generation_mode=pomgenmode.DYNAMIC,

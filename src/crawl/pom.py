@@ -34,7 +34,7 @@ class PomContentType:
     MASKED_VERSION = "***"
 
 
-def get_pom_generator(workspace, pom_template, artifact_def, dependency):
+def get_pom_generator(workspace, pom_template, artifact_def):
     """
     Returns a pom.xml generator (AbstractPomGen implementation) for the
     specified artifact_def.
@@ -44,33 +44,29 @@ def get_pom_generator(workspace, pom_template, artifact_def, dependency):
         pom_template: the template to use for generating dynamic (jar) pom.xmls
         artifact_def: the crawl.buildpom.MavenArtifactDef instance for access 
             to the parsed MVN-INF/* metadata files
-        dependency: the dependency pointing to this artifact_def
     """
     assert artifact_def is not None
-    assert dependency is not None
 
     mode = artifact_def.pom_generation_mode
     if mode is pomgenmode.DYNAMIC:
         also_generate_dep_man_pom = artifact_def.gen_dependency_management_pom
         if also_generate_dep_man_pom:
             return PomWithCompanionDependencyManagementPomGen(
-                workspace, artifact_def, dependency, pom_template)
+                workspace, artifact_def, pom_template)
         else:
-            return DynamicPomGen(
-                workspace, artifact_def, dependency, pom_template)
+            return DynamicPomGen(workspace, artifact_def, pom_template)
     elif mode is pomgenmode.TEMPLATE:
-        return TemplatePomGen(workspace, artifact_def, dependency)
+        return TemplatePomGen(workspace, artifact_def)
     elif mode is pomgenmode.SKIP:
-        return NoopPomGen(workspace, artifact_def, dependency)
+        return NoopPomGen(workspace, artifact_def)
     else:
         raise Exception("Bug: unknown pom_generation_mode [%s] for %s" % (mode, artifact_def.bazel_package))
 
 
 class AbstractPomGen(object):
 
-    def __init__(self, workspace, artifact_def, dependency):
+    def __init__(self, workspace, artifact_def):
         self._artifact_def = artifact_def
-        self._dependency = dependency
         self._workspace = workspace
 
         self.dependencies = set()
@@ -84,10 +80,6 @@ class AbstractPomGen(object):
     @property
     def bazel_package(self):
         return self._artifact_def.bazel_package
-
-    @property 
-    def dependency(self):
-        return self._dependency
 
     def register_dependencies(self, dependencies):
         """
@@ -234,8 +226,8 @@ class NoopPomGen(AbstractPomGen):
     A placeholder pom generator that doesn't generate anything, but still
     follows references.
     """
-    def __init__(self, workspace, artifact_def, dependency):
-        super(NoopPomGen, self).__init__(workspace, artifact_def, dependency)
+    def __init__(self, workspace, artifact_def):
+        super(NoopPomGen, self).__init__(workspace, artifact_def)
 
 
 class TemplatePomGen(AbstractPomGen):
@@ -253,8 +245,8 @@ class TemplatePomGen(AbstractPomGen):
     """
     Generates a pom.xml based on a template file.
     """
-    def __init__(self, workspace, artifact_def, dependency):
-        super(TemplatePomGen, self).__init__(workspace, artifact_def, dependency)
+    def __init__(self, workspace, artifact_def):
+        super(TemplatePomGen, self).__init__(workspace, artifact_def)
     def gen(self, pomcontenttype):
         pom_content = self.artifact_def.custom_pom_template_content
         pom_content, parsed_dependencies = self._process_pom_template_content(pom_content)
@@ -479,8 +471,8 @@ class DynamicPomGen(AbstractPomGen):
        #{group_id}
        #{version}
     """
-    def __init__(self, workspace, artifact_def, dependency, pom_template):
-        super(DynamicPomGen, self).__init__(workspace, artifact_def, dependency)
+    def __init__(self, workspace, artifact_def, pom_template):
+        super(DynamicPomGen, self).__init__(workspace, artifact_def)
         self.pom_content = workspace.pom_content
         self.pom_template = pom_template
 
@@ -568,8 +560,8 @@ class DependencyManagementPomGen(AbstractPomGen):
        #{group_id}
        #{version}
     """
-    def __init__(self, workspace, artifact_def, dependency, pom_template):
-        super(DependencyManagementPomGen, self).__init__(workspace, artifact_def, dependency)
+    def __init__(self, workspace, artifact_def, pom_template):
+        super(DependencyManagementPomGen, self).__init__(workspace, artifact_def)
         self.pom_template = pom_template
         self.pom_content = workspace.pom_content
 
@@ -614,10 +606,10 @@ class PomWithCompanionDependencyManagementPomGen(AbstractPomGen):
     Composite PomGen implementation with a companion PomGen the generates a
     DependencyManagement pom.
     """
-    def __init__(self, workspace, artifact_def, dependency, pom_template):
-        super(PomWithCompanionDependencyManagementPomGen, self).__init__(workspace, artifact_def, dependency)
-        self.pomgen = DynamicPomGen(workspace, artifact_def, dependency, pom_template)
-        self.depmanpomgen = DependencyManagementPomGen(workspace, artifact_def, dependency, pom_template)
+    def __init__(self, workspace, artifact_def, pom_template):
+        super(PomWithCompanionDependencyManagementPomGen, self).__init__(workspace, artifact_def)
+        self.pomgen = DynamicPomGen(workspace, artifact_def, pom_template)
+        self.depmanpomgen = DependencyManagementPomGen(workspace, artifact_def, pom_template)
 
     def register_dependencies(self, dependencies):
         self.pomgen.register_dependencies(dependencies)

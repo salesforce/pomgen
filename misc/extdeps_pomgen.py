@@ -53,7 +53,6 @@ class ThirdPartyDepsPomGen(pom.DynamicPomGen):
 
     def __init__(self, workspace, artifact_def, dependencies, pom_template):
         super(ThirdPartyDepsPomGen, self).__init__(workspace, artifact_def,
-                                                   dependency=None,
                                                    pom_template=pom_template)
         self.dependencies = dependencies
 
