@@ -5,12 +5,14 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
+
+from common import label
 from crawl.buildpom import MavenArtifactDef
-from crawl import dependency
 from crawl.crawler import Node
 from crawl.releasereason import ReleaseReason
 import crawl.libaggregator
 import unittest
+
 
 class LibAggregatorTest(unittest.TestCase):
 
@@ -165,8 +167,9 @@ class LibAggregatorTest(unittest.TestCase):
                                         requires_release=requires_release,
                                         bazel_target="t1")
         artifact_def.release_reason = release_reason
-        dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
-        return Node(parent=None, artifact_def=artifact_def, dependency=dep)
+        return Node(parent=None, artifact_def=artifact_def,
+                    label=label.Label(library_path))
+
 
 if __name__ == '__main__':
     unittest.main()

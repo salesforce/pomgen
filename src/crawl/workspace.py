@@ -46,10 +46,11 @@ class Workspace:
 
     def parse_maven_artifact_def(self, package):
         """
-        Parses the Maven metadata files files in the specified package and 
-        returns a MavenArtifactDef instance.
+        Parses the Maven metadata files files at the specified (bazel) package,
+        which is a relative path from the repository root.
 
-        Returns None if there is no BUILD.pom file at the specified path.
+        Returns a MavenArtifactDef instance, None if there is no BUILD.pom
+        file at the specified path.
         """
         if package in self._package_to_artifact_def:
             return self._package_to_artifact_def[package]

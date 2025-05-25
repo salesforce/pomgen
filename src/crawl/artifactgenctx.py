@@ -6,9 +6,9 @@ class ArtifactGenerationContext:
     Information about a single artifact that was crawled.
     """
 
-    def __init__(self, workspace, pom_template, artifact_def, dependency):
+    def __init__(self, workspace, pom_template, artifact_def, label):
         self._artifact_def = artifact_def
-        self._dependency = dependency
+        self._label = label
 
         self._direct_dependencies = []
         self._artifact_transitive_closure = []
@@ -26,11 +26,11 @@ class ArtifactGenerationContext:
         return self._artifact_def
 
     @property
-    def dependency(self):
+    def label(self):
         """
-        The dependency that points at this artifact (that dragged it in).
+        The label that points at this artifact.
         """
-        return self._dependency
+        return self._label
 
     @property
     def direct_dependencies(self):

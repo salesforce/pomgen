@@ -541,23 +541,20 @@ class CrawlerUnitTest(unittest.TestCase):
             pom_generation_mode=pom_generation_mode,
             library_path=library_path,
             bazel_target="t1")
-        dep = dependency.new_dep_from_maven_artifact_def(art_def)
-        return crawlerm.Node(parent=parent_node, artifact_def=art_def, dependency=dep)
+        return crawlerm.Node(parent_node, art_def, label.Label(bazel_package))
 
     def _get_associated_deps(self, crawler, node):
         return self._get_deps_for_node(node, crawler.target_to_dependencies)
 
     def _get_deps_for_node(self, node, target_to_deps):
-        target_key = crawlerm.Crawler._get_target_key(node.artifact_def.bazel_package, node.dependency)
-        return target_to_deps[target_key]
+        return target_to_deps[node.label]
 
     def _associate_dep(self, crawler, node, dep):
-        target_key = crawlerm.Crawler._get_target_key(node.artifact_def.bazel_package, node.dependency)
         deps_list = dep if isinstance(dep, (list, tuple)) else [dep]
-        if target_key in crawler.target_to_dependencies:
-            crawler.target_to_dependencies[target_key] += deps_list
+        if node.label in crawler.target_to_dependencies:
+            crawler.target_to_dependencies[node.label] += deps_list
         else:
-            crawler.target_to_dependencies[target_key] = deps_list
+            crawler.target_to_dependencies[node.label] = deps_list
 
     def _get_3rdparty_dep(self, artifact_str, name):
         return dependency.new_dep_from_maven_art_str(artifact_str, name)
