@@ -24,6 +24,7 @@ from crawl import dependencymd as dependencymdm
 from crawl import libaggregator
 from crawl import pomcontent
 from crawl import workspace
+from generate.impl import pomgenerationstrategy
 import argparse
 import json
 import os
@@ -163,7 +164,8 @@ if __name__ == "__main__":
                                    args.artifact_release_plan)
 
     if crawl_artifact_dependencies:
-        crawler = crawler.Crawler(ws, cfg.pom_template, args.verbose)
+        gen_strategy = pomgenerationstrategy.PomGenerationStrategy(ws, cfg.pom_template)
+        crawler = crawler.Crawler(ws, gen_strategy, cfg.pom_template, args.verbose)
         crawler_result = crawler.crawl(packages, force_release=args.force)
         root_library_nodes = libaggregator.get_libraries_to_release(crawler_result.nodes)
 

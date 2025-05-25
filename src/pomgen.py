@@ -22,6 +22,7 @@ from crawl import libaggregator
 from crawl import pom
 from crawl import pomcontent as pomcontentm
 from crawl import workspace
+from generate.impl import pomgenerationstrategy
 import argparse
 import os
 import sys
@@ -51,7 +52,8 @@ def main(args):
     packages = ws.filter_artifact_producing_packages(packages)
     if len(packages) == 0:
         raise Exception("Did not find any artifact producing BUILD.pom packages at [%s]" % args.package)
-    crawler = crawlerm.Crawler(ws, cfg.pom_template, args.verbose)
+    gen_strategy = pomgenerationstrategy.PomGenerationStrategy(ws, cfg.pom_template)
+    crawler = crawlerm.Crawler(ws, gen_strategy, cfg.pom_template, args.verbose)
     result = crawler.crawl(packages, follow_references=not args.ignore_references, force_release=args.force)
 
     if len(result.artifact_generation_contexts) == 0:

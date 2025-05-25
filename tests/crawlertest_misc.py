@@ -6,16 +6,16 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 """
 
 from common import maveninstallinfo
-from common import pomgenmode
 from config import config
 from crawl import crawler as crawlerm
 from crawl import dependencymd as dependencym
 from crawl import pomcontent
 from crawl import workspace
-
+import generate.impl.pomgenerationstrategy as pomgenerationstrategy
 import os
 import tempfile
 import unittest
+
 
 GROUP_ID = "group"
 POM_TEMPLATE_FILE = "foo.template"
@@ -42,7 +42,9 @@ class CrawlerTest(unittest.TestCase):
                                  pomcontent.NOOP,
                                  dependency_metadata=depmd,
                                  label_to_overridden_fq_label={})
-        crawler = crawlerm.Crawler(ws, pom_template="")
+        pom_template = ""
+        strategy = pomgenerationstrategy.PomGenerationStrategy(ws, pom_template)
+        crawler = crawlerm.Crawler(ws, strategy, pom_template)
 
         result = crawler.crawl(["lib/a2"])
 
@@ -67,7 +69,9 @@ class CrawlerTest(unittest.TestCase):
                                  pomcontent.NOOP,
                                  dependency_metadata=depmd,
                                  label_to_overridden_fq_label={})
-        crawler = crawlerm.Crawler(ws, pom_template="")
+        pom_template = ""
+        strategy = pomgenerationstrategy.PomGenerationStrategy(ws, pom_template)
+        crawler = crawlerm.Crawler(ws, strategy, pom_template)
 
         result = crawler.crawl(["lib/a2"])
 
@@ -94,7 +98,9 @@ class CrawlerTest(unittest.TestCase):
                                  pomcontent.NOOP,
                                  dependency_metadata=depmd,
                                  label_to_overridden_fq_label={})
-        crawler = crawlerm.Crawler(ws, pom_template="")
+        pom_template = ""
+        strategy = pomgenerationstrategy.PomGenerationStrategy(ws, pom_template)
+        crawler = crawlerm.Crawler(ws, strategy, pom_template)
 
         result = crawler.crawl(["lib/a2"])
 
@@ -102,32 +108,6 @@ class CrawlerTest(unittest.TestCase):
         self.assertEqual("lib/a2", result.nodes[0].artifact_def.bazel_package)
         self.assertEqual("lib/a1", result.nodes[0].children[0].artifact_def.bazel_package)
         self.assertEqual("foo", result.nodes[0].children[0].artifact_def.bazel_target)
-
-    def test_non_default_package_ref__skip_pom_gen_mode(self):
-        """
-        lib/a2 -> lib/a1:foo, lib/a1 has pom_gen_mode = "skip"
-        https://github.com/salesforce/pomgen/tree/master/examples/skip-artifact-generation
-        """
-        repo_root_path = tempfile.mkdtemp("monorepo")
-        self._write_library_root(repo_root_path, "lib")
-        self._add_artifact(repo_root_path, "lib/a1", "skip", deps=[])
-        self._add_artifact(repo_root_path, "lib/a2", "template", deps=["//lib/a1:foo"])
-
-        depmd = dependencym.DependencyMetadata(None)
-        ws = workspace.Workspace(repo_root_path,
-                                 self._get_config(),
-                                 maveninstallinfo.NOOP,
-                                 pomcontent.NOOP,
-                                 dependency_metadata=depmd,
-                                 label_to_overridden_fq_label={})
-        crawler = crawlerm.Crawler(ws, pom_template="")
-
-        result = crawler.crawl(["lib/a2"])
-
-        self.assertEqual(1, len(result.nodes))
-        self.assertEqual("lib/a2", result.nodes[0].artifact_def.bazel_package)
-        self.assertEqual("lib/a1", result.nodes[0].children[0].artifact_def.bazel_package)
-        self.assertIs(pomgenmode.SKIP, result.nodes[0].children[0].artifact_def.pom_generation_mode)
 
     def _get_config(self):
         return config.Config()

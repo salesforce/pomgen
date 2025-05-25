@@ -5,13 +5,17 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
-from functools import total_ordering
-import os
 
+import generate
+from functools import total_ordering
+ 
 
 @total_ordering
-class AbstractDependency(object):
+class AbstractDependency(generate.AbstractDependency):
     """
+    TODO rename this class to AbstractJarDependency and move it out of the
+    general crawl module.
+
 
     Required/always set:
 
@@ -43,10 +47,6 @@ class AbstractDependency(object):
     
     bazel_package: The bazel package this dependency lives in, None for 
         artifacts that are not built out of the repository (for example Guava).
-
-    bazel_target: If bazel_packge is not None, the specific target for this
-        dependency.
-
     """
     def __init__(self, group_id, artifact_id,
                  classifier=None, packaging=None, scope=None):
@@ -110,10 +110,6 @@ class AbstractDependency(object):
 
     @property
     def bazel_package(self):
-        raise Exception("must be implemented in subclass")
-
-    @property
-    def bazel_target(self):
         raise Exception("must be implemented in subclass")
 
     @property
@@ -199,10 +195,6 @@ class ThirdPartyDependency(AbstractDependency):
         return None
 
     @property
-    def bazel_target(self):
-        return None
-
-    @property
     def references_artifact(self):
         return True
 
@@ -239,12 +231,10 @@ class ThirdPartyDependency(AbstractDependency):
 
 class MonorepoDependency(AbstractDependency):
 
-    def __init__(self, artifact_def, bazel_target):
+    def __init__(self, artifact_def):
         super(MonorepoDependency, self).__init__(artifact_def.group_id,
                                                  artifact_def.artifact_id)
         self._artifact_def = artifact_def
-        self._bazel_target = MonorepoDependency._init_target(
-            artifact_def.bazel_package, bazel_target)
 
     @property
     def version(self):
@@ -260,10 +250,6 @@ class MonorepoDependency(AbstractDependency):
         return self._artifact_def.bazel_package
 
     @property
-    def bazel_target(self):
-        return self._bazel_target
-
-    @property
     def bazel_buildable(self):
         pom_template = self._artifact_def.custom_pom_template_content
         return self._artifact_def.pom_generation_mode.bazel_produced_artifact(pom_template)
@@ -271,14 +257,6 @@ class MonorepoDependency(AbstractDependency):
     @property
     def references_artifact(self):
         return self._artifact_def.pom_generation_mode.produces_artifact
-
-    @classmethod
-    def _init_target(clazz, bazel_package, bazel_target):
-        if bazel_target is not None:
-            return bazel_target
-        if bazel_package is not None:
-            return os.path.basename(bazel_package)
-        return None
 
     def _use_previously_released_artifact(self):
         if self._artifact_def.requires_release is not None:
@@ -314,11 +292,8 @@ def new_dep_from_maven_art_str(maven_artifact_str, name):
                                 classifier, packaging)
 
 
-def new_dep_from_maven_artifact_def(artifact_def, bazel_target=None):
-    if bazel_target  is None:
-        bazel_target = artifact_def.bazel_target
-    assert bazel_target is not None
-    return MonorepoDependency(artifact_def, bazel_target)
+def new_dep_from_maven_artifact_def(artifact_def):
+    return MonorepoDependency(artifact_def)
 
 
 """

@@ -86,8 +86,6 @@ class MavenArtifactDef(object):
         guaranteed to exist (see attr below) because pomgen supports "pom only"
         artifacts, which are foreign to bazel.
 
-    has_build_file: whether the bazel package actually has a build file.
-
     bazel_target: the bazel target that builds this artifact.
 
     library_path: the path to the root directory of the library this artifact
@@ -149,7 +147,6 @@ class MavenArtifactDef(object):
         self._requires_release = requires_release
         self._release_reason = None
         self._released_pom_content = released_pom_content
-        self._has_build_file = False
 
         # data cleanup/verification/sanitization
         # these are separate methods for better readability
@@ -218,10 +215,6 @@ class MavenArtifactDef(object):
     @property
     def bazel_package(self):
         return self._bazel_package
-
-    @property
-    def has_build_file(self):
-        return self._has_build_file
 
     @property
     def bazel_target(self):
