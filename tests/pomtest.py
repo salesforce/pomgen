@@ -391,7 +391,7 @@ monorepo artifact version #{version}
         artifact_def.custom_pom_template_content = "srpc #{com.grail.srpc:srpc-api:version}"
         srpc_artifact_def = buildpom.MavenArtifactDef(
             "com.grail.srpc", "srpc-api", "5.6.7", bazel_package="a/b/c")
-        srpc_dep = dependency.MonorepoDependency(srpc_artifact_def, bazel_target=None)
+        srpc_dep = dependency.MonorepoDependency(srpc_artifact_def)
         pomgen = pom.TemplatePomGen(ws, artifact_def)
         pomgen.register_dependencies_transitive_closure__library(set([srpc_dep]))
 
@@ -508,7 +508,7 @@ v2 #{@maven2//:org_apache_maven_mult_versions.version}
 
         # this guava dep is conflicting with an external dep -- internal package called a/b/c
         art = buildpom.MavenArtifactDef("com.google.guava","guava","29.0", bazel_package="a/b/c")
-        d = dependency.MonorepoDependency(art, bazel_target=None)
+        d = dependency.MonorepoDependency(art)
         pomgen.register_dependencies_transitive_closure__library(set([d]))
 
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
@@ -551,7 +551,7 @@ v2 #{@maven2//:org_apache_maven_mult_versions.version}
         srpc_artifact_def = buildpom.MavenArtifactDef("com.grail.srpc",
                                                       "srpc-api", "5.6.7")
         srpc_artifact_def = buildpom._augment_art_def_values(srpc_artifact_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
-        srpc_dep = dependency.MonorepoDependency(srpc_artifact_def, bazel_target=None)
+        srpc_dep = dependency.MonorepoDependency(srpc_artifact_def)
         artifact_def.custom_pom_template_content = """
 this artifact version #{version}
 logback coord #{ch.qos.logback:logback-classic:version}
@@ -715,7 +715,7 @@ __pomgen.end_dependency_customization__
         pomgen = pom.TemplatePomGen(ws, artifact_def)
         srpc_artifact_def = buildpom.MavenArtifactDef(
             "com.grail.srpc", "srpc-api", "5.6.7", bazel_package="a/b/c")
-        internal_dep = dependency.MonorepoDependency(srpc_artifact_def, bazel_target=None)
+        internal_dep = dependency.MonorepoDependency(srpc_artifact_def)
 
         external_dep = dependency.ThirdPartyDependency("name", "cg", "ca", "0.0.1")
         pomgen.register_dependencies_transitive_closure__library(set([external_dep, internal_dep]))
@@ -788,7 +788,7 @@ __pomgen.end_dependency_customization__
                                  pomcontent.NOOP,
                                  depmd,
                                  label_to_overridden_fq_label={})
-        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3", bazel_target="123")
+        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
         artifact_def.custom_pom_template_content = pom_template
         pomgen = pom.TemplatePomGen(ws, artifact_def)
         crawled_dep = dependency.ThirdPartyDependency("name", "cg", "ca", "0.0.1")
@@ -844,7 +844,7 @@ __pomgen.end_dependency_customization__
                                  pomcontent.NOOP,
                                  depmd,
                                  label_to_overridden_fq_label={})
-        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3", bazel_target="123")
+        artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
         artifact_def.custom_pom_template_content = pom_template
         pomgen = pom.TemplatePomGen(ws, artifact_def)
         crawled_dep = dependency.ThirdPartyDependency("name", "cg", "ca", "0.0.1")

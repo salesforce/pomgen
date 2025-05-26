@@ -13,7 +13,9 @@ py_library(
                  "src/common/*.py",
                  "src/config/*.py",
                  "src/common/*.py",
-                 "src/crawl/*.py"]),
+                 "src/crawl/*.py",
+                 "src/generate/*.py",
+                 "src/generate/impl/*.py"]),
     data = ["src/config/pom_template.xml"],
     visibility = ["//misc:__pkg__",],
 )

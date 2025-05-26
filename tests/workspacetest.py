@@ -190,7 +190,6 @@ class WorkspaceTest(unittest.TestCase):
         self.assertEqual(artifact_version, deps[0].version)
         self.assertFalse(deps[0].external)
         self.assertEqual(package_name, deps[0].bazel_package)
-        self.assertEqual("my_cool_target", deps[0].bazel_target)
         self.assertIsNone(deps[0].classifier)
 
     def test_src_dep_without_build_pom(self):

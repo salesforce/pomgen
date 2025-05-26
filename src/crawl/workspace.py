@@ -46,10 +46,11 @@ class Workspace:
 
     def parse_maven_artifact_def(self, package):
         """
-        Parses the Maven metadata files files in the specified package and 
-        returns a MavenArtifactDef instance.
+        Parses the Maven metadata files files at the specified (bazel) package,
+        which is a relative path from the repository root.
 
-        Returns None if there is no BUILD.pom file at the specified path.
+        Returns a MavenArtifactDef instance, None if there is no BUILD.pom
+        file at the specified path.
         """
         if package in self._package_to_artifact_def:
             return self._package_to_artifact_def[package]
@@ -92,6 +93,9 @@ class Workspace:
         return [art_def.bazel_package for art_def in art_defs if art_def.pom_generation_mode.produces_artifact]
 
     def _parse_dep_label(self, dep_label):
+        """
+        TODO: this has been move to the crawler class and can be removed.
+        """
         if dep_label in self.excluded_dependency_labels:
             return None
 
@@ -103,10 +107,8 @@ class Workspace:
         elif dep_label.startswith("//"):
             # src ref:
             package_path = dep_label[2:] # remove leading "//"
-            target_name = None
             i = package_path.rfind(":")
             if i != -1:
-                target_name = package_path[i+1:]
                 package_path = package_path[:i]
 
             for excluded_dependency_path in self.excluded_dependency_paths:
@@ -120,7 +122,7 @@ class Workspace:
 
                 raise Exception("no BUILD.pom file in package [%s]" % package_path)
             else:
-                return dependency.new_dep_from_maven_artifact_def(maven_artifact_def, target_name)
+                return dependency.new_dep_from_maven_artifact_def(maven_artifact_def)
         else:
             raise Exception("bad label [%s]" % dep_label)
 

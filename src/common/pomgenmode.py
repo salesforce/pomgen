@@ -25,6 +25,7 @@ class PomGenMode:
     of the `maven_artifact` rule.
 
     The following attributes are available:
+
         name:
           The name of this pom_generation_mode
 
@@ -35,16 +36,21 @@ class PomGenMode:
           Whether this pomgen mode represents an artifact that is built by
           Bazel (ie a jar)
 
+        query_dependency_attributes:
+          Whether to query the rule attributes that point to other dependencies
+          (and whether to crawl those dependencies, since that's why we query
+          them)
+
         additional_dependency_attrs:
           The rule attributes that point to other dependencies to process.
           For all pomgen modes, these attributes are "deps" and "runtime_deps".
           Additional attributes may be added using this parameter
     """
-    def __init__(self, name, produces_artifact, additional_dependency_attrs=()):
-        """
-        """
+    def __init__(self, name, produces_artifact, query_dependency_attributes,
+                 additional_dependency_attrs=()):
         self.name = name
         self.produces_artifact = produces_artifact
+        self.query_dependency_attributes = query_dependency_attributes
         self.dependency_attributes =\
             ("deps", "runtime_deps") + tuple(additional_dependency_attrs)
 
@@ -60,13 +66,18 @@ class PomGenMode:
 # the pom is generated from scratch, using a common skeleton base template
 # dynamic pom content is only the <dependencies> section, which is based on
 # BUILD file content
-DYNAMIC = PomGenMode("dynamic", produces_artifact=True,)
+DYNAMIC = PomGenMode("dynamic", produces_artifact=True,
+                     query_dependency_attributes=True)
 DYNAMIC.bazel_produced_artifact = types.MethodType(
     lambda self, pom_template_content: True, DYNAMIC)
 
 
 # the pom is generated based on a custom template file only
-TEMPLATE = PomGenMode("template", produces_artifact=True,)
+TEMPLATE = PomGenMode("template", produces_artifact=True,
+                      # False here because pom templates may or may not
+                      # have a build file - if there is a build file, it
+                      # is generally not related to the pom template
+                      query_dependency_attributes=False)
 # this is an edge case - for custom pom templates, the packaging tends to be
 # "pom" - that's the whole point. but we have a couple of cases with different
 # values (such as maven-plugin), in which case bazel is expected to build
@@ -79,6 +90,7 @@ TEMPLATE.bazel_produced_artifact = types.MethodType(
 # dependencies from this bazel package are "pushed up" to the closest parent
 # that has an artifact producing pom_generation_mode
 SKIP = PomGenMode("skip", produces_artifact=False,
+                  query_dependency_attributes=True,
                   additional_dependency_attrs=("exports",))
 SKIP.bazel_produced_artifact = types.MethodType(
     lambda self, pom_template_content: False, SKIP)

@@ -16,6 +16,7 @@ from crawl import pom as pomm
 from crawl import pomcontent
 from crawl import releasereason as rr
 from crawl import workspace
+import generate.impl.pomgenerationstrategy as pomgenerationstrategy
 import os
 import tempfile
 import unittest
@@ -66,7 +67,9 @@ class CrawlerTest(unittest.TestCase):
                                  pom_content=pomcontent.NOOP,
                                  dependency_metadata=depmd,
                                  label_to_overridden_fq_label={})
-        self.crawler = crawler.Crawler(ws, pom_template="")
+        pom_template = ""
+        strategy = pomgenerationstrategy.PomGenerationStrategy(ws, pom_template)
+        self.crawler = crawler.Crawler(ws, strategy, pom_template)
 
     def tearDown(self):
         os.chdir(self.cwd)

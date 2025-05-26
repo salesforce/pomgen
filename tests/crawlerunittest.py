@@ -15,6 +15,7 @@ from crawl import crawler as crawlerm
 from crawl import dependency
 from crawl import dependencymd as dependencymdm
 from crawl import workspace
+import generate.impl.pomgenerationstrategy as pomgenerationstrategy
 import unittest
 
 
@@ -41,8 +42,10 @@ class CrawlerUnitTest(unittest.TestCase):
                                 parent_node=parent_node)
         parent_node.children = (node,)
 
-        crawler = crawlerm.Crawler(workspace=self._get_workspace(),
-                                   pom_template=None)
+        pom_template = ""
+        ws = self._get_workspace()
+        strategy = pomgenerationstrategy.PomGenerationStrategy(ws, pom_template)
+        crawler = crawlerm.Crawler(ws, strategy, pom_template)
         # setup some other deps
         guava = self._get_3rdparty_dep("com.google:guava:20.0", "guava")
         self._associate_dep(crawler, parent_node, guava)
@@ -79,8 +82,12 @@ class CrawlerUnitTest(unittest.TestCase):
         a1_node.children = (a2_node,)
         a3_node = self._build_node("a3", "g/h/i", parent_node=a2_node)
         a2_node.children = (a3_node,)
-        crawler = crawlerm.Crawler(workspace=self._get_workspace(),
-                                   pom_template=None)
+
+        pom_template = ""
+        ws = self._get_workspace()
+        strategy = pomgenerationstrategy.PomGenerationStrategy(ws, pom_template)
+        crawler = crawlerm.Crawler(ws, strategy, pom_template)
+
         # setup 3rd party deps
         d1 = self._get_3rdparty_dep("com:d1:1.0.0", "d1")
         d2 = self._get_3rdparty_dep("com:d2:1.0.0", "d2")
@@ -130,8 +137,11 @@ class CrawlerUnitTest(unittest.TestCase):
         a1_node.children = (a2_node,)
         a3_node = self._build_node("a3", "g/h/i", parent_node=a2_node)
         a2_node.children = (a3_node,)
-        crawler = crawlerm.Crawler(workspace=self._get_workspace(),
-                                   pom_template=None)
+
+        pom_template = ""
+        ws = self._get_workspace()
+        strategy = pomgenerationstrategy.PomGenerationStrategy(ws, pom_template)
+        crawler = crawlerm.Crawler(ws, strategy, pom_template=None)
         # setup 3rd party deps
         d1 = self._get_3rdparty_dep("com:d1:1.0.0", "d1")
         d2 = self._get_3rdparty_dep("com:d2:1.0.0", "d2")
@@ -178,8 +188,11 @@ class CrawlerUnitTest(unittest.TestCase):
         a2_node = self._build_node("a2", "d/e/f", parent_node=a1_node)
         a3_node = self._build_node("a3", "g/h/i", parent_node=a1_node)
         a1_node.children = (a2_node, a3_node,)
-        crawler = crawlerm.Crawler(workspace=self._get_workspace(),
-                                   pom_template=None)
+
+        pom_template = ""
+        ws = self._get_workspace()
+        strategy = pomgenerationstrategy.PomGenerationStrategy(ws, pom_template)
+        crawler = crawlerm.Crawler(ws, strategy, pom_template=None)
         # setup 3rd party deps
         d1 = self._get_3rdparty_dep("com:d1:1.0.0", "d1")
         d2 = self._get_3rdparty_dep("com:d2:1.0.0", "d2")
@@ -227,8 +240,12 @@ class CrawlerUnitTest(unittest.TestCase):
         a10_node.parents = (a1_node, a2_node,)
         a1_node.children = (a10_node,)
         a2_node.children = (a10_node,)
-        crawler = crawlerm.Crawler(workspace=self._get_workspace(),
-                                   pom_template=None)
+
+        pom_template = ""
+        ws = self._get_workspace()
+        strategy = pomgenerationstrategy.PomGenerationStrategy(ws, pom_template)
+        crawler = crawlerm.Crawler(ws, strategy, pom_template)
+
         # setup 3rd party deps
         d1 = self._get_3rdparty_dep("com:d1:1.0.0", "d1")
         d2 = self._get_3rdparty_dep("com:d2:1.0.0", "d2")
@@ -277,8 +294,10 @@ class CrawlerUnitTest(unittest.TestCase):
         a2_node = self._build_node("a2", "d/e/f", parent_node=a1_node)
         a3_node = self._build_node("a3", "g/h/i", parent_node=a1_node)
         a1_node.children = (a2_node, a3_node,)
+        pom_template = ""
         ws = self._get_workspace()
-        crawler = crawlerm.Crawler(workspace=ws, pom_template=None)
+        strategy = pomgenerationstrategy.PomGenerationStrategy(ws, pom_template)
+        crawler = crawlerm.Crawler(ws, strategy, pom_template)
         # setup 3rd party deps
         d1 = self._get_3rdparty_dep("com:d1:1.0.0", "d1")
         t1 = self._get_3rdparty_dep("com:t1:1.0.0", "t1")
@@ -349,8 +368,11 @@ class CrawlerUnitTest(unittest.TestCase):
         a2_node = self._build_node("a2", "d/e/f", parent_node=a1_node)
         a3_node = self._build_node("a3", "g/h/i", parent_node=a1_node)
         a1_node.children = (a2_node, a3_node,)
+
+        pom_template = ""
         ws = self._get_workspace()
-        crawler = crawlerm.Crawler(workspace=ws, pom_template=None)
+        strategy = pomgenerationstrategy.PomGenerationStrategy(ws, pom_template)
+        crawler = crawlerm.Crawler(ws, strategy, pom_template)
         # setup 3rd party deps
         d1 = self._get_3rdparty_dep("com:d1:1.0.0", "d1")
         t1 = self._get_3rdparty_dep("com:t1:1.0.0", "t1")
@@ -412,8 +434,11 @@ class CrawlerUnitTest(unittest.TestCase):
         a2_node = self._build_node("a2", "d/e/f", parent_node=a1_node)
         a3_node = self._build_node("a3", "g/h/i", parent_node=a1_node)
         a1_node.children = (a2_node, a3_node,)
+
+        pom_template = ""
         ws = self._get_workspace()
-        crawler = crawlerm.Crawler(workspace=ws, pom_template=None)
+        strategy = pomgenerationstrategy.PomGenerationStrategy(ws, pom_template)
+        crawler = crawlerm.Crawler(ws, strategy, pom_template)
         # setup 3rd party deps
         d1 = self._get_3rdparty_dep("com:d1:1.0.0", "d1")
         t1 = self._get_3rdparty_dep("com:t1:1.0.0", "t1")
@@ -464,7 +489,9 @@ class CrawlerUnitTest(unittest.TestCase):
         a2_node = self._build_node("a2", "d/e/f", parent_node=a1_node, library_path="l2")
         a1_node.children = (a2_node,)
         ws = self._get_workspace()
-        crawler = crawlerm.Crawler(workspace=ws, pom_template=None)
+        pom_template = ""
+        strategy = pomgenerationstrategy.PomGenerationStrategy(ws, pom_template)
+        crawler = crawlerm.Crawler(ws, strategy, pom_template)
         crawler.library_to_nodes["l1"].append(a1_node)
         crawler.library_to_nodes["l2"].append(a2_node)
         crawler.library_to_artifact["l1"].append(a1_node.artifact_def)
@@ -488,8 +515,11 @@ class CrawlerUnitTest(unittest.TestCase):
         a2_node = self._build_node("a2", "d/e/f", parent_node=a1_node, library_path="l2")
         a3_node = self._build_node("a3", "g/h/i", parent_node=a1_node, library_path="l3")
         a1_node.children = (a2_node, a3_node,)
+
         ws = self._get_workspace()
-        crawler = crawlerm.Crawler(workspace=ws, pom_template=None)
+        pom_template = ""
+        strategy = pomgenerationstrategy.PomGenerationStrategy(ws, pom_template)
+        crawler = crawlerm.Crawler(ws, strategy, pom_template)
         crawler.library_to_nodes["l1"].append(a1_node)
         crawler.library_to_nodes["l2"].append(a2_node)
         crawler.library_to_nodes["l3"].append(a3_node)
@@ -541,23 +571,20 @@ class CrawlerUnitTest(unittest.TestCase):
             pom_generation_mode=pom_generation_mode,
             library_path=library_path,
             bazel_target="t1")
-        dep = dependency.new_dep_from_maven_artifact_def(art_def)
-        return crawlerm.Node(parent=parent_node, artifact_def=art_def, dependency=dep)
+        return crawlerm.Node(parent_node, art_def, label.Label(bazel_package))
 
     def _get_associated_deps(self, crawler, node):
         return self._get_deps_for_node(node, crawler.target_to_dependencies)
 
     def _get_deps_for_node(self, node, target_to_deps):
-        target_key = crawlerm.Crawler._get_target_key(node.artifact_def.bazel_package, node.dependency)
-        return target_to_deps[target_key]
+        return target_to_deps[node.label]
 
     def _associate_dep(self, crawler, node, dep):
-        target_key = crawlerm.Crawler._get_target_key(node.artifact_def.bazel_package, node.dependency)
         deps_list = dep if isinstance(dep, (list, tuple)) else [dep]
-        if target_key in crawler.target_to_dependencies:
-            crawler.target_to_dependencies[target_key] += deps_list
+        if node.label in crawler.target_to_dependencies:
+            crawler.target_to_dependencies[node.label] += deps_list
         else:
-            crawler.target_to_dependencies[target_key] = deps_list
+            crawler.target_to_dependencies[node.label] = deps_list
 
     def _get_3rdparty_dep(self, artifact_str, name):
         return dependency.new_dep_from_maven_art_str(artifact_str, name)
