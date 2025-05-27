@@ -15,7 +15,8 @@ py_library(
                  "src/common/*.py",
                  "src/crawl/*.py",
                  "src/generate/*.py",
-                 "src/generate/impl/*.py"]),
+                 "src/generate/impl/*.py",
+                 "src/generate/impl/py/*.py"]),
     data = ["src/config/pom_template.xml"],
     visibility = ["//misc:__pkg__",],
 )
@@ -224,6 +225,15 @@ py_test(
 py_test(
     name = "pomparsertest",
     srcs = ["tests/pomparsertest.py"],
+    deps = [":pomgen_lib"],
+    imports = ["src"],
+    size = "small",
+    python_version = python_version,
+)
+
+py_test(
+    name = "requirementsparsertest",
+    srcs = ["tests/generate/impl/py/requirementsparsertest.py"],
     deps = [":pomgen_lib"],
     imports = ["src"],
     size = "small",
