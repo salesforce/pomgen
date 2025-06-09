@@ -25,7 +25,13 @@ def get_function_block(code, function_name):
     The logic below assumes the character ')' doesn't appear anywhere in the 
     function name or arguments.
     """
-    start = code.index(function_name)
+    start = code.find(function_name)
+    if start == -1:
+        return None
+    if not _has_only_space_in_front(code, start):
+        return None
+    if not _has_space_until_open_paren(code, start + len(function_name)):
+        return None
     end = code.index(")", start + len(function_name))
     return code[start:end+1]
 
@@ -140,3 +146,31 @@ def _find_name_start_index(content, equals_index):
         else:
             if not within_name:
                 within_name = True
+
+
+def _has_only_space_in_front(text, start_index):
+    if start_index < 0 or start_index >= len(text):
+        raise IndexError("start_index is out of bounds")
+    current_index = start_index
+    while current_index > 0:
+        current_index -= 1
+        char = text[current_index]
+        if char == '\n':
+            return True
+        if not char.isspace():
+            return False
+    return True
+
+
+def _has_space_until_open_paren(text, start_index):
+    if start_index < 0 or start_index >= len(text):
+        raise IndexError("start_index is out of bounds")
+    current_index = start_index
+    while current_index < len(text):
+        char = text[current_index]
+        if char == '(':
+            return True
+        if not char.isspace():
+            return False
+        current_index += 1
+    return False

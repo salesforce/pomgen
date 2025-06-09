@@ -13,12 +13,11 @@ class Dependency:
     def to_pyproject_format(self):
         """Convert the dependency to pyproject.toml format."""
         if self.extras:
-            # Format as TOML table with extras
             extras_str = ', '.join(f'"{extra}"' for extra in self.extras)
-            return f'{{ version = "{self.version}", extras = [{extras_str}] }}'
+            version = f'{{ version = "{self.version}", extras = [{extras_str}] }}'
         else:
-            # Simple version string for packages without extras
-            return f'"{self.version}"'
+            version = self.version
+        return f"{self.name}=={version}"
 
     def __eq__(self, other):
         if not isinstance(other, Dependency):

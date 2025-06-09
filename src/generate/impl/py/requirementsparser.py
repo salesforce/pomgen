@@ -40,8 +40,8 @@ class RequirementsParser:
                     current_vias = []
                     line = line[3:].strip()
                     if len(line) > 0:
-                        if line.startswith("-r tools"):
-                            # via -r tools/pip/requirements.in
+                        if line.startswith("-r "):
+                            # via -r path/to/requirements.in
                             # directly referenced in requirements, no via
                             pass
                         else:
@@ -50,7 +50,12 @@ class RequirementsParser:
                     if current_vias is None:
                         pass
                     else:
-                        current_vias.append(line)
+                        if line.startswith("-r "):
+                            # via -r path/to/requirements.in
+                            # directly referenced in requirements, no via
+                            pass
+                        else:
+                            current_vias.append(line)
             else:
                 version_sep = "==" # we should support other comparison binops?
                 version_sep_index = line.index(version_sep)

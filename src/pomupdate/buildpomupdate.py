@@ -18,8 +18,9 @@ import re
 import sys
 
 
-def update_build_pom_file(root_path, 
+def update_build_pom_file(root_path,
                           packages,
+                          generation_strategy_factory,
                           new_version=None,
                           update_version_using_version_incr_strat=False,
                           new_version_incr_strat=None,
@@ -36,9 +37,9 @@ def update_build_pom_file(root_path,
         - pom_generation_mode
     """
     for package in packages:
-        build_pom_content, build_pom_path = mdfiles.read_file(root_path, package, mdfiles.BUILD_POM_FILE_NAME)
-        if build_pom_content is None:
-            raise Exception("Invalid package [%s]" % package)
+        strategy = generation_strategy_factory.get_strategy_for_package(package)
+        assert strategy is not None, "Invalid package [%s]" % package
+        build_pom_content, build_pom_path = mdfiles.read_file(root_path, package, strategy.metadata_path)
         try:
             current_version = version.parse_build_pom_version(build_pom_content)
 
@@ -68,7 +69,7 @@ def update_build_pom_file(root_path,
 
             # set version back to previously released version
             if updated_version is None and set_version_to_last_released_version:
-                build_pom_released_content, _ = mdfiles.read_file(root_path, package, "BUILD.pom.released")
+                build_pom_released_content, _ = mdfiles.read_file(root_path, package, strategy.released_metadata_path)
                 if build_pom_released_content is None:
                     # if the BUILD.pom.released file cannot be read (because it
                     # doesn't exist (yet), this is a noop - we don't want to 
@@ -101,54 +102,56 @@ def update_build_pom_file(root_path,
             if add_pom_generation_mode_if_missing:
                 build_pom_content = _add_pom_generation_mode_if_missing_in_build_pom_content(build_pom_content)
                     
-            mdfiles.write_file(build_pom_content, root_path, package, mdfiles.BUILD_POM_FILE_NAME)
+            mdfiles.write_file(build_pom_content, root_path, package, strategy.metadata_path)
         except:
             print("[ERROR] Cannot update BUILD.pom [%s]: %s" % (build_pom_path, sys.exc_info()))
             raise
 
 
-def update_released_artifact(root_path, packages, source_exclusions, new_version=None, new_artifact_hash=None, use_current_artifact_hash=False):
+def update_released_artifact(root_path, packages, generation_strategy_factory,
+                             source_exclusions,
+                             new_version=None,
+                             new_artifact_hash=None,
+                             use_current_artifact_hash=False):
     """
     Updates the version and/or artifact hash attributes in the 
     BUILD.pom.released files in the specified packages.
 
     Creates the BUILD.pom.released file if it does not exist.
     """
-
     for package in packages:
-        path = os.path.join(root_path, package, "BUILD.pom.released")
+        print(">>>>", package)
+        strategy = generation_strategy_factory.get_strategy_for_package(package)
+        assert strategy is not None, "Invalid package [%s]" % package
+
+        if use_current_artifact_hash:
+            assert new_artifact_hash is None
+            # we need to load the BUILD.pom file to see whether additional
+            # packages are specified
+            packages = [package]
+            art_def = buildpom.parse_maven_artifact_def(root_path, package, strategy)
+            if art_def is not None:
+                # if the BUILD.pom file doesn't exist, then by definition
+                # additional packages cannot have been specified
+                packages += art_def.additional_change_detected_packages
+            artifact_hash = git.get_dir_hash(root_path, packages, source_exclusions)
+            assert artifact_hash is not None
+        else:
+            artifact_hash = new_artifact_hash
+
         try:
-            if use_current_artifact_hash:
-                assert new_artifact_hash is None
-                # we need to load the BUILD.pom file to see whether additional
-                # packages are specified
-                packages = [package]
-                art_def = buildpom.parse_maven_artifact_def(root_path, package)
-                if art_def is not None:
-                    # if the BUILD.pom file doesn't exist, then by definition
-                    # additional packages cannot have been specified
-                    packages += art_def.additional_change_detected_packages
-                artifact_hash = git.get_dir_hash(root_path, packages, source_exclusions)
-                assert artifact_hash is not None
+            released_file_path = strategy.released_metadata_path
+            content, _ = mdfiles.read_file(root_path, package, released_file_path)
+            if content is None:
+                content = _get_build_pom_released_content(new_version, artifact_hash)
             else:
-                artifact_hash = new_artifact_hash
-
-            content, _ = mdfiles.read_file(root_path, package, mdfiles.BUILD_POM_RELEASED_FILE_NAME)
-
-            if content is not None:
                 if new_version is not None:
                     content = _update_version_in_build_pom_released_content(content, new_version)
                 if artifact_hash is not None:
                     content = _update_artifact_hash_in_build_pom_released_content(content, artifact_hash)
-                mdfiles.write_file(content, root_path, package, mdfiles.BUILD_POM_RELEASED_FILE_NAME)
-
-            else:
-                if not os.path.exists(os.path.join(root_path, package)):
-                    raise Exception("Bad package %s" % package)
-                content = _get_build_pom_released_content(new_version, artifact_hash)
-                mdfiles.write_file(content, root_path, package, mdfiles.BUILD_POM_RELEASED_FILE_NAME)
+            mdfiles.write_file(content, root_path, package, released_file_path)
         except:            
-            print("[ERROR] Cannot update BUILD.pom.released [%s]: %s" % (path, sys.exc_info()))
+            print("[ERROR] Cannot update released manifest [%s]: %s" % (released_file_path, sys.exc_info()))
             raise
 
 

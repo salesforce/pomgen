@@ -41,6 +41,17 @@ f2(
 )
 """.strip())
 
+    def test_get_function_block__substring_match(self):
+        content = """
+foo
+blah
+maven_artifact_update(
+  a = 1,
+  b = 2
+)
+"""
+
+        self.assertIsNone(code.get_function_block(content, "artifact"))
 
     def test_parse_attributes(self):
         content = """

@@ -7,7 +7,10 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 
 
 from crawl import git
+import crawl.pomcontent as pomcontent
 from common.os_util import run_cmd
+from config import config
+from generate import generationstrategyfactory
 from config import exclusions
 from pomupdate import buildpomupdate
 import os
@@ -17,27 +20,35 @@ import unittest
 
 class BuildPomUpdateTest(unittest.TestCase):
 
+    def setUp(self):
+        self.repo_root = tempfile.mkdtemp("repo")
+        self.fac = generationstrategyfactory.GenerationStrategyFactory(
+            self.repo_root, config.Config(), pomcontent.NOOP, verbose=True)
+
     def test_update_BUILD_pom_released__set_artifact_hash_to_current(self):
         pack1 = "somedir/p1"
         pack2 = "somedir/p2"
-        repo_root = tempfile.mkdtemp("monorepo")
-        pack1_path = os.path.join(repo_root, pack1)
+        pack1_path = os.path.join(self.repo_root, pack1)
         os.makedirs(os.path.join(pack1_path))
-        pack2_path = os.path.join(repo_root, pack2)
+        pack2_path = os.path.join(self.repo_root, pack2)
         os.makedirs(os.path.join(pack2_path))
+        self._write_build_pom(pack1_path, "a1", "g1", "1.2.3", "dynamic")
         self._write_build_pom_released(pack1_path, "1.0.0", "aaa")
+        self._write_build_pom(pack2_path, "a1", "g1", "1.2.3", "dynamic")
         self._write_build_pom_released(pack2_path, "1.0.0", "bbb")
-        self._setup_repo(repo_root)
-        self._commit(repo_root)
-        self._touch_file_at_path(repo_root, pack1, "blah1")
-        self._commit(repo_root)
-        pack1_hash = git.get_dir_hash(repo_root, [pack1], exclusions.src_exclusions())
-        self._touch_file_at_path(repo_root, pack2, "blah2")
-        self._commit(repo_root)
-        pack2_hash = git.get_dir_hash(repo_root, [pack2], exclusions.src_exclusions())
+        self._setup_repo(self.repo_root)
+        self._commit(self.repo_root)
+        self._touch_file_at_path(self.repo_root, pack1, "blah1")
+        self._commit(self.repo_root)
+        pack1_hash = git.get_dir_hash(self.repo_root, [pack1], exclusions.src_exclusions())
+        self._touch_file_at_path(self.repo_root, pack2, "blah2")
+        self._commit(self.repo_root)
+        pack2_hash = git.get_dir_hash(self.repo_root, [pack2], exclusions.src_exclusions())
         self.assertNotEqual(pack1_hash, pack2_hash)
 
-        buildpomupdate.update_released_artifact(repo_root, [pack1, pack2], exclusions.src_exclusions(), use_current_artifact_hash=True)
+        buildpomupdate.update_released_artifact(
+            self.repo_root, [pack1, pack2], self.fac,
+            exclusions.src_exclusions(), use_current_artifact_hash=True)
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom.released"), "r") as f:
             content = f.read()
@@ -47,29 +58,32 @@ class BuildPomUpdateTest(unittest.TestCase):
             self.assertIn('artifact_hash = "%s"' % pack2_hash, content)
 
     def test_update_BUILD_pom_released__set_artifact_hash_to_current__with_change_detected_packages(self):
-        pack1 = "somedir/p1"
-        pack2 = "somedir/p2"
-        repo_root = tempfile.mkdtemp("monorepo")
-        pack1_path = os.path.join(repo_root, pack1)
+        pack1 = "somedirs/p1"
+        pack2 = "somedirs/p2"
+        pack1_path = os.path.join(self.repo_root, pack1)
         os.makedirs(os.path.join(pack1_path))
-        pack2_path = os.path.join(repo_root, pack2)
+        pack2_path = os.path.join(self.repo_root, pack2)
         os.makedirs(os.path.join(pack2_path))
+        self._write_build_pom(pack1_path, "p1", "g1", "0.0.0",
+                              pom_generation_mode="dynamic")
         self._write_build_pom_released(pack1_path, "1.0.0", "aaa")
         self._write_build_pom(pack2_path, "p2", "g2", "0.0.0",
                               pom_generation_mode="dynamic",
                               additional_change_detected_packages=[pack1])
         self._write_build_pom_released(pack2_path, "1.0.0", "bbb")
-        self._setup_repo(repo_root)
-        self._commit(repo_root)
-        self._touch_file_at_path(repo_root, pack1, "blah1")
-        self._commit(repo_root)
-        pack1_hash = git.get_dir_hash(repo_root, [pack1], exclusions.src_exclusions())
-        self._touch_file_at_path(repo_root, pack2, "blah2")
-        self._commit(repo_root)
-        pack2_hash = git.get_dir_hash(repo_root, [pack2, pack1], exclusions.src_exclusions())
+        self._setup_repo(self.repo_root)
+        self._commit(self.repo_root)
+        self._touch_file_at_path(self.repo_root, pack1, "blah1")
+        self._commit(self.repo_root)
+        pack1_hash = git.get_dir_hash(self.repo_root, [pack1], exclusions.src_exclusions())
+        self._touch_file_at_path(self.repo_root, pack2, "blah2")
+        self._commit(self.repo_root)
+        pack2_hash = git.get_dir_hash(self.repo_root, [pack2, pack1], exclusions.src_exclusions())
         self.assertNotEqual(pack1_hash, pack2_hash)
 
-        buildpomupdate.update_released_artifact(repo_root, [pack1, pack2], exclusions.src_exclusions(), use_current_artifact_hash=True)
+        buildpomupdate.update_released_artifact(
+            self.repo_root, [pack1, pack2], self.fac,
+            exclusions.src_exclusions(), use_current_artifact_hash=True)
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom.released"), "r") as f:
             content = f.read()
@@ -80,9 +94,10 @@ class BuildPomUpdateTest(unittest.TestCase):
 
     def test_update_BUILD_pom_released(self):
         package_rel_path = "package1/package2"
-        repo_root = tempfile.mkdtemp("monorepo")
-        repo_package = os.path.join(repo_root, package_rel_path)
+        repo_package = os.path.join(self.repo_root, package_rel_path)
         os.makedirs(repo_package)
+        self._write_build_pom(repo_package, "p1", "g1", "0.0.0",
+                              pom_generation_mode="dynamic")
         self._write_build_pom_released(repo_package, "1.0.0", "aaa")
         # sanity:
         with open(os.path.join(repo_package, "MVN-INF", "BUILD.pom.released"), "r") as f:
@@ -90,7 +105,9 @@ class BuildPomUpdateTest(unittest.TestCase):
             self.assertIn('version = "1.0.0"', content)
             self.assertIn('artifact_hash = "aaa"', content)
 
-        buildpomupdate.update_released_artifact(repo_root, [package_rel_path], exclusions.src_exclusions(), "1.2.3", "abc")
+        buildpomupdate.update_released_artifact(
+            self.repo_root, [package_rel_path], self.fac,
+            exclusions.src_exclusions(), "1.2.3", "abc")
 
         with open(os.path.join(repo_package, "MVN-INF", "BUILD.pom.released"), "r") as f:
             content = f.read()
@@ -100,11 +117,14 @@ class BuildPomUpdateTest(unittest.TestCase):
 
     def test_create_BUILD_pom_released(self):
         package_rel_path = "package1/package2"
-        repo_root = tempfile.mkdtemp("monorepo")
-        repo_package = os.path.join(repo_root, package_rel_path)
+        repo_package = os.path.join(self.repo_root, package_rel_path)
         os.makedirs(repo_package)
+        self._write_build_pom(repo_package, "p1", "g1", "0.0.0",
+                              pom_generation_mode="dynamic")
 
-        buildpomupdate.update_released_artifact(repo_root, [package_rel_path], exclusions.src_exclusions(), "1.2.3", "abc")
+        buildpomupdate.update_released_artifact(
+            self.repo_root, [package_rel_path], self.fac,
+            exclusions.src_exclusions(), "1.2.3", "abc")
 
         with open(os.path.join(repo_package, "MVN-INF", "BUILD.pom.released"), "r") as f:
             content = f.read()
@@ -322,13 +342,12 @@ maven_artifact_update(
 
     def test_update_version_in_BUILD_pom(self):
         package_rel_path = "package1/package2"
-        repo_root = tempfile.mkdtemp("monorepo")
-        repo_package = os.path.join(repo_root, package_rel_path)
+        repo_package = os.path.join(self.repo_root, package_rel_path)
         os.makedirs(repo_package)
         self._write_build_pom(repo_package, "a1", "g1", "1.2.3")
 
-        buildpomupdate.update_build_pom_file(repo_root, [package_rel_path],
-                                             "4.5.6")
+        buildpomupdate.update_build_pom_file(
+            self.repo_root, [package_rel_path], self.fac, "4.5.6")
 
         with open(os.path.join(repo_package, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
@@ -340,14 +359,13 @@ maven_artifact_update(
 
     def test_update_version_in_BUILD_pom__use_version_increment_strategy(self):
         package_rel_path = "package1/package2"
-        repo_root = tempfile.mkdtemp("monorepo")
-        repo_package = os.path.join(repo_root, package_rel_path)
+        repo_package = os.path.join(self.repo_root, package_rel_path)
         os.makedirs(repo_package)
         self._write_build_pom(repo_package, "a1", "g1", "1.2.3",
                               version_increment_strategy="major")
 
         buildpomupdate.update_build_pom_file(
-            repo_root, [package_rel_path], new_version=None,
+            self.repo_root, [package_rel_path], self.fac, new_version=None,
             update_version_using_version_incr_strat=True)
 
         with open(os.path.join(repo_package, "MVN-INF", "BUILD.pom"), "r") as f:
@@ -360,14 +378,13 @@ maven_artifact_update(
 
     def test_update_version_in_BUILD_pom__use_version_increment_strategy__snap(self):
         package_rel_path = "package1/package2"
-        repo_root = tempfile.mkdtemp("monorepo")
-        repo_package = os.path.join(repo_root, package_rel_path)
+        repo_package = os.path.join(self.repo_root, package_rel_path)
         os.makedirs(repo_package)
         self._write_build_pom(repo_package, "a1", "g1", "1.2.3-SNAPSHOT",
                               version_increment_strategy="patch")
 
         buildpomupdate.update_build_pom_file(
-            repo_root, [package_rel_path], new_version=None,
+            self.repo_root, [package_rel_path], self.fac, new_version=None,
             update_version_using_version_incr_strat=True)
 
         with open(os.path.join(repo_package, "MVN-INF", "BUILD.pom"), "r") as f:
@@ -380,15 +397,14 @@ maven_artifact_update(
 
     def test_update_version_in_BUILD_pom__set_to_last_released_version(self):
         package_rel_path = "package1/package2"
-        repo_root = tempfile.mkdtemp("monorepo")
-        repo_package = os.path.join(repo_root, package_rel_path)
+        repo_package = os.path.join(self.repo_root, package_rel_path)
         os.makedirs(repo_package)
         self._write_build_pom(repo_package, "a1", "g1", "1.2.3",
                               version_increment_strategy="major")
         self._write_build_pom_released(repo_package, "10.9.8", "abcdef")
 
         buildpomupdate.update_build_pom_file(
-            repo_root, [package_rel_path], new_version=None,
+            self.repo_root, [package_rel_path], self.fac, new_version=None,
             set_version_to_last_released_version=True)
 
         with open(os.path.join(repo_package, "MVN-INF", "BUILD.pom"), "r") as f:
@@ -402,21 +418,20 @@ maven_artifact_update(
     def test_update_version_in_BUILD_pom__set_to_last_released_version__multiple_files(self):
         pack1 = "somedir/p1"
         pack2 = "somedir/p2"
-        repo_root = tempfile.mkdtemp("monorepo")
-        pack1_path = os.path.join(repo_root, pack1)
+        pack1_path = os.path.join(self.repo_root, pack1)
         os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "1.1.1-SNAPSHOT",
                               version_increment_strategy="major")
         self._write_build_pom_released(pack1_path, "9.9.9", "abcdef")
 
-        pack2_path = os.path.join(repo_root, pack2)
+        pack2_path = os.path.join(self.repo_root, pack2)
         os.makedirs(pack2_path)
         self._write_build_pom(pack2_path, "p2a", "p2g", "2.2.2",
                               version_increment_strategy="major")
         self._write_build_pom_released(pack2_path, "10.10.10", "abcdef")
 
         buildpomupdate.update_build_pom_file(
-            repo_root, [pack1, pack2], new_version=None,
+            self.repo_root, [pack1, pack2], self.fac, new_version=None,
             set_version_to_last_released_version=True)
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
@@ -437,14 +452,13 @@ maven_artifact_update(
 
     def test_update_version_in_BUILD_pom__set_to_last_released_version__no_build_pom_released_file(self):
         package_rel_path = "package1/package2"
-        repo_root = tempfile.mkdtemp("monorepo")
-        repo_package = os.path.join(repo_root, package_rel_path)
+        repo_package = os.path.join(self.repo_root, package_rel_path)
         os.makedirs(repo_package)
         self._write_build_pom(repo_package, "a1", "g1", "1.2.3",
                               version_increment_strategy="major")
 
         buildpomupdate.update_build_pom_file(
-            repo_root, [package_rel_path], new_version=None,
+            self.repo_root, [package_rel_path], self.fac, new_version=None,
             set_version_to_last_released_version=True)
 
         with open(os.path.join(repo_package, "MVN-INF", "BUILD.pom"), "r") as f:
@@ -458,19 +472,19 @@ maven_artifact_update(
     def test_update_version_in_BUILD_pom__add_version_qualifier(self):
         pack1 = "somedir/p1"
         pack2 = "somedir/p2"
-        repo_root = tempfile.mkdtemp("monorepo")
-        pack1_path = os.path.join(repo_root, pack1)
+        pack1_path = os.path.join(self.repo_root, pack1)
         os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "1.1.1-SNAPSHOT",
                               version_increment_strategy="major")
 
-        pack2_path = os.path.join(repo_root, pack2)
+        pack2_path = os.path.join(self.repo_root, pack2)
         os.makedirs(pack2_path)
         self._write_build_pom(pack2_path, "p2a", "p2g", "2.2.2",
                               version_increment_strategy="major")
 
         buildpomupdate.update_build_pom_file(
-            repo_root, [pack1, pack2], version_qualifier_to_add="the_qual")
+            self.repo_root, [pack1, pack2], self.fac,
+            version_qualifier_to_add="the_qual")
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
@@ -490,14 +504,14 @@ maven_artifact_update(
 
     def test_update_version_in_BUILD_pom__rm_version_qualifier__with_dash(self):
         pack1 = "somedir/p1"
-        repo_root = tempfile.mkdtemp("monorepo")
-        pack1_path = os.path.join(repo_root, pack1)
+        pack1_path = os.path.join(self.repo_root, pack1)
         os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-foo-blah",
                               version_increment_strategy="major")
 
         buildpomupdate.update_build_pom_file(
-            repo_root, [pack1], version_qualifier_to_remove="-foo")
+            self.repo_root, [pack1], self.fac,
+            version_qualifier_to_remove="-foo")
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
@@ -509,14 +523,14 @@ maven_artifact_update(
 
     def test_update_version_in_BUILD_pom__rm_version_qualifier__without_dash(self):
         pack1 = "somedir/p1"
-        repo_root = tempfile.mkdtemp("monorepo")
-        pack1_path = os.path.join(repo_root, pack1)
+        pack1_path = os.path.join(self.repo_root, pack1)
         os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-SNAPSHOT",
                               version_increment_strategy="major")
 
         buildpomupdate.update_build_pom_file(
-            repo_root, [pack1], version_qualifier_to_remove="SNAPSHOT")
+            self.repo_root, [pack1], self.fac,
+            version_qualifier_to_remove="SNAPSHOT")
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
@@ -528,14 +542,14 @@ maven_artifact_update(
 
     def test_update_version_in_BUILD_pom__rm_version_qualifier__substr1(self):
         pack1 = "somedir/p1"
-        repo_root = tempfile.mkdtemp("monorepo")
-        pack1_path = os.path.join(repo_root, pack1)
+        pack1_path = os.path.join(self.repo_root, pack1)
         os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-SNAPSHOT",
                               version_increment_strategy="major")
 
         buildpomupdate.update_build_pom_file(
-            repo_root, [pack1], version_qualifier_to_remove="SNAP")
+            self.repo_root, [pack1], self.fac,
+            version_qualifier_to_remove="SNAP")
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
@@ -547,14 +561,13 @@ maven_artifact_update(
 
     def test_update_version_in_BUILD_pom__rm_version_qualifier__substr2(self):
         pack1 = "somedir/p1"
-        repo_root = tempfile.mkdtemp("monorepo")
-        pack1_path = os.path.join(repo_root, pack1)
+        pack1_path = os.path.join(self.repo_root, pack1)
         os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-foo-blah",
                               version_increment_strategy="major")
 
         buildpomupdate.update_build_pom_file(
-            repo_root, [pack1], version_qualifier_to_remove="fo")
+            self.repo_root, [pack1], self.fac, version_qualifier_to_remove="fo")
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
@@ -566,14 +579,14 @@ maven_artifact_update(
 
     def test_update_version_in_BUILD_pom__rm_version_qualifier__substr3(self):
         pack1 = "somedir/p1"
-        repo_root = tempfile.mkdtemp("monorepo")
-        pack1_path = os.path.join(repo_root, pack1)
+        pack1_path = os.path.join(self.repo_root, pack1)
         os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-foo-rel9",
                               version_increment_strategy="major")
 
         buildpomupdate.update_build_pom_file(
-            repo_root, [pack1], version_qualifier_to_remove="rel")
+            self.repo_root, [pack1], self.fac,
+            version_qualifier_to_remove="rel")
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
@@ -585,14 +598,14 @@ maven_artifact_update(
 
     def test_update_version_in_BUILD_pom__add_version_qualifier__slashes_are_removed(self):
         pack1 = "somedir/p1"
-        repo_root = tempfile.mkdtemp("monorepo")
-        pack1_path = os.path.join(repo_root, pack1)
+        pack1_path = os.path.join(self.repo_root, pack1)
         os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1",
                               version_increment_strategy="major")
 
         buildpomupdate.update_build_pom_file(
-            repo_root, [pack1], version_qualifier_to_add="-the_qual-")
+            self.repo_root, [pack1], self.fac,
+            version_qualifier_to_add="-the_qual-")
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
@@ -604,16 +617,15 @@ maven_artifact_update(
 
     def test_update_version_in_BUILD_pom__add_version_qualifier__non_snapshot_qualifiers_are_appended(self):
         pack1 = "somedir/p1"
-        repo_root = tempfile.mkdtemp("monorepo")
-        pack1_path = os.path.join(repo_root, pack1)
+        pack1_path = os.path.join(self.repo_root, pack1)
         os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1",
                               version_increment_strategy="major")
 
         buildpomupdate.update_build_pom_file(
-            repo_root, [pack1], version_qualifier_to_add="rel1")
+            self.repo_root, [pack1], self.fac, version_qualifier_to_add="rel1")
         buildpomupdate.update_build_pom_file(
-            repo_root, [pack1], version_qualifier_to_add="rel2")
+            self.repo_root, [pack1], self.fac, version_qualifier_to_add="rel2")
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
@@ -625,14 +637,14 @@ maven_artifact_update(
 
     def test_update_version_in_BUILD_pom__add_version_qualifier__duplicate_is_not_repeated(self):
         pack1 = "somedir/p1"
-        repo_root = tempfile.mkdtemp("monorepo")
-        pack1_path = os.path.join(repo_root, pack1)
+        pack1_path = os.path.join(self.repo_root, pack1)
         os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-casino",
                               version_increment_strategy="major")
 
         buildpomupdate.update_build_pom_file(
-            repo_root, [pack1], version_qualifier_to_add="casino")
+            self.repo_root, [pack1], self.fac,
+            version_qualifier_to_add="casino")
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
@@ -645,14 +657,14 @@ maven_artifact_update(
 
     def test_update_version_in_BUILD_pom__add_version_qualifier__no_duplicate_SNAPSHOT(self):
         pack1 = "somedir/p1"
-        repo_root = tempfile.mkdtemp("monorepo")
-        pack1_path = os.path.join(repo_root, pack1)
+        pack1_path = os.path.join(self.repo_root, pack1)
         os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-SNAPSHOT",
                               version_increment_strategy="major")
 
         buildpomupdate.update_build_pom_file(
-            repo_root, [pack1], version_qualifier_to_add="SNAPSHOT")
+            self.repo_root, [pack1], self.fac,
+            version_qualifier_to_add="SNAPSHOT")
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
@@ -665,14 +677,14 @@ maven_artifact_update(
 
     def test_update_pom_generation_mode_in_BUILD_pom(self):
         pack1 = "somedir/p1"
-        repo_root = tempfile.mkdtemp("monorepo")
-        pack1_path = os.path.join(repo_root, pack1)
+        pack1_path = os.path.join(self.repo_root, pack1)
         os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1",
                               pom_generation_mode="jar")
 
         buildpomupdate.update_build_pom_file(
-            repo_root, [pack1], new_pom_generation_mode="template")
+            self.repo_root, [pack1], self.fac,
+            new_pom_generation_mode="template")
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
@@ -685,14 +697,14 @@ maven_artifact_update(
 
     def test_add_pom_generation_mode_to_BUILD_pom(self):
         pack1 = "somedir/p1"
-        repo_root = tempfile.mkdtemp("monorepo")
-        pack1_path = os.path.join(repo_root, pack1)
+        pack1_path = os.path.join(self.repo_root, pack1)
         os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1",
                               pom_generation_mode=None)
 
         buildpomupdate.update_build_pom_file(
-            repo_root, [pack1], new_pom_generation_mode="mypomgenmode")
+            self.repo_root, [pack1], self.fac,
+            new_pom_generation_mode="mypomgenmode")
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()

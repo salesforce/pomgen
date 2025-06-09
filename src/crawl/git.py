@@ -75,9 +75,9 @@ def _get_file_path_filter(rel_path, source_exclusions):
     excluded_rel_paths += [os.path.join(rel_path, f) for f in mdfiles.get_package_relative_metadata_directory_paths()]
 
     # these paths are ignored
-    #   BUILD: a type of metadata file as far as pomgen is concerned
-    excluded_rel_path_files = [os.path.join(rel_path, f) for f in ["BUILD",]]
-    excluded_rel_path_files += [os.path.join(rel_path, f) for f in mdfiles.get_package_relative_metadata_file_paths()]
+    #   BUILD[.bazel]: pomgen tracks changes to these by checking whether there
+    #                  are diffs in the generated manifest
+    excluded_rel_path_files = [os.path.join(rel_path, f) for f in ["BUILD", "BUILD.bazel"]]
 
     # special case for exluding nested pomgen metadata (MVN-INF) directories.
     # this is to avoid the edge case that updating metadata in a inner bazel

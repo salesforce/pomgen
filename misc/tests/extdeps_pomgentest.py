@@ -10,6 +10,7 @@ import os
 import tempfile
 import unittest
 
+
 class ExtDepsPomgenTest(unittest.TestCase):
 
     def test_extdeps_pomgens(self):

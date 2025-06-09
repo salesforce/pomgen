@@ -5,8 +5,13 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
+from common import maveninstallinfo
 from common import pomgenmode
+from config import config
 from crawl import buildpom
+from crawl import dependencymd as dependencymdm
+from crawl import pomcontent
+import generate.impl.pomgenerationstrategy as pomgenerationstrategy
 import os
 import tempfile
 import unittest
@@ -27,7 +32,8 @@ class BuildPomTest(unittest.TestCase):
                               include_deps=False,
                               deps = ["//a/b/c", "//d/e/f"])
 
-        art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
+        art_def = buildpom.parse_maven_artifact_def(
+            repo_root, package_rel_path, self._get_strategy())
 
         self.assertEqual(group_id, art_def.group_id)
         self.assertEqual(artifact_id, art_def.artifact_id)
@@ -45,6 +51,18 @@ class BuildPomTest(unittest.TestCase):
         self.assertEqual(None, art_def.jar_path)
         self.assertFalse(art_def.gen_dependency_management_pom)
 
+    def test_parse_without_BUILD_pom(self):
+        package_rel_path = "package1/package2"
+        repo_root = tempfile.mkdtemp("reporoot")
+        repo_package = os.path.join(repo_root, package_rel_path)
+        os.makedirs(repo_package)
+
+        artifact_def = buildpom.parse_maven_artifact_def(
+            repo_root, package_rel_path, self._get_strategy())
+
+        # TODO - can this throw an exception with a useful message?
+        self.assertIsNone(artifact_def)
+
     def test_parse_BUILD__pom__empty_deps(self):
         package_rel_path = "package1/package2"
         group_id = "group1"
@@ -57,7 +75,8 @@ class BuildPomTest(unittest.TestCase):
                               "template",
                               deps = [])
 
-        art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
+        art_def = buildpom.parse_maven_artifact_def(
+            repo_root, package_rel_path, self._get_strategy())
 
         self.assertEqual([], art_def.deps)
 
@@ -73,13 +92,15 @@ class BuildPomTest(unittest.TestCase):
         self._write_build_pom(repo_package, artifact_id, group_id, version,
                               "dynamic",
                               generate_dependency_management_pom=True)
-        art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
+        art_def = buildpom.parse_maven_artifact_def(
+            repo_root, package_rel_path, self._get_strategy())
         self.assertTrue(art_def.gen_dependency_management_pom)
 
         self._write_build_pom(repo_package, artifact_id, group_id, version,
                               "dynamic",
                               generate_dependency_management_pom=False)
-        art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
+        art_def = buildpom.parse_maven_artifact_def(
+            repo_root, package_rel_path, self._get_strategy())
         self.assertFalse(art_def.gen_dependency_management_pom)
 
     def test_parse_BUILD_pom_with_change_detection(self):
@@ -94,13 +115,15 @@ class BuildPomTest(unittest.TestCase):
         self._write_build_pom(repo_package, artifact_id, group_id, version,
                               "dynamic",
                               change_detection=False)
-        art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
+        art_def = buildpom.parse_maven_artifact_def(
+            repo_root, package_rel_path, self._get_strategy())
         self.assertFalse(art_def.change_detection)
 
         self._write_build_pom(repo_package, artifact_id, group_id, version,
                               "dynamic",
                               change_detection=True)
-        art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
+        art_def = buildpom.parse_maven_artifact_def(
+            repo_root, package_rel_path, self._get_strategy())
         self.assertTrue(art_def.change_detection)
 
     def test_parse_BUILD_pom_and_BUILD_pom_released(self):
@@ -116,7 +139,8 @@ class BuildPomTest(unittest.TestCase):
         self._write_build_pom(repo_package, artifact_id, group_id, version, "dynamic")
         self._write_build_pom_released(repo_package, released_version, released_artifact_hash)
 
-        art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
+        art_def = buildpom.parse_maven_artifact_def(
+            repo_root, package_rel_path, self._get_strategy())
 
         self.assertEqual(group_id, art_def.group_id)
         self.assertEqual(artifact_id, art_def.artifact_id)
@@ -140,7 +164,8 @@ class BuildPomTest(unittest.TestCase):
         os.makedirs(repo_package)
         self._write_build_pom(repo_package, artifact_id, group_id, version, pom_gen_mode="dynamic")
 
-        art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
+        art_def = buildpom.parse_maven_artifact_def(
+            repo_root, package_rel_path, self._get_strategy())
 
         self.assertIs(pomgenmode.DYNAMIC, art_def.pom_generation_mode)
 
@@ -154,7 +179,8 @@ class BuildPomTest(unittest.TestCase):
         os.makedirs(repo_package)
         self._write_build_pom(repo_package, artifact_id, group_id, version, pom_gen_mode="dynamic")
 
-        art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
+        art_def = buildpom.parse_maven_artifact_def(
+            repo_root, package_rel_path, self._get_strategy())
 
         self.assertIs(pomgenmode.DYNAMIC, art_def.pom_generation_mode)
         self.assertTrue(art_def.pom_generation_mode.produces_artifact)
@@ -169,7 +195,8 @@ class BuildPomTest(unittest.TestCase):
         os.makedirs(repo_package)
         self._write_build_pom(repo_package, artifact_id, group_id, version, pom_gen_mode="template")
 
-        art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
+        art_def = buildpom.parse_maven_artifact_def(
+            repo_root, package_rel_path, self._get_strategy())
 
         self.assertIs(pomgenmode.TEMPLATE, art_def.pom_generation_mode)
         self.assertTrue(art_def.pom_generation_mode.produces_artifact)
@@ -188,7 +215,8 @@ class BuildPomTest(unittest.TestCase):
             pom_gen_mode="template",
             additional_change_detected_packages=more_packages)
 
-        art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
+        art_def = buildpom.parse_maven_artifact_def(
+            repo_root, package_rel_path, self._get_strategy())
 
         self.assertEqual(art_def.additional_change_detected_packages, ["root/a/b/c", "root/d/e/f"])
 
@@ -199,7 +227,8 @@ class BuildPomTest(unittest.TestCase):
         os.makedirs(repo_package)
         self._write_build_pom_skip_generation_mode(repo_package)
 
-        art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
+        art_def = buildpom.parse_maven_artifact_def(
+            repo_root, package_rel_path, self._get_strategy())
 
         self.assertIs(pomgenmode.SKIP, art_def.pom_generation_mode)
         self.assertEqual(None, art_def.group_id)
@@ -228,7 +257,8 @@ class BuildPomTest(unittest.TestCase):
                               pom_gen_mode="template",
                               jar_path=jar_path)
 
-        art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
+        art_def = buildpom.parse_maven_artifact_def(
+            repo_root, package_rel_path, self._get_strategy())
 
         self.assertEqual("package1/package2/a-jar.jar", art_def.jar_path)
 
@@ -245,7 +275,8 @@ class BuildPomTest(unittest.TestCase):
                               pom_gen_mode="template",
                               bazel_target=target)
 
-        art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
+        art_def = buildpom.parse_maven_artifact_def(
+            repo_root, package_rel_path, self._get_strategy())
 
         self.assertEqual(target, art_def.bazel_target)
 
@@ -260,7 +291,8 @@ class BuildPomTest(unittest.TestCase):
         self._write_build_pom(repo_package, artifact_id, group_id, version, "dynamic")
         pom_content = self._write_pom_xml_released(repo_package)
 
-        art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
+        art_def = buildpom.parse_maven_artifact_def(
+            repo_root, package_rel_path, self._get_strategy())
 
         # strip because loading the pom strips trailing whitespace
         self.assertEqual(pom_content.strip(), art_def.released_pom_content)
@@ -278,7 +310,8 @@ class BuildPomTest(unittest.TestCase):
                               pom_template_file="pom.template")
         template_content = self._write_pom_template(repo_package)
 
-        art_def = buildpom.parse_maven_artifact_def(repo_root, package_rel_path)
+        art_def = buildpom.parse_maven_artifact_def(
+            repo_root, package_rel_path, self._get_strategy())
 
         # strip because loading the template strips trailing whitespace
         self.assertEqual(template_content.strip(), art_def.custom_pom_template_content)
@@ -373,6 +406,14 @@ released_maven_artifact(
         with open(os.path.join(path, "pom.template"), "w") as f:
            f.write(template_content)
         return template_content
+
+    def _get_strategy(self):
+        strategy = pomgenerationstrategy.PomGenerationStrategy(
+            "root", config.Config(), maveninstallinfo.NOOP,
+            dependencymdm.DependencyMetadata(None),
+            pomcontent.NOOP, label_to_overridden_fq_label={}, verbose=True)
+        strategy.initialize()
+        return strategy
 
 
 if __name__ == '__main__':
