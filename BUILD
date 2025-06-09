@@ -24,6 +24,12 @@ py_library(
     visibility = ["//misc:__pkg__",],
 )
 
+# we will rename pomgen to gen
+alias(
+    name = "gen",
+    actual = ":pomgen"
+)
+
 py_binary(
     name = "pomgen",
     srcs = ["src/pomgen.py"],
