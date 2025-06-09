@@ -40,6 +40,7 @@ class ExtDepsPomgenTest(unittest.TestCase):
         self._add_WORKSPACE_file()
         self._add_maven_install_json_file()
         self._add_pom_template()
+        self._add_rc_file()
 
     def _add_WORKSPACE_file(self):
         self._write_file("", "", "WORKSPACE", "needs to exist")
@@ -80,9 +81,16 @@ class ExtDepsPomgenTest(unittest.TestCase):
         """
         self._write_file("", "", "maven_install.json", content)
 
+    def _add_rc_file(self):
+       self._write_file("","",".popeyerc", """
+[general]
+pom_template_path=pom_template.xml
+maven_install_paths=maven_install.json
+""")
+
     def _add_pom_template(self):
         content = "#{dependencies}"
-        self._write_file("src", "config", "pom_template.xml", content)
+        self._write_file("", "", "pom_template.xml", content)
 
     def _write_file(self, package_rel_path, rel_path, filename, content):
         path = os.path.join(self.repo_root_path, package_rel_path, rel_path, 

@@ -41,6 +41,16 @@ uvloop==0.21.0 \
 llama-cloud==0.1.15 \
     --hash=sha256:3ec98422072ee4290c1e7597bc33889af3f03edb2a50ab09c15d5586d9f8635c \
     --hash=sha256:8e7376346d580b244a87d023eb7493506f06b53c898fb2a2e712b9fe7eb5b310
+    # via httpx
+
+# The following packages are considered to be unsafe in a requirements file:
+setuptools==75.8.1 \
+    --hash=sha256:3bc32c0b84c643299ca94e77f834730f126efd621de0cc1de64119e0e17dab1f \
+    --hash=sha256:65fb779a8f28895242923582eadca2337285f0891c2c9e160754df917c3d2530
+    # via
+    #   -r tools/pip/requirements.in
+    #   opentelemetry-instrumentation
+
 """
 
 
@@ -52,7 +62,7 @@ class RequirementsParserTest(unittest.TestCase):
     def test_parse_requirements_lock_file(self):
         dependencies = self.parser.parse_requirements_lock_file(CONTENT)
 
-        self.assertEqual(7, len(dependencies))
+        self.assertEqual(8, len(dependencies))
         ansi = dependencies[0]
         self.assertEqual("ansi", ansi.name)
         self.assertEqual("0.3.7", ansi.version)
@@ -81,14 +91,18 @@ class RequirementsParserTest(unittest.TestCase):
         self.assertEqual("llama-cloud", llama_cloud.name)
         self.assertEqual("0.1.15", llama_cloud.version)
         self.assertEqual(0, len(llama_cloud.extras))
+        setuptools = dependencies[7]
+        self.assertEqual("setuptools", setuptools.name)
+        self.assertEqual("75.8.1", setuptools.version)
 
         self.assertEqual(1, len(pydantic.child_dependencies))
         self.assertIs(pydantic.child_dependencies[0], ansi)
         self.assertEqual(1, len(cffi.child_dependencies))
         self.assertIs(cffi.child_dependencies[0], pydantic)
-        self.assertEqual(2, len(httpx.child_dependencies))
+        self.assertEqual(3, len(httpx.child_dependencies))
         self.assertIs(httpx.child_dependencies[0], ansi)
         self.assertIs(httpx.child_dependencies[1], cffi)
+        self.assertIs(httpx.child_dependencies[2], setuptools)
         self.assertEqual(1, len(llama_cloud.child_dependencies))
         self.assertIs(llama_cloud.child_dependencies[0], cffi)
         self.assertEqual(1, len(uvicorn.child_dependencies))

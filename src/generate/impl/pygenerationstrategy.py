@@ -46,7 +46,7 @@ class PyGenerationStrategy(generate.AbstractGenerationStrategy):
         """
         if label.is_source_ref:
             assert artifact_def is not None
-            return dependency.Dependency(artifact_def.artifact_id, artifact_def.version)
+            return dependency.Dependency(artifact_def.artifact_id, artifact_def.version, artifact_def)
         else:
             assert label in self._label_to_ext_dep, "unknown third party dependency [%s]" % label
             return self._label_to_ext_dep[label]
@@ -73,7 +73,8 @@ class PyGenerationStrategy(generate.AbstractGenerationStrategy):
             if self._verbose and len(deps) > 0:
                 logger.info("Parsing locked file %s" % path)
             for dep in deps:
-                lbl = labelm.Label("@%s//%s" % (repositoy_name, dep.name)) 
+                label_name = dep.name.replace("-", "_") # what else?
+                lbl = labelm.Label("@%s//%s" % (repositoy_name, label_name)) 
                 label_to_dep[lbl] = dep
                 if self._verbose:
                     logger.info("  %s->%s" % (lbl, dep))

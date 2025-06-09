@@ -19,7 +19,7 @@ py_library(
                  "src/generate/*.py",
                  "src/generate/impl/*.py",
                  "src/generate/impl/py/*.py"]),
-    data = ["src/config/pom_template.xml"],
+    data = ["examples/java/pom_template.xml"],
     deps = ["@pip//lxml"],
     visibility = ["//misc:__pkg__",],
 )

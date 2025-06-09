@@ -1,23 +1,36 @@
+from functools import total_ordering
+
+
+@total_ordering
 class Dependency:
     """
     Represents a Python package dependency.
+
+    TODO - abstract common shape into ABC.
     """
 
-    def __init__(self, name, version, extras=None):
+    def __init__(self, name, version, artifact_def=None, extras=None):
         self.name = name
         self.version = version
+        self.artifact_def = artifact_def # TODO we don't want to store this
         self.extras = tuple(extras) if extras else ()
 
         self.child_dependencies = []
 
+    # TODO impl in terms of label in crawler
+    @property
+    def references_artifact(self):
+        if self.artifact_def is None:
+            return True # 3rd party dep
+        else:
+            return self.artifact_def.pom_generation_mode.produces_artifact
+
     def to_pyproject_format(self):
         """Convert the dependency to pyproject.toml format."""
-        if self.extras:
-            extras_str = ', '.join(f'"{extra}"' for extra in self.extras)
-            version = f'{{ version = "{self.version}", extras = [{extras_str}] }}'
-        else:
-            version = self.version
-        return f"{self.name}=={version}"
+        extras_str = ""
+        if len(self.extras) > 0:
+            extras_str = "[%s]" % ",".join(self.extras)
+        return f"{self.name}{extras_str}=={self.version}"
 
     def __eq__(self, other):
         if not isinstance(other, Dependency):
@@ -25,6 +38,9 @@ class Dependency:
         return (self.name == other.name and 
                 self.version == other.version and
                 self.extras == other.extras)
+
+    def __lt__(self, other):
+        return self.name < other.name
 
     def __hash__(self):
         return hash((self.name, self.version, self.extras))

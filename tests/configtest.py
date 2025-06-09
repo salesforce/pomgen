@@ -29,7 +29,7 @@ class ConfigTest(unittest.TestCase):
 
         cfg = config.load(repo_root)
 
-        self.assertEqual(("maven_install.json",), cfg.maven_install_paths)
+        self.assertEqual((), cfg.maven_install_paths)
 
     def test_maven_install_paths(self):
         repo_root = tempfile.mkdtemp("root")
