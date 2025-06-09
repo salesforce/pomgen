@@ -5,7 +5,9 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
-python_version = "PY3"
+load("@aspect_rules_py//py:defs.bzl", "py_test")
+load("@rules_python//python:pip.bzl", "compile_pip_requirements")
+
 
 py_library(
     name = "pomgen_lib",
@@ -18,6 +20,7 @@ py_library(
                  "src/generate/impl/*.py",
                  "src/generate/impl/py/*.py"]),
     data = ["src/config/pom_template.xml"],
+    deps = ["@pip//lxml"],
     visibility = ["//misc:__pkg__",],
 )
 
@@ -25,22 +28,39 @@ py_binary(
     name = "pomgen",
     srcs = ["src/pomgen.py"],
     deps = [":pomgen_lib"],
-    python_version = python_version,
+    imports = ["src"],
 )
 
 py_binary(
     name = "query",
     srcs = ["src/query.py"],
-    deps = [":pomgen_lib"],    
-    python_version = python_version,
+    deps = [":pomgen_lib"],
+    imports = ["src"],
 )
 
 py_binary(
     name = "update",
     srcs = ["src/update.py"],
     deps = [":pomgen_lib"],
-    python_version = python_version,
+    imports = ["src"],
 )
+
+
+# bazel run //:pip.update
+compile_pip_requirements(
+    name = "pip",
+    src = "//tools/pip:requirements.in",
+    requirements_txt = "//tools/pip:requirements_lock.txt",
+)
+
+# bazel run //:examples_pip.update
+compile_pip_requirements(
+    name = "examples_pip",
+    src = "//examples/python/pip:requirements.in",
+    requirements_txt = "//examples/python/pip:requirements_lock.txt",
+)
+
+
 
 py_test(
     name = "argsupporttest",
@@ -48,7 +68,6 @@ py_test(
     deps = [":pomgen_lib"],
     imports = ["src"],
     size = "small",
-    python_version = python_version,
 )
 
 py_test(
@@ -57,7 +76,6 @@ py_test(
     deps = [":pomgen_lib"],
     imports = ["src"],
     size = "small",
-    python_version = python_version,
 )
 
 py_test(
@@ -66,7 +84,6 @@ py_test(
     deps = [":pomgen_lib"],
     imports = ["src"],
     size = "small",
-    python_version = python_version,
 )
 
 py_test(
@@ -75,7 +92,6 @@ py_test(
     deps = [":pomgen_lib"],
     imports = ["src"],
     size = "small",
-    python_version = python_version,
 )
 
 py_test(
@@ -84,7 +100,6 @@ py_test(
     deps = [":pomgen_lib"],
     imports = ["src"],
     size = "small",
-    python_version = python_version,
 )
 
 py_test(
@@ -93,7 +108,6 @@ py_test(
     deps = [":pomgen_lib"],
     imports = ["src"],
     size = "small",
-    python_version = python_version,
 )
 
 py_test(
@@ -102,7 +116,6 @@ py_test(
     deps = [":pomgen_lib"],
     imports = ["src"],
     size = "small",
-    python_version = python_version,
 )
 
 py_test(
@@ -111,7 +124,6 @@ py_test(
     deps = [":pomgen_lib"],    
     imports = ["src"],
     size = "small",
-    python_version = python_version,
 )
 
 py_test(
@@ -120,7 +132,6 @@ py_test(
     deps = [":pomgen_lib"],
     imports = ["src"],
     size = "small",
-    python_version = python_version,
 )
 
 py_test(
@@ -129,7 +140,6 @@ py_test(
     deps = [":pomgen_lib"],
     imports = ["src"],
     size = "small",
-    python_version = python_version,
 )
 
 py_test(
@@ -138,7 +148,6 @@ py_test(
     deps = [":pomgen_lib"],
     imports = ["src"],
     size = "small",
-    python_version = python_version,
 )
 
 py_test(
@@ -147,7 +156,6 @@ py_test(
     deps = [":pomgen_lib"],
     imports = ["src"],
     size = "small",
-    python_version = python_version,
 )
 
 py_test(
@@ -156,7 +164,6 @@ py_test(
     deps = [":pomgen_lib"],
     imports = ["src"],
     size = "small",
-    python_version = python_version,
 )
 
 py_test(
@@ -165,7 +172,6 @@ py_test(
     deps = [":pomgen_lib"],
     imports = ["src"],
     size = "small",
-    python_version = python_version,
 )
 
 py_test(
@@ -174,7 +180,6 @@ py_test(
     deps = [":pomgen_lib"],
     imports = ["src"],
     size = "small",
-    python_version = python_version,
 )
 
 py_test(
@@ -183,7 +188,6 @@ py_test(
     deps = [":pomgen_lib"],
     imports = ["src"],
     size = "small",
-    python_version = python_version,
 )
 
 py_test(
@@ -192,7 +196,6 @@ py_test(
     deps = [":pomgen_lib"],
     imports = ["src"],
     size = "small",
-    python_version = python_version,
 )
 
 py_test(
@@ -201,7 +204,6 @@ py_test(
     deps = [":pomgen_lib"],
     imports = ["src"],
     size = "small",
-    python_version = python_version,
 )
 
 py_test(
@@ -210,7 +212,14 @@ py_test(
     deps = [":pomgen_lib"],
     imports = ["src"],
     size = "small",
-    python_version = python_version,
+)
+
+py_test(
+    name = "pomgenerationstrategytest",
+    srcs = ["tests/generate/impl/pomgenerationstrategytest.py"],
+    deps = [":pomgen_lib"],
+    imports = ["src"],
+    size = "small",
 )
 
 py_test(
@@ -219,7 +228,6 @@ py_test(
     deps = [":pomgen_lib"],
     imports = ["src"],
     size = "small",
-    python_version = python_version,
 )
 
 py_test(
@@ -228,7 +236,6 @@ py_test(
     deps = [":pomgen_lib"],
     imports = ["src"],
     size = "small",
-    python_version = python_version,
 )
 
 py_test(
@@ -237,7 +244,6 @@ py_test(
     deps = [":pomgen_lib"],
     imports = ["src"],
     size = "small",
-    python_version = python_version,
 )
 
 py_test(
@@ -246,7 +252,6 @@ py_test(
     deps = [":pomgen_lib"],
     imports = ["src"],
     size = "small",
-    python_version = python_version,
 )
 
 py_test(
@@ -255,7 +260,6 @@ py_test(
     deps = [":pomgen_lib"],
     imports = ["src"],
     size = "small",
-    python_version = python_version,
 )
 
 py_test(
@@ -264,5 +268,4 @@ py_test(
     deps = [":pomgen_lib"],            
     imports = ["src"],
     size = "small",
-    python_version = python_version,
 )

@@ -13,18 +13,14 @@ from common import argsupport
 from common import common
 from common import instancequery
 from common import logger
-from common import maveninstallinfo
-from common import overridefileinfo
 from common import version_increment_strategy as vis
 from config import config
 from crawl import bazel
-from crawl import buildpom
 from crawl import crawler
-from crawl import dependencymd as dependencymdm
 from crawl import libaggregator
 from crawl import pomcontent
 from crawl import workspace
-from generate.impl import pomgenerationstrategy
+from generate import generationstrategyfactory
 import argparse
 import json
 import os
@@ -90,25 +86,18 @@ if __name__ == "__main__":
     args = _parse_arguments(sys.argv[1:])
     repo_root = common.get_repo_root(args.repo_root)
     cfg = config.load(repo_root, args.verbose)
-    dep_overrides = overridefileinfo.OverrideFileInfo(
-        cfg.override_file_paths, repo_root).label_to_overridden_fq_label
-    mvn_install_info = maveninstallinfo.MavenInstallInfo(cfg.maven_install_paths)
-    depmd = dependencymdm.DependencyMetadata(cfg.jar_artifact_classifier)    
-    ws = workspace.Workspace(repo_root, cfg, mvn_install_info, pomcontent.NOOP,
-                             dependency_metadata=depmd,
-                             label_to_overridden_fq_label=dep_overrides,
-                             verbose=args.verbose)
-
+    fac = generationstrategyfactory.GenerationStrategyFactory(
+        repo_root, cfg, pomcontent.NOOP, args.verbose)
+    ws = workspace.Workspace(repo_root, cfg, fac)
     determine_packages_to_process = (args.list_libraries or 
                                      args.list_artifacts or
                                      args.library_release_plan_tree or
                                      args.library_release_plan_json or
                                      args.artifact_release_plan)
-
     if determine_packages_to_process:
         if args.verbose:
             logger.debug("Starting with package [%s]" % args.package)
-        packages = argsupport.get_all_packages(repo_root, args.package, args.verbose)
+        packages = argsupport.get_all_packages(repo_root, args.package, fac, args.verbose)
         if args.verbose:
             logger.debug("Expanded initial package to %s" % packages)
         packages = ws.filter_artifact_producing_packages(packages)
@@ -119,7 +108,7 @@ if __name__ == "__main__":
 
     if args.list_libraries:
         all_libs = []
-        for lib_path in bazel.query_all_libraries(repo_root, packages, args.verbose):
+        for lib_path in bazel.query_all_libraries(repo_root, packages, fac, args.verbose):
             attrs = OrderedDict()
             attrs["name"] = os.path.basename(lib_path)
             attrs["path"] = lib_path
@@ -127,7 +116,7 @@ if __name__ == "__main__":
         print(_to_json(all_libs))
 
     if args.list_artifacts:
-        maven_artifacts = [buildpom.parse_maven_artifact_def(repo_root, p) for p in packages]
+        maven_artifacts = [ws.parse_maven_artifact_def(p) for p in packages]
         all_artifacts = []
         if args.filter is not None:
             query = instancequery.InstanceQuery(args.filter)
@@ -142,7 +131,7 @@ if __name__ == "__main__":
         print(_to_json(all_artifacts))
 
     if args.list_external_dependencies:
-        external_dependencies = sorted(ws.external_dependencies, key=lambda dep: dep.bazel_label_name)
+        external_dependencies = sorted(fac.load_all_external_dependencies(), key=lambda dep: dep.bazel_label_name)
         ext_deps = []
         for external_dependency in external_dependencies:
             attrs = OrderedDict()
@@ -164,8 +153,7 @@ if __name__ == "__main__":
                                    args.artifact_release_plan)
 
     if crawl_artifact_dependencies:
-        gen_strategy = pomgenerationstrategy.PomGenerationStrategy(ws, cfg.pom_template)
-        crawler = crawler.Crawler(ws, gen_strategy, cfg.pom_template, args.verbose)
+        crawler = crawler.Crawler(ws, args.verbose)
         crawler_result = crawler.crawl(packages, force_release=args.force)
         root_library_nodes = libaggregator.get_libraries_to_release(crawler_result.nodes)
 

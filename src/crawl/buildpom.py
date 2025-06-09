@@ -98,6 +98,8 @@ class MavenArtifactDef(object):
 
     released_pom_content: if the file pom.xml.released exists next to the 
         BUILD.pom file, the content of the pom.xml.released file.
+
+    generation_strategy: the generation strategy for this artfifact.
     =====
 
 
@@ -126,7 +128,8 @@ class MavenArtifactDef(object):
                  bazel_target=None,
                  library_path=None,
                  requires_release=None,
-                 released_pom_content=None):
+                 released_pom_content=None,
+                 generation_strategy=None):
         self._group_id = group_id
         self._artifact_id = artifact_id
         self._version = version
@@ -147,6 +150,7 @@ class MavenArtifactDef(object):
         self._requires_release = requires_release
         self._release_reason = None
         self._released_pom_content = released_pom_content
+        self._generation_strategy = generation_strategy
 
         # data cleanup/verification/sanitization
         # these are separate methods for better readability
@@ -255,6 +259,10 @@ class MavenArtifactDef(object):
     def version_increment_strategy_name(self):
         return self._version_increment_strategy_name
 
+    @property
+    def generation_strategy(self):
+        return self._generation_strategy
+
     def __str__(self):
         return "%s:%s" % (self._group_id, self._artifact_id)
 
@@ -271,46 +279,61 @@ class MavenArtifactDef(object):
 ReleasedMavenArtifactDef = namedtuple("ReleasedMavenArtifactDef", "version artifact_hash")
 
 
-def parse_maven_artifact_def(root_path, package):
+def parse_maven_artifact_def(root_path, package, generation_strategy):
     """
-    Parses the BUILD.pom file *and* BUILD.pom.released file at the specified 
-    path and returns a MavenArtifactDef instance.
+    Parses the metadata (for ex BUILD.pom) file *and* the released metadata
+    file (for ex BUILD.pom.released) file at the specified path and returns a
+    MavenArtifactDef instance.
 
-    Returns None if there is no BUILD.pom file at the specified path.
+    Returns None if there is no metadata (for ex BUILD.pom) file at the
+    specified path.
     """
-    content, path = mdfiles.read_file(root_path, package, mdfiles.BUILD_POM_FILE_NAME)
+    content, path = mdfiles.read_file(root_path, package, generation_strategy.metadata_path)
     if content is None:
         return None
-    ma = code.get_function_block(content, "maven_artifact")
+    ma = code.get_function_block(content, "artifact")
+    if ma is None:
+        # maven_artifact is deprecated
+        ma = code.get_function_block(content, "maven_artifact")
+    assert ma is not None, "bad md content %s" % content
     ma_attrs = code.parse_attributes(ma)
     art_def =  MavenArtifactDef(
         group_id=ma_attrs.get("group_id", None),
         artifact_id=ma_attrs.get("artifact_id", None),
         version=ma_attrs.get("version", None),
-        pom_generation_mode=ma_attrs.get("pom_generation_mode", None),
+        # pom_generation_mode is deprecated
+        pom_generation_mode=ma_attrs.get(
+            "generation_mode", ma_attrs.get("pom_generation_mode")),
         include_deps=ma_attrs.get("include_deps", True),
         change_detection=ma_attrs.get("change_detection", True),
         additional_change_detected_packages=ma_attrs.get("additional_change_detected_packages", []),
         gen_dependency_management_pom=ma_attrs.get("generate_dependency_management_pom", False),
         jar_path=ma_attrs.get("jar_path", None),
         bazel_target=ma_attrs.get("target_name", None),
-        deps=ma_attrs.get("deps", []))
+        deps=ma_attrs.get("deps", []),
+        generation_strategy=generation_strategy)
 
+    md_dir_name = os.path.dirname(generation_strategy.metadata_path)        
     template_path = ma_attrs.get("pom_template_file", None)
     if template_path is not None:
-        template_content, _ = mdfiles.read_file(root_path, package, template_path)
+        template_path = os.path.join(md_dir_name, template_path)
+        template_content, _ = mdfiles.read_file(root_path, package, template_path, must_exist=True)
         art_def.custom_pom_template_content = template_content
     
     pom_generation_mode = pomgenmode.from_string(art_def.pom_generation_mode)
 
     if pom_generation_mode.produces_artifact:
-        rel_art_def = _parse_released_maven_artifact_def(root_path, package)
-        released_pom_content = _read_released_pom(root_path, package)
+        rel_art_def = _parse_released_maven_artifact_def(root_path, package, generation_strategy)
+        released_pom_content = _read_released_manifest(root_path, package, generation_strategy)
 
-        maup = code.get_function_block(content, "maven_artifact_update")
-        maup_attrs = code.parse_attributes(maup)
-        vers_inc_strat_name = maup_attrs.get("version_increment_strategy", None)
+        aup = code.get_function_block(content, "artifact_update")
+        if aup is None:
+            # maven_artifact_update is deprecated
+            aup = code.get_function_block(content, "maven_artifact_update")
+        aup_attrs = code.parse_attributes(aup)
+        vers_inc_strat_name = aup_attrs.get("version_increment_strategy", None)
         return _augment_art_def_values(art_def, rel_art_def, package,
+                                       md_dir_name,
                                        released_pom_content,
                                        vers_inc_strat_name,
                                        pom_generation_mode)
@@ -318,24 +341,28 @@ def parse_maven_artifact_def(root_path, package):
         return _augment_art_def_values(art_def, 
                                        rel_art_def=None,
                                        bazel_package=package,
+                                       md_dir_name=md_dir_name,
                                        released_pom_content=None,
                                        version_increment_strategy_name=None,
                                        pom_generation_mode=pom_generation_mode)
 
 
-def _read_released_pom(root_path, package):
-    content, _ = mdfiles.read_file(root_path, package, mdfiles.POM_XML_RELEASED_FILE_NAME)
+def _read_released_manifest(root_path, package, generation_strategy):
+    """
+    For example pom.xml.released
+    """
+    content, _ = mdfiles.read_file(root_path, package, generation_strategy.released_manifest_path)
     return content
 
 
-def _parse_released_maven_artifact_def(root_path, package):
+def _parse_released_maven_artifact_def(root_path, package, generation_strategy):
     """
-    Parses the BUILD.pom.released file at the specified path and returns a 
+    Parses the released metadata file at the specified path and returns a 
     ReleasedMavenArtifactDef instance.
 
     Returns None if there is no BUILD.pom.released file at the specified path.
     """
-    content, _ = mdfiles.read_file(root_path, package, mdfiles.BUILD_POM_RELEASED_FILE_NAME)
+    content, _ = mdfiles.read_file(root_path, package, generation_strategy.released_metadata_path)
     if content is None:
         return None
     attrs = code.parse_attributes(content)
@@ -345,6 +372,7 @@ def _parse_released_maven_artifact_def(root_path, package):
     
 
 def _augment_art_def_values(user_art_def, rel_art_def, bazel_package,
+                            md_dir_name,
                             released_pom_content,
                             version_increment_strategy_name,
                             pom_generation_mode):
@@ -361,11 +389,12 @@ def _augment_art_def_values(user_art_def, rel_art_def, bazel_package,
         change_detection=True if user_art_def.change_detection is None else user_art_def.change_detection,
         additional_change_detected_packages=[] if user_art_def.additional_change_detected_packages is None else user_art_def.additional_change_detected_packages,
         gen_dependency_management_pom=False if user_art_def.gen_dependency_management_pom is None else user_art_def.gen_dependency_management_pom,
-        jar_path=None if user_art_def.jar_path is None else os.path.normpath(os.path.join(bazel_package, mdfiles.MD_DIR_NAME, user_art_def.jar_path)),
+        jar_path=None if user_art_def.jar_path is None else os.path.normpath(os.path.join(bazel_package, md_dir_name, user_art_def.jar_path)),
         deps=user_art_def.deps,
         bazel_target=user_art_def.bazel_target if user_art_def.bazel_target is not None else os.path.basename(bazel_package),
         released_version=rel_art_def.version if rel_art_def is not None else None,
         released_artifact_hash=rel_art_def.artifact_hash if rel_art_def is not None else None,
         bazel_package=bazel_package,
         released_pom_content=released_pom_content,
-        version_increment_strategy_name=version_increment_strategy_name)
+        version_increment_strategy_name=version_increment_strategy_name,
+        generation_strategy=user_art_def.generation_strategy)

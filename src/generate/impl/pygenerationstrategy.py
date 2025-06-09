@@ -1,46 +1,37 @@
+import common.common as common
+import common.label as labelm
+import common.logger as logger
+import generate.impl.py.dependency as dependency
+import generate.impl.py.pyprojectgenerator as pyprojectgenerator
+import generate.impl.py.requirementsparser as requirementsparser
 import generate
+import os
 
 
 class PyGenerationStrategy(generate.AbstractGenerationStrategy):
-    """
-    Strategy for generating Python package metadat as pyproject.toml.
 
-    [build-system]
-    requires = ["setuptools>=42", "wheel"]
-    build-backend = "setuptools.build_meta"
+    def __init__(self, repository_root, config, verbose=False):
+        assert repository_root is not None
+        assert config is not None
+        self._repository_root = repository_root
+        self._locked_requirements_paths = config.locked_requirements_paths
+        self._base_filename = config.pyproject_base_filename
+        self._verbose = verbose
 
-    [project]
-    name = "hello-world"
-    version = "0.1.0"
-    description = "A sample Python project"
-    readme = "README.md"
-    requires-python = ">=3.8"
-    license = {text = "Apache-2.0"}
-    authors = [
-        {name = "Your Name", email = "your.email@example.com"}
-    ]
-    classifiers = [
-        "Development Status :: 4 - Beta",
-        "Intended Audience :: Developers",
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: 3.11",
-    ]
+    def initialize(self):
+        self._label_to_ext_dep = self._parse_locked_requirements()
 
-    dependencies = [
-        "requests>=2.28.0",
-        "pytest>=7.0.0",
-        "black>=22.0.0",
-    ]
-    """
+    @property
+    def metadata_path(self):
+        return "md/pyproject.in"
 
-    def __init__(self, workspace, template):
-        assert workspace is not None
-        assert template is not None
-        self.workspace = workspace
-        self.template = template
+    @property
+    def base_manifest_filename(self):
+        return self._base_filename
+
+    @property
+    def manifest_file_extension(self):
+        return "toml"
 
     def load_dependency(self, label, artifact_def):
         """
@@ -53,7 +44,37 @@ class PyGenerationStrategy(generate.AbstractGenerationStrategy):
         Returns:
             A dependency instance appropriate for Python packages
         """
-        pass
+        if label.is_source_ref:
+            assert artifact_def is not None
+            return dependency.Dependency(artifact_def.artifact_id, artifact_def.version)
+        else:
+            assert label in self._label_to_ext_dep, "unknown third party dependency [%s]" % label
+            return self._label_to_ext_dep[label]
 
     def load_transitive_closure(self, dependency):
-        pass
+        return ()
+
+    def _new_generator__hook(self, artifact_def):
+        return pyprojectgenerator.PyProjectGenerator(artifact_def)
+
+    def _parse_locked_requirements(self):
+        label_to_dep = {}
+        for rel_path in self._locked_requirements_paths:
+            # path/to/requirements_lock.txt@repository_name
+            at_index = rel_path.find("@")
+            assert at_index > 0, "specify the path to the requirements.lock file, followed by \"@repository_name\", for example tools/pip/requirements_lock.txt@pip"
+            repositoy_name = rel_path[at_index+1:]
+            rel_path = rel_path[0:at_index]
+            path = os.path.join(self._repository_root, rel_path)
+            assert os.path.exists(path), "the requirements lock file path [%s] does not exist" % path
+            content = common.read_file(path)
+            parser = requirementsparser.RequirementsParser()
+            deps = parser.parse_requirements_lock_file(content)
+            if self._verbose and len(deps) > 0:
+                logger.info("Parsing locked file %s" % path)
+            for dep in deps:
+                lbl = labelm.Label("@%s//%s" % (repositoy_name, dep.name)) 
+                label_to_dep[lbl] = dep
+                if self._verbose:
+                    logger.info("  %s->%s" % (lbl, dep))
+        return label_to_dep

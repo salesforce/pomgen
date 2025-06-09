@@ -12,7 +12,6 @@ requested data.
 """
 
 from common import logger
-from common import mdfiles
 from common.os_util import run_cmd
 from collections import defaultdict
 from crawl import dependency
@@ -56,26 +55,7 @@ def query_java_library_deps_attributes(repository_root_path, target_pattern,
     return reversed(deps)
 
 
-def query_all_artifact_packages(repository_root_path, target_pattern, verbose=False):
-    """
-    Returns all packages in the specified target pattern, as a list of strings,
-    that are "maven aware" packages.
-    """
-    path = os.path.join(repository_root_path, target_pattern_to_path(target_pattern))
-
-    maven_artifact_packages = []
-    for rootdir, dirs, files in os.walk(path):
-        if verbose:
-            logger.debug("Checking for artifact package at [%s]" % rootdir)
-        if mdfiles.is_artifact_package(rootdir):
-            relpath = os.path.relpath(rootdir, repository_root_path)
-            if verbose:
-                logger.debug("Found artifact package [%s]" % relpath)
-            maven_artifact_packages.append(relpath)
-    return maven_artifact_packages
-
-
-def query_all_libraries(repository_root_path, packages, verbose=False):
+def query_all_libraries(repository_root_path, packages, generation_strategy_factory, verbose=False):
     """
     Given a list of packages (directories), walks the paths up to find the root
     library directories, and returns those (without duplicates).
@@ -86,7 +66,7 @@ def query_all_libraries(repository_root_path, packages, verbose=False):
             abs_package_path = os.path.join(repository_root_path, package)
             if verbose:
                 logger.debug("Checking path for library [%s]" % abs_package_path)
-            if mdfiles.is_library_package(abs_package_path):
+            if generation_strategy_factory.get_strategy_for_library_package(abs_package_path) is not None:
                 if verbose:
                     logger.debug("Found library [%s]" % package)
                 lib_roots.add(package)

@@ -57,12 +57,13 @@ def _get_library_path(repo_root_path, art_def):
     Starts at the path the specified artifact lives at and "walks up" to find  
     the location (path) of the library owning the specified artifact.
     """
+    md_dir_name = os.path.dirname(art_def.generation_strategy.metadata_path)
     abs_repo_path = os.path.abspath(repo_root_path)
     org_abs_path = os.path.abspath(os.path.join(repo_root_path, art_def.bazel_package))
     path = org_abs_path
     emergency_break = 0
     while True:
-        if mdfiles.is_library_package(path):
+        if os.path.exists(os.path.join(path, md_dir_name, mdfiles.LIB_ROOT_FILE_NAME)):
             return os.path.relpath(path, repo_root_path)
         if path == abs_repo_path:
             raise Exception("Did not find %s at %s or any parent dir" % (mdfiles.LIB_ROOT_FILE_NAME, org_abs_path))

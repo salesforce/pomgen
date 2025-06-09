@@ -9,6 +9,7 @@ dependencies.
 """
 
 from common import common
+from common import label as labelm
 from common import maveninstallinfo
 from config import config
 from crawl import buildpom
@@ -16,7 +17,7 @@ from crawl import dependency
 from crawl import dependencymd as dependencymdm
 from crawl import pom
 from crawl import pomcontent
-from crawl import workspace
+from generate.impl import pomgenerationstrategy
 import argparse
 import os
 import sys
@@ -45,15 +46,17 @@ def _parse_arguments(args):
     parser.add_argument("--exclude_all_transitives", action="store_true",
                         required=False,
         help="optional - adds a *:* <exclusion> to all dependencies in the generated pom")
-
+    parser.add_argument("--verbose", action="store_true",
+                        required=False,
+        help="optional - verbose output")
     return parser.parse_args(args)
 
 
 class ThirdPartyDepsPomGen(pom.DynamicPomGen):
 
-    def __init__(self, workspace, artifact_def, dependencies, pom_template):
-        super(ThirdPartyDepsPomGen, self).__init__(workspace, artifact_def,
-                                                   pom_template=pom_template)
+    def __init__(self, artifact_def, dependencies, pom_template, dependency_md):
+        super(ThirdPartyDepsPomGen, self).__init__(
+            artifact_def, pom_template, pomcontent.NOOP, dependency_md)
         self.dependencies = dependencies
 
 
@@ -62,6 +65,7 @@ def _starts_with_ignored_prefix(line):
         if line.startswith(prefix):
             return True
     return False
+
 
 def main(args):
     args = _parse_arguments(args)
@@ -78,10 +82,12 @@ def main(args):
 
     mvn_install_info = maveninstallinfo.MavenInstallInfo(cfg.maven_install_paths, allow_excludes)
 
-    depmd = dependencymdm.DependencyMetadata(cfg.jar_artifact_classifier)
-    ws = workspace.Workspace(repo_root, cfg, mvn_install_info,
-                             pomcontent.NOOP, dependency_metadata=depmd,
-                             label_to_overridden_fq_label={})
+    dependencymd = dependencymdm.DependencyMetadata(cfg.jar_artifact_classifier)
+    gen_strategy = pomgenerationstrategy.PomGenerationStrategy(
+        repo_root, cfg, mvn_install_info, dependencymd,
+        pomcontent.NOOP, label_to_overridden_fq_label={},
+        verbose=args.verbose)
+    gen_strategy.initialize()
 
     group_id = "all_ext_deps_group" if args.group_id is None else args.group_id
     artifact_id = "all_ext_deps_art" if args.artifact_id is None else args.artifact_id
@@ -92,8 +98,7 @@ def main(args):
                                              version=version)
 
     if args.stdin:
-        dep_labels = set() # we want to de-dupe labels
-        dependencies = []
+        labels = set() # we want to de-dupe labels
         for line in sys.stdin:
             line = line.strip()
             if len(line) == 0:
@@ -102,10 +107,10 @@ def main(args):
                 continue
             if _starts_with_ignored_prefix(line):
                 continue
-            dep_labels.add(line)
-        dependencies = ws.parse_dep_labels(dep_labels)
+            labels.add(labelm.Label(line))
+        dependencies = [gen_strategy.load_dependency(lbl, None) for lbl in labels]
     else:
-        dependencies = list(ws.external_dependencies)
+        dependencies = list(gen_strategy.load_external_dependencies())
 
     # to be nice:
     dependencies.sort()
@@ -124,21 +129,14 @@ def main(args):
                 updated_dependencies.append(dep)
         dependencies = updated_dependencies
 
-        # ignore what was specified in the pinned dependencies files and instead
-        # exclude all transitives: add an "exclude all dependency"
-        # (* exclusions) for all dependencies that end up in the generated pom
-        ws.dependency_metadata.clear()
-        for dep in dependencies:
-            ws.dependency_metadata.register_exclusions(
-                dep, [dependency.EXCLUDE_ALL_PLACEHOLDER_DEP])
     else:
         # it is possible to end up with duplicate dependencies
         # because different labels may point to the same dependency (gav)
         # (for ex: @maven//:org_antlr_ST4 and @antlr//:org_antlr_ST4)
         pass
 
-    pomgen = ThirdPartyDepsPomGen(ws, artifact_def, dependencies,
-                                  cfg.pom_template)
+    pomgen = ThirdPartyDepsPomGen(
+        artifact_def, dependencies, cfg.pom_template, dependencymd)
 
     return pomgen.gen(pom.PomContentType.RELEASE)
 

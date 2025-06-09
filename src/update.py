@@ -13,6 +13,8 @@ from common import argsupport
 from common import common
 from common import version_increment_strategy as vis
 from config import config
+from crawl import pomcontent
+from generate import generationstrategyfactory
 from pomupdate import buildpomupdate
 import argparse
 import sys
@@ -59,9 +61,10 @@ if __name__ == "__main__":
     args = _parse_arguments(sys.argv[1:])
     repo_root = common.get_repo_root(args.repo_root)
     cfg = config.load(repo_root)
-    packages = argsupport.get_all_packages(repo_root, args.package)
-    if len(packages) == 0:
-        raise Exception("Did not find any BUILD.pom packages at [%s]" % args.package)
+    fac = generationstrategyfactory.GenerationStrategyFactory(
+        repo_root, cfg, pomcontent.NOOP, verbose=False)
+    packages = argsupport.get_all_packages(repo_root, args.package, fac)
+    assert len(packages) > 0, "Did not find any packages at [%s]" % args.package
 
     if (args.new_version is not None or
         args.update_version_using_version_increment_strategy or
@@ -73,7 +76,7 @@ if __name__ == "__main__":
         args.add_missing_pom_generation_mode):
 
         buildpomupdate.update_build_pom_file(
-            repo_root, packages,
+            repo_root, packages, fac,
             args.new_version,
             args.update_version_using_version_increment_strategy,
             args.new_version_increment_strategy,
@@ -87,7 +90,8 @@ if __name__ == "__main__":
         args.new_released_artifact_hash is not None or
         args.update_released_artifact_hash_to_current):
         buildpomupdate.update_released_artifact(
-            repo_root, packages, cfg.all_src_exclusions,
+            repo_root, packages, fac,
+            cfg.all_src_exclusions,
             args.new_released_version,
             args.new_released_artifact_hash,
             args.update_released_artifact_hash_to_current)

@@ -11,12 +11,14 @@ from collections import defaultdict
 from common import label as labelm
 from common import logger
 from crawl import artifactgenctx
+from crawl import bazel
 from crawl import buildpom
 from crawl import dependency
-from crawl import bazel
+from crawl import pom
 from crawl import pomparser
 from crawl.releasereason import ReleaseReason
 import difflib
+import os
 
 
 class Node:
@@ -66,10 +68,8 @@ class CrawlerResult:
 
 class Crawler:
 
-    def __init__(self, workspace, generation_strategy, pom_template, verbose=False):
+    def __init__(self, workspace, verbose=False):
         self.workspace = workspace
-        self.generation_strategy = generation_strategy
-        self.pom_template = pom_template
         self.verbose = verbose # verbose logging
         self.package_to_artifact = {} # bazel package -> artifact def instance
         self.library_to_artifact = defaultdict(list) # library root path -> list of its artifact def instances
@@ -230,9 +230,21 @@ class Crawler:
             library_path = artifact_def.library_path
             if library_path not in processed_libraries:
                 processed_libraries.add(library_path)
-                all_library_packages = set(bazel.query_all_artifact_packages(self.workspace.repo_root_path, library_path))
+                all_library_packages = set(
+                    self._query_all_artifact_sub_packages(
+                        library_path, artifact_def.generation_strategy))
                 missing_packages += all_library_packages.difference(all_packages_already_processed)
         return missing_packages
+
+    def _query_all_artifact_sub_packages(self, library_path, generation_strategy):
+        maven_artifact_packages = []
+        path = os.path.join(self.workspace.repo_root_path, library_path)
+        for rootdir, dirs, files in os.walk(path):
+            md_file_path = os.path.join(rootdir, generation_strategy.metadata_path)
+            if os.path.exists(md_file_path):
+                relpath = os.path.relpath(rootdir, self.workspace.repo_root_path)
+                maven_artifact_packages.append(relpath)
+        return maven_artifact_packages
 
     def _check_for_artifact_manifest_changes(self):
         """
@@ -244,8 +256,9 @@ class Crawler:
         for ctx in self.genctxs:
             art_def = ctx.artifact_def
             if not art_def.requires_release and art_def.released_pom_content is not None:
-                # TODO pomparser
-                current_manifest = pomparser.format_for_comparison(ctx.gen_goldfile_manifest())
+                generator = art_def.generation_strategy.new_generator(ctx)
+                goldfile_manifest = generator.gen(pom.PomContentType.GOLDFILE)
+                current_manifest = pomparser.format_for_comparison(goldfile_manifest)
                 previous_manifest = pomparser.format_for_comparison(art_def.released_pom_content)
                 manifest_changed = current_manifest != previous_manifest
                 if manifest_changed:
@@ -308,7 +321,7 @@ class Crawler:
             # Maven deps
             # this is an extra lookup because these may not be listed in the
             # BUILD file
-            transitives = self.generation_strategy.load_transitive_closure(dep)
+            transitives = node.artifact_def.generation_strategy.load_transitive_closure(dep)
             for transitive in transitives:
                 if transitive not in processed_deps:
                     # only add the transitive if it isn't explicitly listed
@@ -531,13 +544,11 @@ class Crawler:
             self.library_to_artifact[artifact_def.library_path].append(artifact_def)
 
             artifactctx = artifactgenctx.ArtifactGenerationContext(
-                self.workspace, self.pom_template, artifact_def, label)
+                self.workspace, artifact_def, label)
             self.genctxs.append(artifactctx)
             labels = self._discover_dependencies(artifact_def, label)
-            # TODO abstract this, as it assumes maven_install
-            #all_deps = self.workspace.parse_dep_labels([lbl.canonical_form for lbl in labels])
-            #self.target_to_dependencies[label] = all_deps
-            source_labels, deps = self._partition_and_filter_labels(labels)
+            source_labels, deps = self._partition_and_filter_labels(
+                labels, artifact_def.generation_strategy)
             if self.verbose:
                 logger.debug("Determined labels for artifact: [%s] with target key [%s]" % (artifact_def, label))
                 logger.debug("Labels: %s" % "\n".join([lbl.canonical_form for lbl in labels]))
@@ -584,7 +595,7 @@ class Crawler:
                     self.workspace.repo_root_path,
                     label.canonical_form,
                     artifact_def.pom_generation_mode.dependency_attributes,
-                    self.workspace.verbose)
+                    self.verbose)
                 labels = [labelm.Label(lbl) for lbl in labels]
                 return Crawler._remove_package_private_labels(labels, artifact_def)
             except Exception as e:
@@ -634,7 +645,7 @@ class Crawler:
                 return label
         raise AssertionError("we should not get here " + str(label))
 
-    def _partition_and_filter_labels(self, labels):
+    def _partition_and_filter_labels(self, labels, generation_strategy):
         """
         For the given lables, filters and partitions by source labels.
         Returns a tuple of source labels and dependencies.
@@ -649,7 +660,7 @@ class Crawler:
             if lbl.is_source_ref:
                 source_labels.append(lbl)
                 artifact_def = self.workspace.parse_maven_artifact_def(lbl.package_path)
-            dep = self.generation_strategy.load_dependency(lbl, artifact_def)
+            dep = generation_strategy.load_dependency(lbl, artifact_def)
             deps.append(dep)
         return source_labels, deps
 
@@ -665,6 +676,7 @@ class Crawler:
                 if bazel.is_never_link_dep(self.workspace.repo_root_path, label.canonical_form):
                     return None
                 else:
+                    # TODO
                     raise Exception("no BUILD.pom file in package [%s]" % label.package_path)
         return label
 

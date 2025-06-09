@@ -7,7 +7,10 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 
 Common argument processing.
 """
+from common import logger
 from crawl import bazel
+import os
+
 
 def get_package_doc():
     """
@@ -15,7 +18,9 @@ def get_package_doc():
     """
     return "Multiple comma-separated paths are supported. Each path is crawled, looking for packages. If a path starts with  '-', packages starting with that path are excluded. If not specified, defaults to the repository root."
 
-def get_all_packages(repository_root_path, packages_str, verbose=False):
+
+def get_all_packages(repository_root_path, packages_str, 
+                     generation_stategy_factory, verbose=False):
     """
     Handles the common --package argument.
 
@@ -43,7 +48,8 @@ def get_all_packages(repository_root_path, packages_str, verbose=False):
     all_packages = set()
 
     for p in inclusion_paths:
-        packages = bazel.query_all_artifact_packages(repository_root_path, p, verbose)
+        packages = _find_packages_with_md(
+            repository_root_path, p, generation_stategy_factory, verbose)
         for package in packages:
             for exclusion_path in exclusion_paths:
                 prefix_match = True
@@ -59,6 +65,26 @@ def get_all_packages(repository_root_path, packages_str, verbose=False):
                     packages_list.append(package)
 
     return packages_list
+
+
+def _find_packages_with_md(repository_root_path, target_pattern, fac, verbose):
+    """
+    Returns all packages in the specified target pattern, as a list of strings,
+    that are "maven aware" packages.
+    """
+    path = os.path.join(repository_root_path, bazel.target_pattern_to_path(target_pattern))
+
+    maven_artifact_packages = []
+    for rootdir, dirs, files in os.walk(path):
+        if verbose:
+            logger.debug("Checking for artifact package at [%s]" % rootdir)
+        if fac.get_strategy_for_package(rootdir) is not None:
+            relpath = os.path.relpath(rootdir, repository_root_path)
+            if verbose:
+                logger.debug("Found artifact package [%s]" % relpath)
+            maven_artifact_packages.append(relpath)
+    return maven_artifact_packages
+
 
 def _to_path(list_of_paths):
     return [bazel.target_pattern_to_path(p) for p in list_of_paths]

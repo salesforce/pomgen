@@ -6,17 +6,14 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 """
 
 from common.os_util import run_cmd
-from common import maveninstallinfo
 from config import config
 from config import exclusions
 from crawl import crawler
-from crawl import dependencymd as dependencymdm
 from crawl import git
-from crawl import pom as pomm
 from crawl import pomcontent
 from crawl import releasereason as rr
 from crawl import workspace
-import generate.impl.pomgenerationstrategy as pomgenerationstrategy
+from generate import generationstrategyfactory
 import os
 import tempfile
 import unittest
@@ -54,22 +51,17 @@ class CrawlerTest(unittest.TestCase):
           B: 0.0.2
           C: 0.0.3
         """
-        self.repo_root_path = tempfile.mkdtemp("monorepo")
+        self.repo_root_path = tempfile.mkdtemp("repo")
         self._add_libraries(self.repo_root_path)
         self._setup_repo(self.repo_root_path)
         self._write_all_build_pom_released(self.repo_root_path)
         self.cwd = os.getcwd()
         os.chdir(self.repo_root_path)
-        depmd = dependencymdm.DependencyMetadata(None)
-        ws = workspace.Workspace(self.repo_root_path,
-                                 config=config.Config(),
-                                 maven_install_info=maveninstallinfo.NOOP,
-                                 pom_content=pomcontent.NOOP,
-                                 dependency_metadata=depmd,
-                                 label_to_overridden_fq_label={})
-        pom_template = ""
-        strategy = pomgenerationstrategy.PomGenerationStrategy(ws, pom_template)
-        self.crawler = crawler.Crawler(ws, strategy, pom_template)
+        cfg = config.Config()
+        fac = generationstrategyfactory.GenerationStrategyFactory(
+            self.repo_root_path, cfg, pomcontent.NOOP, verbose=True)
+        ws = workspace.Workspace(self.repo_root_path, cfg, fac)
+        self.crawler = crawler.Crawler(ws, verbose=True)
 
     def tearDown(self):
         os.chdir(self.cwd)
@@ -206,65 +198,6 @@ class CrawlerTest(unittest.TestCase):
 
         self.assertEqual(set(["libs/a/a1"]),
                          set([ctx.artifact_def.bazel_package for ctx in result.artifact_generation_contexts]))
-
-    def test_register_dependencies(self):
-        """
-        Verifies that the register_dependencies* methods are called by the
-        crawler.
-        """
-        self._update_files(self.repo_root_path, ["libs/a/a1",])
-        self._commit(self.repo_root_path)
-
-        registered_deps = []
-        registered_artifact_deps = []
-        registered_library_deps = []
-        import crawl.pom as pom
-        register_deps_org_method = pom.TemplatePomGen.register_dependencies
-        register_deps_artifact_org_method = pom.TemplatePomGen.register_dependencies_transitive_closure__artifact
-        register_deps_library_org_method = pom.TemplatePomGen.register_dependencies_transitive_closure__library
-        try:
-            pom.TemplatePomGen.register_dependencies = lambda s, deps: registered_deps.append(list(deps))
-            pom.TemplatePomGen.register_dependencies_transitive_closure__artifact = lambda s, deps: registered_artifact_deps.append(list(deps))
-            pom.TemplatePomGen.register_dependencies_transitive_closure__library = lambda s, deps: registered_library_deps.append(list(deps))
-
-            self.crawler.crawl(["libs/a/a1"],)
-
-            self.assertTrue(len(registered_deps) > 0, "register_dependencies was not called")
-            self.assertTrue(len(registered_artifact_deps) > 0, "register_dependencies_transitive_closure__artifact was not called")
-            self.assertTrue(len(registered_library_deps) > 0, "register_dependencies_transitive_closure__library was not called")
-
-        finally:
-            pom.TemplatePomGen.register_dependencies = register_deps_org_method
-            pom.TemplatePomGen.register_dependencies_transitive_closure__artifact = register_deps_artifact_org_method
-            pom.TemplatePomGen.register_dependencies_transitive_closure__library = register_deps_library_org_method
-
-    def test_version_references_in_pom_template(self):
-        """
-        Verify that monorepo artifact versions can be referenced in a pom
-        template.
-        """
-        pom_template = """
-<project>
-<version>#{%s:B_a1:version}</version>
-<version>#{%s:C_a1:version}</version>
-</project>
-"""
-        self._write_file(self.repo_root_path, "libs/a/a1", "MVN-INF", 
-                         POM_TEMPLATE_FILE, pom_template % (GROUP_ID, GROUP_ID))
-
-        # this is required because poms are only compared if there's a 
-        # pom.xml.released
-        self._write_file(self.repo_root_path, "libs/a/a1", "MVN-INF", 
-                         "pom.xml.released", """<project></project>""")
-
-        self._commit(self.repo_root_path)
-
-        result = self.crawler.crawl(["libs/a/a1"])
-
-        pom = result.artifact_generation_contexts[0].generator.gen(pomm.PomContentType.RELEASE)
-        
-        self.assertIn("<version>0.0.2</version>", pom)
-        self.assertIn("<version>0.0.3</version>", pom)
 
     def test_A_a1_changed(self):
         """

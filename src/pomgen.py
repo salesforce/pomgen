@@ -11,18 +11,15 @@ The pomgen cmdline entry-point.
 from common import argsupport
 from common import common
 from common import logger
-from common import maveninstallinfo
-from common import overridefileinfo
 from common import mdfiles
 from config import config
 from crawl import bazel
 from crawl import crawler as crawlerm
-from crawl import dependencymd as dependencym
 from crawl import libaggregator
 from crawl import pom
 from crawl import pomcontent as pomcontentm
 from crawl import workspace
-from generate.impl import pomgenerationstrategy
+from generate import generationstrategyfactory
 import argparse
 import os
 import sys
@@ -30,38 +27,33 @@ import sys
 
 def main(args):
     args = _parse_arguments(args)
-
     repo_root = common.get_repo_root(args.repo_root)
     cfg = config.load(repo_root, args.verbose)
     pom_content = pomcontentm.PomContent()
-    dependencymd = dependencym.DependencyMetadata(cfg.jar_artifact_classifier)
     if args.pom_description is not None:
         pom_content.description = args.pom_description
     if args.verbose:
         logger.debug("Global pom content: %s" % pom_content)
 
-    override_file_info = overridefileinfo.OverrideFileInfo(cfg.override_file_paths, repo_root)
-    mvn_install_info = maveninstallinfo.MavenInstallInfo(cfg.maven_install_paths)
-    ws = workspace.Workspace(repo_root, cfg,
-                             mvn_install_info,
-                             pom_content,
-                             dependencymd,
-                             override_file_info.label_to_overridden_fq_label,
-                             verbose=args.verbose)
-    packages = argsupport.get_all_packages(repo_root, args.package)
+    fac = generationstrategyfactory.GenerationStrategyFactory(
+        repo_root, cfg, pom_content, args.verbose)
+    ws = workspace.Workspace(repo_root, cfg, fac)
+    packages = argsupport.get_all_packages(repo_root, args.package, fac, args.verbose)
     packages = ws.filter_artifact_producing_packages(packages)
-    if len(packages) == 0:
-        raise Exception("Did not find any artifact producing BUILD.pom packages at [%s]" % args.package)
-    gen_strategy = pomgenerationstrategy.PomGenerationStrategy(ws, cfg.pom_template)
-    crawler = crawlerm.Crawler(ws, gen_strategy, cfg.pom_template, args.verbose)
-    result = crawler.crawl(packages, follow_references=not args.ignore_references, force_release=args.force)
+    assert len(packages) > 0, "Did not find any artifact producing BUILD.pom packages at/under [%s]" % args.package
+    if args.verbose:
+        logger.info("Input packages are:")
+        print("\n".join(packages))
+    crawler = crawlerm.Crawler(ws, args.verbose)
+    result = crawler.crawl(packages,
+                           follow_references=not args.ignore_references,
+                           force_release=args.force)
 
     if len(result.artifact_generation_contexts) == 0:
         logger.info("No releases are required. pomgen will not generate any pom files. To force pom generation, use pomgen's --force option.")
     else:
         output_dir = _get_output_dir(args)
-
-        lib_paths = bazel.query_all_libraries(repo_root, packages)
+        lib_paths = bazel.query_all_libraries(repo_root, packages, fac, args.verbose)
         if args.write_libraries_hint_file:
             if not args.ignore_references:
                 # the libraries hint file contains the list of all upstream
@@ -73,10 +65,9 @@ def main(args):
                     path = lib_paths[0]
                     _write_all_libraries_hint_files(result, output_dir, path)
 
-        # hardcoded to pom.xml files right here, but in the future pluggable?
-        pomgens = [ctx.generator for ctx in result.artifact_generation_contexts]
-
-        for pomgen in pomgens:
+        for ctx in result.artifact_generation_contexts:
+            gen_strategy = ctx.artifact_def.generation_strategy
+            pomgen = gen_strategy.new_generator(ctx)
             pom_dest_dir = os.path.join(output_dir, pomgen.bazel_package)
             if not os.path.exists(pom_dest_dir):
                 os.makedirs(pom_dest_dir)
@@ -87,19 +78,23 @@ def main(args):
             if args.pom_goldfile:
                 pom_content = pomgen.gen(pom.PomContentType.GOLDFILE)
                 pom_goldfile_path = mdfiles.write_file(pom_content, output_dir, pomgen.bazel_package, mdfiles.POM_XML_RELEASED_FILE_NAME)
-                logger.info("Wrote pom goldfile to [%s]" % pom_goldfile_path)
+                logger.info("Wrote goldfile manifest to [%s]" % pom_goldfile_path)
             else:
                 pom_content = pomgen.gen(pom.PomContentType.RELEASE)
                 pom_path = os.path.join(
-                    pom_dest_dir, "%s.xml" % cfg.pom_base_filename)
+                    pom_dest_dir, "%s.%s" % (
+                        gen_strategy.base_manifest_filename,
+                        gen_strategy.manifest_file_extension))
                 _write_file(pom_path, pom_content)
-                logger.info("Wrote pom file to [%s]" % pom_path)
+                logger.info("Wrote manifest file to [%s]" % pom_path)
                 for i, companion_pomgen in enumerate(pomgen.get_companion_generators()):
                     pom_content = companion_pomgen.gen(pom.PomContentType.RELEASE)
                     pom_path = os.path.join(pom_dest_dir, 
-                        "%s_companion%s.xml" % (cfg.pom_base_filename, i))
+                        "%s_companion%s.%s" % (
+                            gen_strategy.base_manifest_filename, i,
+                            gen_strategy.manifest_file_extension))
                     _write_file(pom_path, pom_content)
-                    logger.info("Wrote companion pom file to [%s]" % pom_path)
+                    logger.info("Wrote companion manifest file to [%s]" % pom_path)
 
                 # if jar_path has been set in the BUILD.pom file, we write a
                 # hint file with the path out so we can find it more easily

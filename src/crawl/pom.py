@@ -7,6 +7,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 This module contains pom.xml generation logic.
 """
 
+from crawl import pomcontent as pomcontentm
 from common import pomgenmode
 import copy
 from crawl import pomparser
@@ -34,40 +35,43 @@ class PomContentType:
     MASKED_VERSION = "***"
 
 
-def get_pom_generator(workspace, pom_template, artifact_def):
+def get_pom_generator(pom_template, artifact_def, external_dependencies,
+                      pom_content_md, dependency_md):
     """
     Returns a pom.xml generator (AbstractPomGen implementation) for the
     specified artifact_def.
 
     Arguments:
-        workspace: the crawl.workspace.Workspace singleton
         pom_template: the template to use for generating dynamic (jar) pom.xmls
         artifact_def: the crawl.buildpom.MavenArtifactDef instance for access 
             to the parsed MVN-INF/* metadata files
+        external_dependencies: all known external dependencies (jars)
+        pom_content_md: additional metadata about pom content
+        dependency_md: additional metadata about dependencies (jars)
     """
     assert artifact_def is not None
-
+    assert isinstance(pom_content_md, pomcontentm.PomContent)
     mode = artifact_def.pom_generation_mode
     if mode is pomgenmode.DYNAMIC:
         also_generate_dep_man_pom = artifact_def.gen_dependency_management_pom
         if also_generate_dep_man_pom:
             return PomWithCompanionDependencyManagementPomGen(
-                workspace, artifact_def, pom_template)
+                artifact_def, pom_template, pom_content_md, dependency_md)
         else:
-            return DynamicPomGen(workspace, artifact_def, pom_template)
+            return DynamicPomGen(artifact_def, pom_template, pom_content_md, dependency_md)
     elif mode is pomgenmode.TEMPLATE:
-        return TemplatePomGen(workspace, artifact_def)
+        return TemplatePomGen(artifact_def, external_dependencies, dependency_md)
     elif mode is pomgenmode.SKIP:
-        return NoopPomGen(workspace, artifact_def)
+        return NoopPomGen(artifact_def, dependency_md)
     else:
         raise Exception("Bug: unknown pom_generation_mode [%s] for %s" % (mode, artifact_def.bazel_package))
 
 
 class AbstractPomGen(object):
 
-    def __init__(self, workspace, artifact_def):
+    def __init__(self, artifact_def, dependency_md):
         self._artifact_def = artifact_def
-        self._workspace = workspace
+        self._dependency_md = dependency_md
 
         self.dependencies = set()
         self.dependencies_artifact_transitive_closure = set()
@@ -172,7 +176,7 @@ class AbstractPomGen(object):
         content, indent = self._xml(content, "groupId", indent, dep.group_id)
         content, indent = self._xml(content, "artifactId", indent, dep.artifact_id)
         content, indent = self._xml(content, "version", indent, self._dep_version(pomcontenttype, dep))
-        classifier = self._workspace.dependency_metadata.get_classifier(dep)
+        classifier = self._dependency_md.get_classifier(dep)
         if classifier is not None:
             content, indent = self._xml(content, "classifier", indent, classifier)
         if dep.scope is not None:
@@ -226,8 +230,8 @@ class NoopPomGen(AbstractPomGen):
     A placeholder pom generator that doesn't generate anything, but still
     follows references.
     """
-    def __init__(self, workspace, artifact_def):
-        super(NoopPomGen, self).__init__(workspace, artifact_def)
+    def __init__(self, artifact_def, dependency_md):
+        super(NoopPomGen, self).__init__(artifact_def, dependency_md)
 
 
 class TemplatePomGen(AbstractPomGen):
@@ -245,8 +249,10 @@ class TemplatePomGen(AbstractPomGen):
     """
     Generates a pom.xml based on a template file.
     """
-    def __init__(self, workspace, artifact_def):
-        super(TemplatePomGen, self).__init__(workspace, artifact_def)
+    def __init__(self, artifact_def, external_dependencies, dependency_md):
+        super(TemplatePomGen, self).__init__(artifact_def, dependency_md)
+        self._external_dependencies = external_dependencies
+
     def gen(self, pomcontenttype):
         pom_content = self.artifact_def.custom_pom_template_content
         pom_content, parsed_dependencies = self._process_pom_template_content(pom_content)
@@ -320,7 +326,7 @@ class TemplatePomGen(AbstractPomGen):
         # all external deps + deps built out of the monorepo that are
         # transitives of this library
         all_deps = \
-            list(self._workspace.external_dependencies) + \
+            list(self._external_dependencies) + \
             [d for d in self.dependencies_library_transitive_closure if d.bazel_package is not None]
 
         for dep in all_deps:
@@ -471,17 +477,18 @@ class DynamicPomGen(AbstractPomGen):
        #{group_id}
        #{version}
     """
-    def __init__(self, workspace, artifact_def, pom_template):
-        super(DynamicPomGen, self).__init__(workspace, artifact_def)
-        self.pom_content = workspace.pom_content
+    def __init__(self, artifact_def, pom_template, pom_content_md, dependency_md):
+        super(DynamicPomGen, self).__init__(artifact_def, dependency_md)
+        assert isinstance(pom_content_md, pomcontentm.PomContent)
         self.pom_template = pom_template
+        self.pom_content_md = pom_content_md
 
     def gen(self, pomcontenttype):
         content = self.pom_template.replace("#{group_id}", self._artifact_def.group_id)
         content = content.replace("#{artifact_id}", self._artifact_def.artifact_id)
         version = self._artifact_def_version(pomcontenttype)
         content = content.replace("#{version}", version)
-        content = self._handle_description(content, self.pom_content.description)
+        content = self._handle_description(content, self.pom_content_md.description)
         if len(self.dependencies) == 0:
             content = self._remove_token(content, "#{dependencies}")
         else:
@@ -529,7 +536,7 @@ class DynamicPomGen(AbstractPomGen):
         transitives_set = set()
         dependencies_set = set(dependencies)
         for dep in dependencies:
-            for transitive in self._workspace.dependency_metadata.get_transitive_closure(dep):
+            for transitive in self._dependency_md.get_transitive_closure(dep):
                 if transitive in transitives_set:
                     # avoid duplication
                     pass
@@ -560,10 +567,10 @@ class DependencyManagementPomGen(AbstractPomGen):
        #{group_id}
        #{version}
     """
-    def __init__(self, workspace, artifact_def, pom_template):
-        super(DependencyManagementPomGen, self).__init__(workspace, artifact_def)
+    def __init__(self, artifact_def, pom_template, pom_content_md, dependency_md):
+        super(DependencyManagementPomGen, self).__init__(artifact_def, dependency_md)
         self.pom_template = pom_template
-        self.pom_content = workspace.pom_content
+        self.pom_content_md = pom_content_md
 
     def gen(self, pomcontenttype):
         assert pomcontenttype == PomContentType.RELEASE
@@ -574,7 +581,7 @@ class DependencyManagementPomGen(AbstractPomGen):
         content = content.replace("#{artifact_id}", "%s.depmanagement" % self._artifact_def.artifact_id)
         version = self._artifact_def_version(pomcontenttype)
         content = content.replace("#{version}", version)
-        content = self._handle_description(content, self.pom_content.description)
+        content = self._handle_description(content, self.pom_content_md.description)
         if len(self.dependencies_artifact_transitive_closure) == 0:
             content = self._remove_token(content, "#{dependencies}")
         else:
@@ -606,10 +613,10 @@ class PomWithCompanionDependencyManagementPomGen(AbstractPomGen):
     Composite PomGen implementation with a companion PomGen the generates a
     DependencyManagement pom.
     """
-    def __init__(self, workspace, artifact_def, pom_template):
-        super(PomWithCompanionDependencyManagementPomGen, self).__init__(workspace, artifact_def)
-        self.pomgen = DynamicPomGen(workspace, artifact_def, pom_template)
-        self.depmanpomgen = DependencyManagementPomGen(workspace, artifact_def, pom_template)
+    def __init__(self, artifact_def, pom_template, pom_content_md, dependency_md):
+        super(PomWithCompanionDependencyManagementPomGen, self).__init__(artifact_def, dependency_md)
+        self.pomgen = DynamicPomGen(artifact_def, pom_template, pom_content_md, dependency_md)
+        self.depmanpomgen = DependencyManagementPomGen(artifact_def, pom_template, pom_content_md, dependency_md)
 
     def register_dependencies(self, dependencies):
         self.pomgen.register_dependencies(dependencies)
