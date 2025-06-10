@@ -1,6 +1,7 @@
 import datetime
 
 
+# TODO requires-python should not be hardcoded
 _TEMPLATE = """
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
@@ -9,7 +10,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "$name$"
 version = "$version$"
-requires-python = ">=3.11"
+requires-python = ">=3.9"
 $dependencies$
 
 [tool.setuptools]
