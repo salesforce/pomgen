@@ -30,7 +30,7 @@ class Dependency:
         extras_str = ""
         if len(self.extras) > 0:
             extras_str = "[%s]" % ",".join(self.extras)
-        return f"{self.name}{extras_str}=={self.version}"
+        return f"{self.name}{extras_str}>={self.version}"
 
     def __eq__(self, other):
         if not isinstance(other, Dependency):
