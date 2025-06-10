@@ -54,6 +54,9 @@ class RequirementsParser:
                             # via -r path/to/requirements.in
                             # directly referenced in requirements, no via
                             pass
+                        elif line.startswith("The following"):
+                            # TODO: instead check "via" value has not space
+                            pass
                         else:
                             current_vias.append(line)
             else:
@@ -67,7 +70,7 @@ class RequirementsParser:
                     name = name[:extras_start_index]
                 space_index = line.find(" ", version_sep_index)
                 version = line[version_sep_index + len(version_sep):space_index]
-                dependency = Dependency(name, version, extras)
+                dependency = Dependency(name, version, extras=extras)
                 dependencies.append(dependency)
                 assert name not in name_to_dependency
                 name_to_dependency[name] = dependency

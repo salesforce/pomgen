@@ -1,4 +1,7 @@
-TEMPLATE = """
+import datetime
+
+
+_TEMPLATE = """
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
@@ -6,10 +9,20 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "$name$"
 version = "$version$"
-$dependencies$
 requires-python = ">=3.11"
+$dependencies$
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["*"]
 """
 
+
+_VERSION_TS_TOKEN_START = "${timestamp:"
+_VERSION_TS_TOKEN_END = "}"
 
 class PyProjectGenerator:
 
@@ -61,15 +74,29 @@ class PyProjectGenerator:
         return ()
 
     def gen(self, pomcontenttype):
-        content = TEMPLATE.strip()
+        content = _TEMPLATE.strip()
         content = content.replace("$name$", self._artifact_def.artifact_id)
-        content = content.replace("$version$", self._artifact_def.version)
+        content = content.replace("$version$", _get_version(self._artifact_def.version))
         if len(self._dependencies) == 0:
             content = content.replace("$dependencies$", "dependencies = []")
         else:
+            deps = sorted(self._dependencies)
             content = content.replace(
                 "$dependencies$",
                 """dependencies = [
 %s
-]""" % "\n".join(['%s"%s",' % (" "*4, dep.to_pyproject_format()) for dep in self._dependencies]))
+]""" % "\n".join(['%s"%s",' % (" "*4, dep.to_pyproject_format()) for dep in deps]))
         return content
+
+
+
+def _get_version(version):
+    start_i = version.find(_VERSION_TS_TOKEN_START)
+    if start_i != -1:
+        end_i = version.index(_VERSION_TS_TOKEN_END, start_i)
+        format_str = version[start_i + len(_VERSION_TS_TOKEN_START):end_i]
+        timestamp = datetime.datetime.now().strftime(format_str)
+        version = version[0:start_i] + timestamp + version[end_i+1:]
+    return version
+
+    

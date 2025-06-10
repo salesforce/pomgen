@@ -36,7 +36,7 @@ maven_install(
     strict_visibility = False,
     generate_compat_repositories = False,
     # to regenerate the pinned file: bazel run @unpinned_maven//:pin
-    maven_install_json = "//examples/maven_install:maven_install.json",
+    maven_install_json = "//examples/java/maven_install:maven_install.json",
     resolve_timeout = 1800,
 )
 
@@ -60,7 +60,7 @@ maven_install(
     strict_visibility = True,
     generate_compat_repositories = False,
     # to regenerate the pinned file: bazel run @unpinned_antlr//:pin
-    maven_install_json = "//examples/maven_install:antlr_install.json",
+    maven_install_json = "//examples/java/maven_install:antlr_install.json",
     resolve_timeout = 1800,
 )
 

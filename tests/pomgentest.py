@@ -39,7 +39,7 @@ class PomGenTest(unittest.TestCase):
         self.assertIn("<version>1.0.0</version>", content)
 
     def _setup_workspace(self):
-        self.repo_root_path = tempfile.mkdtemp("monorepo")
+        self.repo_root_path = tempfile.mkdtemp("repo")
         self._add_WORKSPACE_file()
         self._add_pom_template()
         self._write_file("","","maven_install.json", """
@@ -52,6 +52,13 @@ class PomGenTest(unittest.TestCase):
 }
 """)
         self._write_file("","",".bazelversion", "3.7.1")
+
+        self._write_file("","",".popeyerc", """
+[general]
+pom_template_path=pom_template.xml
+maven_install_paths=maven_install.json
+""")
+
 
     def _add_WORKSPACE_file(self):
         content = """
@@ -71,7 +78,7 @@ class PomGenTest(unittest.TestCase):
     <version>#{version}</version>
 </project>
 """
-        self._write_file("src", "config", "pom_template.xml", content)
+        self._write_file("", "", "pom_template.xml", content)
 
     def _add_package(self, package_rel_path, group_id, artifact_id, version):
         self._add_BUILD_file(package_rel_path)

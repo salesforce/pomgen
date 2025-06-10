@@ -1,3 +1,0 @@
-[general]
-maven_install_paths=examples/maven_install/*.json
-locked_requirements_paths=examples/python/pip/requirements_lock.txt@examples_pip

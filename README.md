@@ -89,7 +89,7 @@ bazel run @pomgen//maven -- -a pomgen,install
 
 ## Configuration
 
-Some pomgen behavior is driven by an optional configuration file `.pomgenrc`. pomgen looks for this file at the root of the repository it is running in.
+Some pomgen behavior is driven by an optional configuration file `.popeyerc`. pomgen looks for this file at the root of the repository it is running in.
 
 Running pomgen with `--verbose` causes the current config to be echoed.
 
@@ -98,7 +98,8 @@ The file format is:
 ```
 [general]
 # Path to the pom template, used when generating pom.xml files for jar artifacts
-# Default value: config/pom_template.xml
+# Required: True
+# Default value: ""
 pom_template_path=
 
 # The base filename (without extension) of the generated pom files.
@@ -108,7 +109,7 @@ pom_base_filename=
 # The list of all maven install json files with pinned dependencies, comma-separated. 
 # All dependencies that pomgen encounters in BUILD files must exist in one of the files
 # listed here.
-# Default value: maven_install.json
+# Default value: ""
 # Example value: tools/maven_install/*.json,another/path/to/mvn_install.json,
 maven_install_paths=
 
@@ -164,7 +165,7 @@ transitives_versioning_mode=
 # The same value can also be specified by setting the environment variable
 # POMGEN_JAR_CLASSIFIER - the environment variable takes precedence over the
 # value set in this cfg file
-# Default value: empty (not set)
+# Default value: ""
 jar_classifier=
 ```
 

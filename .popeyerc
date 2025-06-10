@@ -1,0 +1,4 @@
+[general]
+pom_template_path=examples/java/pom_template.xml
+maven_install_paths=examples/java/maven_install/*.json
+locked_requirements_paths=examples/python/pip/requirements_lock.txt@examples_pip

@@ -40,21 +40,13 @@ def load(repo_root, verbose=False):
         """Read from [artifact] section """
         return _get_value_from_config(parser, "artifact", option, dflt, valid_values)
 
-    search_locations = ("tools/etc", "tools", ".")
-    for loc in search_locations:
-        cfg_path = os.path.join(repo_root, loc, ".pomgenrc")
-        if os.path.exists(cfg_path):
-            with open(cfg_path, 'r') as f:
-                parser.read_file(f)
-            if verbose:
-                logger.info("Loading configuration at [%s]" % cfg_path)
-            break
+    _load_cfg(repo_root, parser, verbose)
 
-    pom_template_p = gen("pom_template_path", ["src/config/pom_template.xml"])
+    pom_template_p = gen("pom_template_path", "")
 
     cfg = Config(
-        pom_template_path_and_content=_read_files(repo_root, pom_template_p)[0],
-        maven_install_paths=gen("maven_install_paths", ("maven_install.json",)),
+        pom_template_path_and_content=_read_file(repo_root, pom_template_p),
+        maven_install_paths=gen("maven_install_paths", ()),
         locked_requirements_paths=gen("locked_requirements_paths", ()),
         override_file_paths=gen("override_file_paths", ()),
         pom_base_filename=gen("pom_base_filename", "pom"),
@@ -73,6 +65,20 @@ def load(repo_root, verbose=False):
         logger.raw("Running with configuration:\n%s\n" % str(cfg))
 
     return cfg
+
+
+def _load_cfg(repo_root, parser, verbose):
+    search_locations = ("tools/etc", "tools", ".")
+    for loc in search_locations:
+        fnames = (".popeyerc", ".pomgenrc")
+        for fname in fnames:
+            cfg_path = os.path.join(repo_root, loc, fname)
+            if os.path.exists(cfg_path):
+                with open(cfg_path, 'r') as f:
+                    parser.read_file(f)
+                if verbose:
+                    logger.info("Loading configuration at [%s]" % cfg_path)
+                return
 
 
 def _get_value_from_config(parser, section, option, dflt, valid_values):
@@ -204,16 +210,17 @@ def _to_bool(thing):
     raise Exception("Cannot convert to bool [%s]" % thing)
 
 
-def _read_files(repo_root, paths):
+def _read_file(repo_root, path):
     """
-    Returns a list of tuples: (<path>, <file content>).
+    Returns a tuple: (<path>, <file content>).
     """
-    paths = _to_tuple(paths)
-    path_and_content = []
-    for path in paths:
-        with open(os.path.join(repo_root, path), "r") as f:
-            path_and_content.append((path, f.read().strip()))
-    return path_and_content
+    if path is None or len(path) == 0:
+        return "", ""
+    abspath = os.path.join(repo_root, path)
+    if os.path.exists(abspath):
+        with open(abspath, "r") as f:
+            return path, f.read().strip()
+    return "", ""
 
 
 def _add_pathsep(paths):
