@@ -70,7 +70,7 @@ def load(repo_root, verbose=False):
 def _load_cfg(repo_root, parser, verbose):
     search_locations = ("tools/etc", "tools", ".")
     for loc in search_locations:
-        fnames = (".popeyerc", ".pomgenrc")
+        fnames = (".poppyrc", ".pomgenrc")
         for fname in fnames:
             cfg_path = os.path.join(repo_root, loc, fname)
             if os.path.exists(cfg_path):

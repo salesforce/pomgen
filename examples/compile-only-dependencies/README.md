@@ -13,7 +13,7 @@ bazel build examples/compile-only-dependencies/...
 ```
 
 ```
-bazel run @pomgen//maven -- -a pomgen,install -l examples/compile-only-dependencies
+bazel run @poppy//package/maven -- -a pomgen,install -l examples/compile-only-dependencies
 ```
 
 It should pass although `examples/compile-only-dependencies/fancy` has no `BUILD.pom` file. The generated pom does not include the `neverlink` dependency.

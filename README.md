@@ -83,13 +83,13 @@ The `master` branch is always releasable - use the current `HEAD` commit.
 You can then run pomgen commands [as documented](examples/hello-world/README.md#before-running-pomgen), for example:
 
 ```
-bazel run @pomgen//maven -- -a pomgen,install
+bazel run @poppy//package/maven -- -a pomgen,install
 ```
 
 
 ## Configuration
 
-Some pomgen behavior is driven by an optional configuration file `.popeyerc`. pomgen looks for this file at the root of the repository it is running in.
+Some pomgen behavior is driven by an optional configuration file `.poppyrc`. pomgen looks for this file at the root of the repository it is running in.
 
 Running pomgen with `--verbose` causes the current config to be echoed.
 

@@ -55,7 +55,7 @@ class LabelTest(unittest.TestCase):
         n = label.Label("//name")
         self.assertFalse(n.is_root_target)
 
-        n = label.Label("@pomgen//:query")
+        n = label.Label("@poppy//:query")
         self.assertTrue(n.is_root_target)
 
         n = label.Label("//:query")
@@ -68,7 +68,7 @@ class LabelTest(unittest.TestCase):
         n = label.Label("@foo//:name")
         self.assertTrue(n.has_repository_prefix)
 
-        n = label.Label("@pomgen//maven")
+        n = label.Label("@poppy//maven")
         self.assertTrue(n.has_repository_prefix)
 
     def test_repository_prefix(self):
@@ -78,8 +78,8 @@ class LabelTest(unittest.TestCase):
         n = label.Label("@foo//:name")
         self.assertEqual("@foo", n.repository_prefix)
 
-        n = label.Label("@pomgen//maven")
-        self.assertEqual("@pomgen", n.repository_prefix)
+        n = label.Label("@poppy//maven")
+        self.assertEqual("@poppy", n.repository_prefix)
 
     def test_hash(self):
         n1 = label.Label("@foo//blah:1234")
@@ -134,27 +134,27 @@ class LabelTest(unittest.TestCase):
         n1 = label.Label("//path/blah:blah")
         self.assertEqual("//path/blah", n1.canonical_form)
 
-        n1 = label.Label("@pomgen//blah:foo")
-        self.assertEqual("@pomgen//blah:foo", n1.canonical_form)
+        n1 = label.Label("@poppy//blah:foo")
+        self.assertEqual("@poppy//blah:foo", n1.canonical_form)
 
-        n1 = label.Label("@pomgen//blah:blah")
-        self.assertEqual("@pomgen//blah", n1.canonical_form)
+        n1 = label.Label("@poppy//blah:blah")
+        self.assertEqual("@poppy//blah", n1.canonical_form)
 
     def test_str(self):
-        n1 = label.Label("@pomgen//blah:blah")
-        self.assertEqual("@pomgen//blah", str(n1))
+        n1 = label.Label("@poppy//blah:blah")
+        self.assertEqual("@poppy//blah", str(n1))
 
     def test_with_target(self):
-        n1 = label.Label("@pomgen//b22")
-        self.assertEqual("@pomgen//b22:foo",
+        n1 = label.Label("@poppy//b22")
+        self.assertEqual("@poppy//b22:foo",
                          n1.with_target("foo").canonical_form)
         
-        n1 = label.Label("@pomgen//b22:b22")
-        self.assertEqual("@pomgen//b22:foo",
+        n1 = label.Label("@poppy//b22:b22")
+        self.assertEqual("@poppy//b22:foo",
                          n1.with_target("foo").canonical_form)
 
-        n1 = label.Label("@pomgen//b22:blah")
-        self.assertEqual("@pomgen//b22:foo",
+        n1 = label.Label("@poppy//b22:blah")
+        self.assertEqual("@poppy//b22:foo",
                          n1.with_target("foo").canonical_form)
 
 

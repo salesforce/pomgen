@@ -14,7 +14,7 @@ bazel build examples/java-import/...
 ```
 
 ```
-bazel run //maven -- -a pomgen,install -l examples/java-import
+bazel run @poppy//package/maven -- -a pomgen,install -l examples/java-import
 ```
 
 The cmd above installs jars and poms into `~/.m2/repository`. The `java_import` jar is at:

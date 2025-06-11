@@ -53,7 +53,7 @@ class PomGenTest(unittest.TestCase):
 """)
         self._write_file("","",".bazelversion", "3.7.1")
 
-        self._write_file("","",".popeyerc", """
+        self._write_file("","",".poppyrc", """
 [general]
 pom_template_path=pom_template.xml
 maven_install_paths=maven_install.json
