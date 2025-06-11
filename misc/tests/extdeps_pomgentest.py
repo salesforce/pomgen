@@ -82,7 +82,7 @@ class ExtDepsPomgenTest(unittest.TestCase):
         self._write_file("", "", "maven_install.json", content)
 
     def _add_rc_file(self):
-       self._write_file("","",".popeyerc", """
+       self._write_file("","",".poppyrc", """
 [general]
 pom_template_path=pom_template.xml
 maven_install_paths=maven_install.json

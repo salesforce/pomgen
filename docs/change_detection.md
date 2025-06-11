@@ -43,7 +43,7 @@ pomgen uses a hash based on the git repository state to track the state of an ar
 In order to update the artifact's hash and the released artifact's version, use the following command:
 
 ```
-bazel run @pomgen//:update -- --package <path/to/bazel/package> \ 
+bazel run @poppy//:update -- --package <path/to/bazel/package> \ 
     --update_released_artifact_hash_to_current \
     --new_released_version <released version>
 ```
@@ -51,7 +51,7 @@ bazel run @pomgen//:update -- --package <path/to/bazel/package> \
 For example, the following command updates the release state of all artifacts under the hello-world directory.
 
 ```
-bazel run @pomgen//:update -- --package examples/hello-world \
+bazel run @poppy//:update -- --package examples/hello-world \
     --update_released_artifact_hash_to_current \
     --new_released_version 1.0.0
 ```
@@ -64,7 +64,7 @@ For more details on working with snapshot jars, see [this doc](./bazel_maven_wor
 pomgen query can show information about the Libraries being relased and their "release reason".  For example:
 
 ```
-bazel run //:query -- --package examples/hello-world/juicer --library_release_plan_tree
+bazel run @poppy//:query -- --package examples/hello-world/juicer --library_release_plan_tree
 ```
 
 Output:
@@ -146,7 +146,7 @@ A typical dev workflow is:
 - Generate pom(s) and install the library/ies into `~/.m2/repository` so that other Maven-based builds can find them:
 
 ```
-bazel run //maven -- -a pomgen,install -l examples/hello-world/juicer
+bazel run //package/maven -- -a pomgen,install -l examples/hello-world/juicer
 ```
 
 
@@ -173,4 +173,4 @@ Change detection is enabled by default. It can be disabled:
 - Globally in the [pomgen configuration file](../README.md#configuration) (`[artifact] : change_detection_enabled`)
 - On a per-artifact basis, by setting the `change_detection` attribute of the `maven_install` rule in the `BUILD.pom` file to `False`
 - By setting the `--force` argument when running `pomgen`
-- By setting the `-f` argument when running `//maven`
+- By setting the `-f` argument when running `//package/maven`

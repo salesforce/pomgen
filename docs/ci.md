@@ -19,13 +19,13 @@ bazel build <bazel package>
 Typically, versions defined in BUILD.pom files end with `-SNAPSHOT` during development. Before releasing to the Maven Repository, the -SNAPSHOT suffix needs to be removed. This is done using the `update` target:
 
 ```
-bazel run @pomgen//:update -- --package <bazel package> --new_version <release version>
+bazel run @poppy//:update -- --package <bazel package> --new_version <release version>
 ```
 
 pomgen query can be used to get the value to use as release version:
 
 ```
-bazel run @pomgen//:query -- --package <bazel package> --library_release_plan_json
+bazel run @poppy//:query -- --package <bazel package> --library_release_plan_json
 ```
 
 Look for the attribute called `proposed_release_version`.
@@ -36,14 +36,14 @@ See this [related issue](https://github.com/salesforce/pomgen/issues/29) to make
 ### Generate poms
 
 ```
-bazel run @pomgen//maven -- -a pomgen -l <bazel package>
+bazel run @poppy//package/maven -- -a pomgen -l <bazel package>
 ```
 
 
 ### Upload Artifacts to the Maven Repository
 
 ```
-bazel run @pomgen//maven -- -a deploy_all
+bazel run @poppy//package/maven -- -a deploy_all
 ```
 
 "deploy_all" includes sources and javadoc.
@@ -57,7 +57,7 @@ bazel run @pomgen//maven -- -a deploy_all
 These files are used by pomgen to determine whether a new release is required because the pom has changed since the last release.
 
 ```
-bazel run @pomgen//:pomgen -- --package <bazel package> --destdir <root of repo> --pom_goldfile
+bazel run @poppy//:pomgen -- --package <bazel package> --destdir <root of repo> --pom_goldfile
 ```
 
 
@@ -66,7 +66,7 @@ bazel run @pomgen//:pomgen -- --package <bazel package> --destdir <root of repo>
 These files are used by pomgen to determine whether any binary Artifact has changed since it was last released.
 
 ```
-bazel run @pomgen//:update -- --package <bazel package> --new_released_version <release version> --update_released_artifact_hash_to_current
+bazel run @poppy//:update -- --package <bazel package> --new_released_version <release version> --update_released_artifact_hash_to_current
 ```
 
 
@@ -80,7 +80,7 @@ bazel run //:query -- --package <bazel package> --library_release_plan_json
 
 Then increment the artifact version:
 ```
-bazel run @pomgen//:update -- --package <bazel package> --new_version <proposed dev version from above>
+bazel run @poppy//:update -- --package <bazel package> --new_version <proposed dev version from above>
 ```
 
 

@@ -10,7 +10,7 @@ set -e
 print_usage() {
 cat << EOF
 
-Usage: bazel run @pomgen//maven.sh -a action(s) -l path/to/library/root/dir
+Usage: bazel run @poppy//package/maven.sh -a action(s) -l path/to/library/root/dir
 
   Required arguments:
 
@@ -110,23 +110,23 @@ Usage: bazel run @pomgen//maven.sh -a action(s) -l path/to/library/root/dir
 
   Generate poms for the hello-world example:
 
-      bazel run @pomgen//maven -- -a pomgen -l examples/hello-world
+      bazel run @poppy//package/maven -- -a pomgen -l examples/hello-world
 
 
   Install all example artifacts into the local Maven repository:
   
-      bazel run @pomgen//maven -- -a install -l examples/hello-world
+      bazel run @poppy//package/maven -- -a install -l examples/hello-world
 
 
   Upload all examples, including javadoc and source jars, to Nexus:
   
-      bazel run @pomgen//maven -- -a deploy_all
+      bazel run @poppy//package/maven -- -a deploy_all
 
 
   More than one action may be specified, for example, to generate poms and
   then install to the local Maven repository:
 
-      bazel run @pomgen//maven -- -a pomgen,install
+      bazel run @poppy//package/maven -- -a pomgen,install
 
 EOF
 }
@@ -228,8 +228,8 @@ fi
 
 if [ -z "$actions" ] ; then
     echo "[ERROR] The action(s) to run must be specified using -a, for example:"
-    echo "        $ bazel run @pomgen//maven -- -a pomgen,install"
-    echo "        bazel run @pomgen//maven for usage information."
+    echo "        $ bazel run @poppy//package/maven -- -a pomgen,install"
+    echo "        bazel run @poppy//package/maven for usage information."
     exit 1
 fi
 
@@ -260,12 +260,12 @@ if [ -f "${this_script_dir}/${helper_functions_file}" ]; then
     source "${this_script_dir}/${helper_functions_file}"
 else
     # to support running through "bazel run", look in a few other places
-    p="external/pomgen/maven/${helper_functions_file}"
+    p="external/pomgen/package/maven/${helper_functions_file}"
     if [ -f "${p}" ]; then
         # remote repository
         source "${p}"
     else
-        p="maven/${helper_functions_file}"
+        p="package/maven/${helper_functions_file}"
         if [ -f "${p}" ]; then
             # local pomgen repository
             source "${p}"
@@ -295,12 +295,12 @@ fi
 # load the configured classifier to use for jar artifacts, this classifier is
 # used for jars processed below by this script, and it is added to generated
 # pom.xml files referencing those jars
-jar_artifact_classifier=$(bazel run @pomgen//misc:configvalueloader -- --key artifact.jar_classifier --default None)
+jar_artifact_classifier=$(bazel run @poppy//misc:configvalueloader -- --key artifact.jar_classifier --default None)
 
 # also load the pom base filename - I guess we shouldn't keep adding these load
 # stmts, so if we end up adding a 3rd one, refactor to bulk load in a single
 # call
-pom_base_filename=$(bazel run @pomgen//misc:configvalueloader -- --key general.pom_base_filename)
+pom_base_filename=$(bazel run @poppy//misc:configvalueloader -- --key general.pom_base_filename)
 
 
 for action in $(echo $actions | tr "," "\n")
@@ -330,9 +330,10 @@ do
             extra_args="${extra_args} --ignore_references"
         fi
         if [ "$debug" = true ]; then
-            echo "[DEBUG] Running with pomgen extra args ${extra_args}"
+            echo "[DEBUG] Running with extra args ${extra_args}"
+            extra_args="${extra_args} --verbose"
         fi
-        bazel run @pomgen//:pomgen -- \
+        bazel run @poppy//:gen -- \
                --package $library_path \
                --destdir $repo_root_path/bazel-bin \
                --pom.description "${POM_DESCRIPTION:-""}" $extra_args

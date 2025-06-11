@@ -41,7 +41,7 @@ This means that the `stringtemplate` dependency will be overridden with `guava`.
 Regenerate the pom:
 
 ```
-bazel run @pomgen//:pomgen -- --package examples/dep-overrides --destdir /tmp/overrides
+bazel run @poppy//:gen -- --package examples/dep-overrides --destdir /tmp/overrides
 ```
 
 Have a look at the generated pom.xml - since the `stringtemplate` dependency is replaced by `guava`, the `antlr` dependency, previously dragged in by `stringtemplate`, is no longer there.

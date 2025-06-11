@@ -7,7 +7,7 @@ This makes it easy to detect fundamental changes in how pom files are generated 
 To updated the goldfiles, run from the root of this repository:
 
 ```
-bazel run //:pomgen -- --package examples --destdir tests/examples_goldfiles
+bazel run //:gen -- --package examples --destdir tests/examples_goldfiles
 ```
 
 Then `git status` and `git diff` to see if anything/what changed.
