@@ -5,8 +5,10 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
-from crawl import pomparser
+
+import generate.impl.pom.pomparser as pomparser
 import unittest
+
 
 class PomParserTest(unittest.TestCase):
 
@@ -119,6 +121,7 @@ class PomParserTest(unittest.TestCase):
     </dependencies>
 </project>
         """
+
         self.assertEqual(pomparser.format_for_comparison(pom1), pomparser.format_for_comparison(pom2))
 
     def test_format_for_comparison__different_poms(self):
@@ -142,6 +145,7 @@ class PomParserTest(unittest.TestCase):
         </dependency>
     </dependencies>
 </project>"""
+
         self.assertNotEqual(pomparser.format_for_comparison(pom1), pomparser.format_for_comparison(pom2))
 
 

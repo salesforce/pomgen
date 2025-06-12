@@ -7,12 +7,14 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 
 This module is responsible for updating BUILD.pom and BUILD.pom.released files.
 """
-from common import mdfiles
-from common import pomgenmode
-from common import version
-from common import version_increment_strategy as vis
-from crawl import buildpom
-from crawl import git
+
+
+import common.mdfiles as mdfiles
+import common.pomgenmode as pomgenmode
+import common.version as version
+import common.version_increment_strategy as vis
+import crawl.buildpom as buildpom
+import crawl.git as git
 import os
 import re
 import sys

@@ -5,13 +5,14 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
-from common import maveninstallinfo
-from common import pomgenmode
-from config import config
-from crawl import buildpom
-from crawl import dependencymd as dependencymdm
-from crawl import pomcontent
-import generate.impl.pomgenerationstrategy as pomgenerationstrategy
+
+import common.pomgenmode as pomgenmode
+import config.config as config
+import crawl.buildpom as buildpom
+import crawl.pomcontent as pomcontent
+import generate.impl.pom.dependencymd as dependencymd
+import generate.impl.pom.maveninstallinfo as maveninstallinfo
+import generate.impl.pom.pomgenerationstrategy as pomgenerationstrategy
 import os
 import tempfile
 import unittest
@@ -410,7 +411,7 @@ released_maven_artifact(
     def _get_strategy(self):
         strategy = pomgenerationstrategy.PomGenerationStrategy(
             "root", config.Config(), maveninstallinfo.NOOP,
-            dependencymdm.DependencyMetadata(None),
+            dependencymd.DependencyMetadata(None),
             pomcontent.NOOP, label_to_overridden_fq_label={}, verbose=True)
         strategy.initialize()
         return strategy

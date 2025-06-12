@@ -4,12 +4,14 @@ All rights reserved.
 SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
-from common import pomgenmode
-from crawl import buildpom
-from crawl import dependency
-from crawl import dependencymd as dependencym
-from crawl import pom
-from crawl import pomcontent
+
+
+import common.pomgenmode as pomgenmode
+import crawl.buildpom as buildpom
+import crawl.pomcontent as pomcontent
+import generate.impl.pom.dependency as dependency
+import generate.impl.pom.dependencymd as dependencymdm
+import generate.impl.pom.pom as pom
 import unittest
 
 
@@ -35,7 +37,7 @@ class PomTest(unittest.TestCase):
         self.guava_dep = f("com.google.guava:guava:23.0", "maven")
         self.logback_dep = f("ch.qos.logback:logback-classic:1.2.3", "maven")
         self.aop_dep = f("aopalliance:aopalliance:jar:1.0.0", "maven")
-        self.dependencymd = dependencym.DependencyMetadata(None)
+        self.dependencymd = dependencymdm.DependencyMetadata(None)
         self.dependencymd.register_transitives(self.guava_dep, [self.t1_dep, self.t2_dep])
     
     def test_dynamic_pom__sanity(self):
@@ -231,7 +233,7 @@ class PomTest(unittest.TestCase):
         Tests that the globally defined classifier is used when referencing
         a bazel-built dependency
         """
-        depmd = dependencym.DependencyMetadata("split-the-g")
+        depmd = dependencymdm.DependencyMetadata("split-the-g")
         root_artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3")
         root_artifact_def = buildpom._augment_art_def_values(
             root_artifact_def, None, "pack1", "WEB-INF", None, None,

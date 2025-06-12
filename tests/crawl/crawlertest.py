@@ -5,15 +5,16 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
-from common.os_util import run_cmd
-from config import config
-from config import exclusions
-from crawl import crawler
-from crawl import git
-from crawl import pomcontent
-from crawl import releasereason as rr
-from crawl import workspace
-from generate import generationstrategyfactory
+
+import common.os_util as os_util
+import config.config as config
+import config.exclusions as exclusions
+import crawl.crawler as crawler
+import crawl.git as git
+import crawl.pomcontent as pomcontent
+import crawl.releasereason as rr
+import crawl.workspace as workspace
+import generate.generationstrategyfactory as generationstrategyfactory
 import os
 import tempfile
 import unittest
@@ -627,15 +628,15 @@ class CrawlerTest(unittest.TestCase):
         self._update_file(repo_root_path, package_rel_path, "MVN-INF", POM_TEMPLATE_FILE)
 
     def _setup_repo(self, repo_root_path):
-        run_cmd("git init .", cwd=repo_root_path)
-        run_cmd("git config user.email 'test@example.com'", cwd=repo_root_path)
-        run_cmd("git config user.name 'test example'", cwd=repo_root_path)
-        run_cmd("git config commit.gpgsign false", cwd=repo_root_path)
+        os_util.run_cmd("git init .", cwd=repo_root_path)
+        os_util.run_cmd("git config user.email 'test@example.com'", cwd=repo_root_path)
+        os_util.run_cmd("git config user.name 'test example'", cwd=repo_root_path)
+        os_util.run_cmd("git config commit.gpgsign false", cwd=repo_root_path)
         self._commit(repo_root_path)
 
     def _commit(self, repo_root_path):
-        run_cmd("git add .", cwd=repo_root_path)
-        run_cmd("git commit -m 'test commit'", cwd=repo_root_path)
+        os_util.run_cmd("git add .", cwd=repo_root_path)
+        os_util.run_cmd("git commit -m 'test commit'", cwd=repo_root_path)
 
     def _update_files(self, repo_root_path, package_rel_paths):
         for p in package_rel_paths:

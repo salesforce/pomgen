@@ -8,20 +8,21 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 Command line utility that shows information about Maven artifacts.
 """
 
-from collections import OrderedDict
-from common import argsupport
-from common import common
-from common import instancequery
-from common import logger
-from common import version_increment_strategy as vis
-from config import config
-from crawl import bazel
-from crawl import crawler
-from crawl import libaggregator
-from crawl import pomcontent
-from crawl import workspace
-from generate import generationstrategyfactory
+
 import argparse
+import collections
+import common.argsupport as argsupport
+import common.common as common
+import common.instancequery as instancequery
+import common.logger as logger
+import common.version_increment_strategy as vis
+import config.config as config
+import crawl.bazel as bazel
+import crawl.crawler as crawler
+import crawl.libaggregator as libaggregator
+import crawl.pomcontent as pomcontent
+import crawl.workspace as workspace
+import generate.generationstrategyfactory as generationstrategyfactory
 import json
 import os
 import sys
@@ -46,15 +47,11 @@ def _parse_arguments(args):
 
     parser.add_argument("--library_release_plan_tree", action="store_true",
                         required=False,
-                        help="Prints release information about the libraries in the monorepo - output is human-readable")
+                        help="Prints release information about the libraries in the repository - output is human-readable")
 
     parser.add_argument("--library_release_plan_json", action="store_true",
                         required=False,
-                        help="Prints release information about the libraries in the monorepo - output is json")
-
-    parser.add_argument("--artifact_release_plan", action="store_true",
-                        required=False,
-                        help="Prints release information about the artifacts in the monorepo - output is json")
+                        help="Prints release information about the libraries in the repository - output is json")
 
     parser.add_argument("--verbose", required=False, action="store_true",
         help="Verbose output")
@@ -92,8 +89,7 @@ if __name__ == "__main__":
     determine_packages_to_process = (args.list_libraries or 
                                      args.list_artifacts or
                                      args.library_release_plan_tree or
-                                     args.library_release_plan_json or
-                                     args.artifact_release_plan)
+                                     args.library_release_plan_json)
     if determine_packages_to_process:
         if args.verbose:
             logger.debug("Starting with package [%s]" % args.package)
@@ -109,7 +105,7 @@ if __name__ == "__main__":
     if args.list_libraries:
         all_libs = []
         for lib_path in bazel.query_all_libraries(repo_root, packages, fac, args.verbose):
-            attrs = OrderedDict()
+            attrs = collections.OrderedDict()
             attrs["name"] = os.path.basename(lib_path)
             attrs["path"] = lib_path
             all_libs.append(attrs)
@@ -122,7 +118,7 @@ if __name__ == "__main__":
             query = instancequery.InstanceQuery(args.filter)
             maven_artifacts = query(maven_artifacts)
         for maven_artifact in sorted(maven_artifacts, key=lambda a: a.bazel_package):
-            attrs = OrderedDict()
+            attrs = collections.OrderedDict()
             attrs["artifact_id"] = maven_artifact.artifact_id
             attrs["group_id"] = maven_artifact.group_id
             attrs["version"] = maven_artifact.version
@@ -134,7 +130,7 @@ if __name__ == "__main__":
         external_dependencies = sorted(fac.load_all_external_dependencies(), key=lambda dep: dep.bazel_label_name)
         ext_deps = []
         for external_dependency in external_dependencies:
-            attrs = OrderedDict()
+            attrs = collections.OrderedDict()
             attrs["artifact_id"] = external_dependency.artifact_id
             attrs["group_id"] = external_dependency.group_id
             attrs["version"] = external_dependency.version
@@ -149,8 +145,7 @@ if __name__ == "__main__":
         print(_to_json(ext_deps))
 
     crawl_artifact_dependencies = (args.library_release_plan_tree or
-                                   args.library_release_plan_json or
-                                   args.artifact_release_plan)
+                                   args.library_release_plan_json)
 
     if crawl_artifact_dependencies:
         crawler = crawler.Crawler(ws, args.verbose)
@@ -173,7 +168,7 @@ if __name__ == "__main__":
                     increment_rel_qualifier = incremental_rel_enabled and transitive
                     version_strat = _get_version_increment_strategy(
                         node, increment_rel_qualifier)
-                    attrs = OrderedDict()
+                    attrs = collections.OrderedDict()
                     attrs["library_path"] = node.library_path
                     attrs["version"] = node.version
                     attrs["released_version"] = node.released_version
@@ -190,15 +185,4 @@ if __name__ == "__main__":
 
                     all_libs_json.append(attrs)
                 print(_to_json(all_libs_json))
-            
-            if args.artifact_release_plan:
-                all_artifacts_json = []
-                for dep in crawler_result.crawled_bazel_packages:
-                    attrs = OrderedDict()
-                    attrs["artifact_id"] = dep.artifact_id
-                    attrs["group_id"] = dep.group_id
-                    attrs["version"] = dep.version
-                    attrs["requires_release"] = not dep.external
-                    attrs["bazel_label"] = "//%s" % dep.bazel_package if dep.bazel_buildable else None
-                    all_artifacts_json.append(attrs)
-                print(_to_json(all_artifacts_json))
+

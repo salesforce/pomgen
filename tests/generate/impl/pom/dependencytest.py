@@ -5,9 +5,10 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
-from common import pomgenmode
-from crawl import buildpom
-from crawl import dependency
+
+import common.pomgenmode as pomgenmode
+import crawl.buildpom as buildpom
+import generate.impl.pom.dependency as dependency
 import unittest
 
 

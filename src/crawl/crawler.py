@@ -7,17 +7,18 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 
 Crawls Bazel BUILD file dependencies and builds a DAG.
 """
-from collections import defaultdict
-from common import label as labelm
-from common import logger
-from crawl import artifactgenctx
-from crawl import bazel
-from crawl import buildpom
-from crawl import dependency
-from crawl import pom
-from crawl import pomparser
-from crawl.releasereason import ReleaseReason
+
+
+import collections
+import common.label as labelm
+import common.logger as logger
+import crawl.artifactgenctx as artifactgenctx
+import crawl.bazel as bazel
+import crawl.buildpom as buildpom
+import crawl.releasereason as releasereason
 import difflib
+import generate.impl.pom.pom as pom
+import generate.impl.pom.pomparser as pomparser
 import os
 
 
@@ -54,16 +55,13 @@ class CrawlerResult:
     """
     Useful bits and pieces that are the outcome of crawling Bazel BUILD files.
     """
-    def __init__(self, genctxs, nodes, crawled_bazel_packages):
+    def __init__(self, genctxs, nodes):
 
         # artifactgenctx.ArtifactGenerationContext instances
         self.artifact_generation_contexts = genctxs
 
         # list of root nodes
         self.nodes = nodes
-
-        # set of Dependency instances, for all crawled bazel packages
-        self.crawled_bazel_packages = crawled_bazel_packages
 
 
 class Crawler:
@@ -72,8 +70,8 @@ class Crawler:
         self.workspace = workspace
         self.verbose = verbose # verbose logging
         self.package_to_artifact = {} # bazel package -> artifact def instance
-        self.library_to_artifact = defaultdict(list) # library root path -> list of its artifact def instances
-        self.library_to_nodes = defaultdict(list) # library root path -> list of its DAG Node instances
+        self.library_to_artifact = collections.defaultdict(list) # library root path -> list of its artifact def instances
+        self.library_to_nodes = collections.defaultdict(list) # library root path -> list of its DAG Node instances
         self.target_to_node = {} # label.Label -> Node for that target
         self.target_to_dependencies = {} # label.Label -> target's deps
 
@@ -170,9 +168,7 @@ class Crawler:
         # included in the result
         ctxs = [ctx for ctx in self.genctxs if ctx.artifact_def.requires_release]
 
-        crawled_bazel_packages = self._get_crawled_packages_as_deps()
-
-        return CrawlerResult(ctxs, nodes, crawled_bazel_packages)
+        return CrawlerResult(ctxs, nodes)
 
     def _register_dependencies(self, target_to_transitive_closure_deps):
         """
@@ -206,13 +202,11 @@ class Crawler:
         # other, but these references are not guaranteed)
         artifacts = self.library_to_artifact[library_path]
         for art_def in artifacts:
-            all_deps.add(dependency.new_dep_from_maven_artifact_def(art_def))
+            strategy = art_def.generation_strategy
+            label = labelm.Label(art_def.bazel_package)
+            dep = strategy.load_dependency(label, art_def)
+            all_deps.add(dep)
         return all_deps
-
-    def _get_crawled_packages_as_deps(self):
-        deps = [dependency.new_dep_from_maven_artifact_def(art_def) for art_def in self.package_to_artifact.values()]
-        deps = set(self._filter_non_artifact_referencing_deps(deps))
-        return deps
 
     def _get_unprocessed_packages(self):
         """
@@ -258,13 +252,14 @@ class Crawler:
             if not art_def.requires_release and art_def.released_pom_content is not None:
                 generator = art_def.generation_strategy.new_generator(ctx)
                 goldfile_manifest = generator.gen(pom.PomContentType.GOLDFILE)
+                # TODO - do not hardcode pom logic
                 current_manifest = pomparser.format_for_comparison(goldfile_manifest)
                 previous_manifest = pomparser.format_for_comparison(art_def.released_pom_content)
                 manifest_changed = current_manifest != previous_manifest
                 if manifest_changed:
                     art_def.requires_release = True
                     # TODO release reason
-                    art_def.release_reason = ReleaseReason.POM
+                    art_def.release_reason = releasereason.ReleaseReason.POM
 
                     if self.verbose:
                         logger.debug("pom diff %s %s" % (art_def, art_def.bazel_package))
@@ -452,12 +447,12 @@ class Crawler:
                     artifact_def.requires_release = True
                     updated_artifact_defs.append(artifact_def)
                     if force_release:
-                        artifact_def.release_reason = ReleaseReason.ALWAYS
+                        artifact_def.release_reason = releasereason.ReleaseReason.ALWAYS
                     else:
                         if sibling_artifact_requires_release:
                             artifact_def.release_reason = sibling_release_reason
                         elif transitive_dep_requires_release:
-                            artifact_def.release_reason = ReleaseReason.TRANSITIVE
+                            artifact_def.release_reason = releasereason.ReleaseReason.TRANSITIVE
                         else:
                             raise Exception("release_reason not set on artifact - this is a bug")
         else: # release not required

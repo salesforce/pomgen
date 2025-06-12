@@ -4,20 +4,18 @@ All rights reserved.
 SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
-
-
-from common import label
-from common import maveninstallinfo
-from common import pomgenmode
-from config import config
-from crawl import buildpom
-from crawl import crawler as crawlerm
-from crawl import dependency
-from crawl import dependencymd as dependencymdm
-from crawl import pomcontent
-from crawl import workspace
-from generate import generationstrategyfactory
-import generate.impl.pomgenerationstrategy as pomgenerationstrategy
+import common.label as label
+import common.pomgenmode as pomgenmode
+import config.config as config
+import crawl.buildpom as buildpom
+import crawl.crawler as crawlerm
+import crawl.pomcontent as pomcontent
+import crawl.workspace as workspace
+import generate.generationstrategyfactory as generationstrategyfactory
+import generate.impl.pom.dependency as dependency
+import generate.impl.pom.dependencymd as dependencymdm
+import generate.impl.pom.maveninstallinfo as maveninstallinfo
+import generate.impl.pom.pomgenerationstrategy as pomgenerationstrategy
 import unittest
 
 

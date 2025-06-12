@@ -4,17 +4,17 @@ All rights reserved.
 SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
-from common import maveninstallinfo
-from common.os_util import run_cmd
-from config import config
-from config import exclusions
-from crawl import artifactprocessor
-from crawl import buildpom
-from crawl import dependencymd as dependencymdm
-from crawl import git
-from crawl import pomcontent
-from crawl import releasereason
-import generate.impl.pomgenerationstrategy as pomgenerationstrategy
+import common.os_util as os_util
+import config.config as config
+import config.exclusions as exclusions
+import crawl.artifactprocessor as artifactprocessor
+import crawl.buildpom as buildpom
+import crawl.git as git
+import crawl.pomcontent as pomcontent
+import crawl.releasereason as releasereason
+import generate.impl.pom.dependencymd as dependencymd
+import generate.impl.pom.maveninstallinfo as maveninstallinfo
+import generate.impl.pom.pomgenerationstrategy as pomgenerationstrategy
 import os
 import tempfile
 import unittest
@@ -377,12 +377,12 @@ class ArtifactProcessorTest(unittest.TestCase):
         repo_root_path = tempfile.mkdtemp("monorepo")
         self._touch_file_at_path(repo_root_path, "", "MVN-INF", "LIBRARY.root")
         self._add_package(repo_root_path, package_rel_path)
-        run_cmd("git init .", cwd=repo_root_path)
-        run_cmd("git config user.email 'test@example.com'", cwd=repo_root_path)
-        run_cmd("git config user.name 'test example'", cwd=repo_root_path)
-        run_cmd("git config commit.gpgsign false", cwd=repo_root_path)
-        run_cmd("git add .", cwd=repo_root_path)
-        run_cmd("git commit -m 'test commit'", cwd=repo_root_path)
+        os_util.run_cmd("git init .", cwd=repo_root_path)
+        os_util.run_cmd("git config user.email 'test@example.com'", cwd=repo_root_path)
+        os_util.run_cmd("git config user.name 'test example'", cwd=repo_root_path)
+        os_util.run_cmd("git config commit.gpgsign false", cwd=repo_root_path)
+        os_util.run_cmd("git add .", cwd=repo_root_path)
+        os_util.run_cmd("git commit -m 'test commit'", cwd=repo_root_path)
         return repo_root_path
 
     def _add_package(self, repo_root_path, package_rel_path):
@@ -407,13 +407,13 @@ class ArtifactProcessorTest(unittest.TestCase):
                 f.write("abc\n")
 
     def _commit(self, repo_root_path):
-        run_cmd("git add .", repo_root_path)
-        run_cmd("git commit -m 'message'", repo_root_path)
+        os_util.run_cmd("git add .", repo_root_path)
+        os_util.run_cmd("git commit -m 'message'", repo_root_path)
 
     def _get_strategy(self):
         strategy = pomgenerationstrategy.PomGenerationStrategy(
             "root", config.Config(), maveninstallinfo.NOOP,
-            dependencymdm.DependencyMetadata(None),
+            dependencymd.DependencyMetadata(None),
             pomcontent.NOOP, label_to_overridden_fq_label={}, verbose=True)
         strategy.initialize()
         return strategy

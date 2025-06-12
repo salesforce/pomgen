@@ -1,14 +1,22 @@
+"""
+Copyright (c) 2025, salesforce.com, inc.
+All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause
+For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+"""
+
+
 import common.label as labelm
-import common.maveninstallinfo as maveninstallinfo
 import common.os_util as os_util
 import config.config as config
 import config.exclusions as exclusions
-import crawl.bazel as bazel
-import crawl.dependency as dependency
 import crawl.git as git
 import crawl.pomcontent as pomcontent
 import crawl.workspace as workspace
-from generate import generationstrategyfactory
+import generate.generationstrategyfactory as generationstrategyfactory
+import generate.impl.pom.dependency as dependency
+import generate.impl.pom.maveninstallinfo as maveninstallinfo
+import generate.impl.pom.maveninstallparser as maveninstallparser
 import os
 import tempfile
 import unittest
@@ -17,14 +25,14 @@ import unittest
 class PomGenerationStrategyTest(unittest.TestCase):
 
     def setUp(self):
-        self.orig_bazel_parse_maven_install = bazel.parse_maven_install
+        self._org_parse_func = maveninstallparser.parse_maven_install
         f = dependency.new_dep_from_maven_art_str
         query_result = [
             (f("org.apache.maven:maven-artifact:3.3.9", "maven"), [],),
             (f("com.google.guava:guava:23.0", "maven"), [],),
             (f("ch.qos.logback:logback-classic:1.2.3", "maven"), [],)
         ]
-        bazel.parse_maven_install = lambda names, paths, verbose: query_result
+        maveninstallparser.parse_maven_install = lambda names, paths, verbose: query_result
 
         self.repo_root = tempfile.mkdtemp("root")
         self.fac = generationstrategyfactory.GenerationStrategyFactory(
@@ -32,7 +40,7 @@ class PomGenerationStrategyTest(unittest.TestCase):
         self.ws = workspace.Workspace(self.repo_root, _get_config(), self.fac)
     
     def tearDown(self):
-        bazel.parse_maven_install = self.orig_bazel_parse_maven_install
+        maveninstallparser.parse_maven_install = self._org_parse_func
 
     def test_parse_src_dep(self):
         """

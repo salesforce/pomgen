@@ -7,10 +7,10 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 This module contains pom.xml generation logic.
 """
 
-from crawl import pomcontent as pomcontentm
-from common import pomgenmode
+import common.pomgenmode as pomgenmode
 import copy
-from crawl import pomparser
+import crawl.pomcontent as pomcontentm
+import generate.impl.pom.pomparser as pomparser
 import os
 import re
 

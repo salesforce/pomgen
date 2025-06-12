@@ -10,7 +10,7 @@ import os
 
 class PyGenerationStrategy(generate.AbstractGenerationStrategy):
 
-    def __init__(self, repository_root, config, verbose=False):
+    def __init__(self, repository_root, config, verbose):
         assert repository_root is not None
         assert config is not None
         self._repository_root = repository_root

@@ -6,13 +6,13 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 """
 
 
-from crawl import git
+import common.buildpomupdate as buildpomupdate
+import common.os_util as os_util
+import config.config as config
+import config.exclusions as exclusions
+import crawl.git as git
 import crawl.pomcontent as pomcontent
-from common.os_util import run_cmd
-from config import config
-from generate import generationstrategyfactory
-from config import exclusions
-from pomupdate import buildpomupdate
+import generate.generationstrategyfactory as generationstrategyfactory
 import os
 import tempfile
 import unittest
@@ -763,14 +763,14 @@ released_maven_artifact(
            f.write(build_pom_released % (released_version, released_artifact_hash))
 
     def _setup_repo(self, repo_root_path):
-        run_cmd("git init .", cwd=repo_root_path)
-        run_cmd("git config user.email 'test@example.com'", cwd=repo_root_path)
-        run_cmd("git config user.name 'test example'", cwd=repo_root_path)
+        os_util.run_cmd("git init .", cwd=repo_root_path)
+        os_util.run_cmd("git config user.email 'test@example.com'", cwd=repo_root_path)
+        os_util.run_cmd("git config user.name 'test example'", cwd=repo_root_path)
         self._commit(repo_root_path)
 
     def _commit(self, repo_root_path):
-        run_cmd("git add .", cwd=repo_root_path)
-        run_cmd("git commit --allow-empty --no-gpg-sign -m 'test commit'", cwd=repo_root_path)
+        os_util.run_cmd("git add .", cwd=repo_root_path)
+        os_util.run_cmd("git commit --allow-empty --no-gpg-sign -m 'test commit'", cwd=repo_root_path)
 
     def _touch_file_at_path(self, repo_root_path, package_rel_path, filename):
         path = os.path.join(repo_root_path, package_rel_path, filename)
