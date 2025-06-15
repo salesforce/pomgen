@@ -82,11 +82,10 @@ class MavenArtifactDef(object):
         BUILD.pom file.
 
     bazel_package: the bazel package (relative path to the directory) where the 
-        MVN-INF directory and the build file live. The build file is not
-        guaranteed to exist (see attr below) because pomgen supports "pom only"
-        artifacts, which are foreign to bazel.
+        manifest file (for ex MVN-INF/) directory and the build file live.
+        The build file is not guaranteed to exist.
 
-    bazel_target: the bazel target that builds this artifact.
+    bazel_target: the bazel target that builds the binary artifact.
 
     library_path: the path to the root directory of the library this artifact
         is part of.

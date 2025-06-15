@@ -8,7 +8,6 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 Common argument processing.
 """
 from common import logger
-from crawl import bazel
 import os
 
 
@@ -72,7 +71,7 @@ def _find_packages_with_md(repository_root_path, target_pattern, fac, verbose):
     Returns all packages in the specified target pattern, as a list of strings,
     that are "maven aware" packages.
     """
-    path = os.path.join(repository_root_path, bazel.target_pattern_to_path(target_pattern))
+    path = os.path.join(repository_root_path, _target_pattern_to_path(target_pattern))
 
     maven_artifact_packages = []
     for rootdir, dirs, files in os.walk(path):
@@ -87,5 +86,23 @@ def _find_packages_with_md(repository_root_path, target_pattern, fac, verbose):
 
 
 def _to_path(list_of_paths):
-    return [bazel.target_pattern_to_path(p) for p in list_of_paths]
+    return [_target_pattern_to_path(p) for p in list_of_paths]
     
+
+def _target_pattern_to_path(target_pattern):
+    """
+    Converts a bazel target pattern to a directory path.
+
+    For example:
+        //projects/libs/servicelibs/srpc/srpc-api:srpc-api -> projects/libs/servicelibs/srpc/srpc-api
+        //projects/libs/servicelibs/srpc/... -> projects/libs/servicelibs/srpc
+    """
+    if target_pattern.startswith("//"):
+        target_pattern = target_pattern[2:]
+    elif target_pattern.startswith("/"):
+        target_pattern = target_pattern[1:]
+    if ":" in target_pattern:
+        target_pattern = target_pattern[0:target_pattern.rfind(":")]
+    if target_pattern.endswith("/..."):
+        target_pattern = target_pattern[0:-4]
+    return target_pattern

@@ -11,12 +11,8 @@ from functools import total_ordering
  
 
 @total_ordering
-class AbstractDependency(generate.AbstractDependency):
+class AbstractJarDependency(generate.AbstractDependency):
     """
-    TODO rename this class to AbstractJarDependency and move it out of the
-    general crawl module.
-
-
     Required/always set:
 
     group_id: the maven artifact groupId of this depdendency.
@@ -175,7 +171,7 @@ class AbstractDependency(generate.AbstractDependency):
         return self.__str__()
 
 
-class ThirdPartyDependency(AbstractDependency):
+class ThirdPartyDependency(AbstractJarDependency):
 
     def __init__(self, maven_install_name, group_id, artifact_id, version,
                  classifier=None, packaging=None, scope=None):
@@ -229,7 +225,7 @@ class ThirdPartyDependency(AbstractDependency):
         return n
 
 
-class MonorepoDependency(AbstractDependency):
+class MonorepoDependency(AbstractJarDependency):
 
     def __init__(self, artifact_def):
         super(MonorepoDependency, self).__init__(artifact_def.group_id,

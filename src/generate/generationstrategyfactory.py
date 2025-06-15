@@ -1,9 +1,6 @@
-from common import maveninstallinfo
-from common import overridefileinfo
-from crawl import dependencymd as dependencym
 from common import mdfiles
-from generate.impl import pomgenerationstrategy
-from generate.impl import pygenerationstrategy
+import generate.impl.pom.pomgenerationstrategy as pomgenerationstrategy
+import generate.impl.py.pygenerationstrategy as pygenerationstrategy
 import os
 
 
@@ -16,8 +13,12 @@ class GenerationStrategyFactory:
         self._repository_root = repository_root
         self._verbose = verbose
         self._strategies = []
-        self._pomstrategy = self._build_pomgen_strategy(config, pom_content)
-        self._strategies = (self._pomstrategy, self._build_pygen_strategy(config))
+        self._pomstrategy = pomgenerationstrategy.PomGenerationStrategy.new(
+            repository_root, config, pom_content, verbose)
+        self._strategies = (
+            self._pomstrategy,
+            pygenerationstrategy.PyGenerationStrategy(
+                self._repository_root, config, self._verbose))
         self._initialize_strategies()
 
     def get_strategy_for_package(self, package):
@@ -43,19 +44,3 @@ class GenerationStrategyFactory:
     def _initialize_strategies(self):
         for strategy in self._strategies:
             strategy.initialize()
-
-    def _build_pomgen_strategy(self, config, pom_content):
-        dependencymd = dependencym.DependencyMetadata(
-            config.jar_artifact_classifier)
-        override_file_info = overridefileinfo.OverrideFileInfo(
-            config.override_file_paths, self._repository_root)
-        mvn_install_info = maveninstallinfo.MavenInstallInfo(
-            config.maven_install_paths)
-        return pomgenerationstrategy.PomGenerationStrategy(
-            self._repository_root, config, mvn_install_info, dependencymd,
-            pom_content, override_file_info.label_to_overridden_fq_label,
-            self._verbose)
-
-    def _build_pygen_strategy(self, config):
-        return pygenerationstrategy.PyGenerationStrategy(
-            self._repository_root, config, self._verbose)

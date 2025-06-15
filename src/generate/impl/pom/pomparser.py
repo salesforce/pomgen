@@ -8,8 +8,8 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 This is a helper module for pom generation - it contains methods dealing with 
 pom.xml parsing.
 """
-from collections import defaultdict
-from crawl import dependency
+import collections
+import generate.impl.pom.dependency as dependency
 import os
 
 
@@ -70,7 +70,7 @@ def indent_xml(xml_content, indent):
 
 class ParsedDependencies:
 
-    def __init__(self, dependencies=set(), dependency_to_exclusions=defaultdict(list), dependency_to_str_repr={}):
+    def __init__(self, dependencies=set(), dependency_to_exclusions=collections.defaultdict(list), dependency_to_str_repr={}):
         # a set of all dependencies (Dependency instances) declared in the 
         # pom's DependencyManagement section
         self._dependencies = dependencies
@@ -144,7 +144,7 @@ def parse_dependencies(pom_content):
     all_deps = tree.xpath('/project/dependencies/*')
 
     dependencies = set()
-    dependency_to_exclusions = defaultdict(list)
+    dependency_to_exclusions = collections.defaultdict(list)
     dependency_to_str_repr = {}
 
     for el in all_deps:

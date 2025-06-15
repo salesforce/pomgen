@@ -5,10 +5,10 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
-from common import argsupport
-from config import config
-from generate import generationstrategyfactory
-from crawl import pomcontent
+import common.argsupport as argsupport
+import config.config as config
+import generate.generationstrategyfactory as generationstrategyfactory
+import crawl.pomcontent as pomcontent
 import os
 import unittest
 import tempfile
@@ -121,7 +121,6 @@ class ArgSupportTest(unittest.TestCase):
         self.assertNotIn("projects/libs/servicelibs/grail/grail-admin-impl", packages)
         self.assertNotIn("projects/libs/servicelibs/zk-connect", packages)
 
-
     def test_exact_match_exclusions(self):
         packages_str = "projects/libs,-projects/libs/servicelibs/zk,-projects/libs/servicelibs/grail/grail-admin-api/, -projects/libs/servicelibs/grail/"
 
@@ -133,6 +132,16 @@ class ArgSupportTest(unittest.TestCase):
         self.assertNotIn("projects/libs/servicelibs/grail/grail-admin-api", packages)
         self.assertIn("projects/libs/servicelibs/grail/grail-admin-impl", packages)
         self.assertNotIn("projects/libs/servicelibs/zk-connect", packages)
+
+    def test_target_pattern_to_path(self):
+        """
+        Tests for bazel.target_pattern_to_path.
+        """
+        self.assertEqual("foo/blah", argsupport._target_pattern_to_path("//foo/blah"))
+        self.assertEqual("foo/blah", argsupport._target_pattern_to_path("/foo/blah"))
+        self.assertEqual("foo/blah", argsupport._target_pattern_to_path("foo/blah:target_name"))
+        self.assertEqual("foo/blah", argsupport._target_pattern_to_path("foo/blah/..."))
+        self.assertEqual("foo/blah", argsupport._target_pattern_to_path("foo/blah"))
 
 
 def _setup_repo():

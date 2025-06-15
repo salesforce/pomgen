@@ -1,11 +1,27 @@
 import common.logger as logger
-import crawl.dependency as dependency
-import crawl.bazel as bazel
-import crawl.pom as pom
 import generate
+import generate.impl.pom.dependency as dependency
+import generate.impl.pom.dependencymd as dependencymd
+import generate.impl.pom.maveninstallinfo as maveninstallinfo
+import generate.impl.pom.maveninstallparser as maveninstallparser
+import generate.impl.pom.overridefileinfo as overridefileinfo
+import generate.impl.pom.pom as pom
 
 
 class PomGenerationStrategy(generate.AbstractGenerationStrategy):
+
+    @classmethod
+    def new(clazz, repository_root, config, pom_content, verbose):
+        depmd = dependencymd.DependencyMetadata(
+            config.jar_artifact_classifier)
+        override_file_info = overridefileinfo.OverrideFileInfo(
+            config.override_file_paths, repository_root)
+        mvn_install_info = maveninstallinfo.MavenInstallInfo(
+            config.maven_install_paths)
+        return PomGenerationStrategy(
+            repository_root, config, mvn_install_info, depmd,
+            pom_content, override_file_info.label_to_overridden_fq_label,
+            verbose)
 
     def __init__(self,
                  repository_root,
@@ -82,7 +98,7 @@ class PomGenerationStrategy(generate.AbstractGenerationStrategy):
         names_and_paths = self._maven_install_info.\
             get_maven_install_names_and_paths(self._repository_root)
 
-        dep_to_transitives = bazel.parse_maven_install(
+        dep_to_transitives = maveninstallparser.parse_maven_install(
             names_and_paths, self._label_to_overridden_fq_label, self._verbose)
 
         label_to_dep = {}

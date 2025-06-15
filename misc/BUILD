@@ -1,4 +1,5 @@
-python_version = 'PY3'
+load("@aspect_rules_py//py:defs.bzl", "py_binary", "py_test")
+
 
 py_binary(
     name = "extdeps",
@@ -6,7 +7,6 @@ py_binary(
     main = "extdeps_pomgen.py",
     deps = ["//:pomgen_lib"],
     imports = ["../src"],
-    python_version = python_version,
 )
 
 py_binary(
@@ -14,7 +14,6 @@ py_binary(
     srcs = ["configvalueloader.py"],
     deps = ["//:pomgen_lib"],
     imports = ["../src"],
-    python_version = python_version,
 )
 
 py_test(
@@ -24,6 +23,5 @@ py_test(
     deps = ["//:pomgen_lib"],
     imports = [".", "../src"],
     size = "small",
-    python_version = python_version,
 )
 

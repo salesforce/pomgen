@@ -29,6 +29,16 @@ class LabelTest(unittest.TestCase):
         n = label.Label("@foo//a/b/c")
         self.assertEqual("a/b/c", n.package_path)
 
+    def test_is_source_ref(self):
+        n = label.Label("@foo//a/b/c")
+        self.assertFalse(n.is_source_ref)
+
+        n = label.Label("//foo/a/b/c")
+        self.assertTrue(n.is_source_ref)
+
+        n = label.Label("foo/a/b/c")
+        self.assertTrue(n.is_source_ref)
+
     def test_target(self):
         n = label.Label("//:name")
         self.assertEqual("name", n.target)

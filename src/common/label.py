@@ -23,6 +23,9 @@ class Label(object):
         name = name.strip()
         if name.endswith("/"):
             name = name[:-1]
+        if not name.startswith("@") and not name.startswith("//"):
+            # just a path? we treat a/b/c as //a/b/c
+            name = "//%s" % name
         self._name = name
 
     @property

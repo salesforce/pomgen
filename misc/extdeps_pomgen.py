@@ -8,17 +8,18 @@ Generates a single pom to stdout that has <dependency/> entries for 3rd party
 dependencies.
 """
 
-from common import common
-from common import label as labelm
-from common import maveninstallinfo
-from config import config
-from crawl import buildpom
-from crawl import dependency
-from crawl import dependencymd as dependencymdm
-from crawl import pom
-from crawl import pomcontent
-from generate.impl import pomgenerationstrategy
+
 import argparse
+import common.common as common
+import common.label as labelm
+import config.config as config
+import crawl.buildpom as buildpom
+import crawl.pomcontent as pomcontent
+import generate.impl.pom.dependency as dependency
+import generate.impl.pom.dependencymd as dependencymdm
+import generate.impl.pom.maveninstallinfo as maveninstallinfo
+import generate.impl.pom.pom as pom
+import generate.impl.pom.pomgenerationstrategy as pomgenerationstrategy
 import os
 import sys
 

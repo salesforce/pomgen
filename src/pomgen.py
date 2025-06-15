@@ -8,19 +8,20 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 The pomgen cmdline entry-point.
 """
 
-from common import argsupport
-from common import common
-from common import logger
-from common import mdfiles
-from config import config
-from crawl import bazel
-from crawl import crawler as crawlerm
-from crawl import libaggregator
-from crawl import pom
-from crawl import pomcontent as pomcontentm
-from crawl import workspace
-from generate import generationstrategyfactory
+
 import argparse
+import common.argsupport as argsupport
+import common.common as common
+import common.logger as logger
+import common.mdfiles as mdfiles
+import config.config as config
+import crawl.bazel as bazel
+import crawl.crawler as crawlerm
+import crawl.libaggregator as libaggregator
+import crawl.pomcontent as pomcontentm
+import crawl.workspace as workspace
+import generate.generationstrategyfactory as generationstrategyfactory
+import generate.impl.pom.pom as pom
 import os
 import sys
 

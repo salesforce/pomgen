@@ -1,25 +1,26 @@
 """
-Copyright (c) 2018, salesforce.com, inc.
+Copyright (c) 2025, salesforce.com, inc.
 All rights reserved.
 SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
-from crawl import bazel
-from crawl import dependency
+
+import generate.impl.pom.dependency as dependency
+import generate.impl.pom.maveninstallparser as maveninstallparser
 import os
-import unittest
 import tempfile
+import unittest
 
 
-class BazelTest(unittest.TestCase):
+class MavenInstallParserTest(unittest.TestCase):
 
     def test_parse_maven_install(self):
         fd, path = tempfile.mkstemp()
         with os.fdopen(fd, 'w') as f:
             f.write(MVN_INSTALL_JSON_CONTENT)
 
-        result = bazel.parse_maven_install([("maven", path,)])
+        result = maveninstallparser.parse_maven_install([("maven", path,)])
         self.assertEqual(7, len(result))
         dep, transitives = self._get_dep_and_transitives(
             result, "ch.qos.logback", "logback-classic", "maven")
@@ -80,7 +81,7 @@ class BazelTest(unittest.TestCase):
         with os.fdopen(fd, 'w') as f:
             f.write(MVN_INSTALL_JSON_CONTENT)
 
-        result = bazel.parse_maven_install([("maven", path)])
+        result = maveninstallparser.parse_maven_install([("maven", path)])
 
         guava_dep, _ = self._get_dep_and_transitives(
             result, "google.guava", "guava", "maven")
@@ -99,7 +100,7 @@ class BazelTest(unittest.TestCase):
 
         label_to_overridden_fq_label = {guava.unqualified_bazel_label_name: antlr.bazel_label_name}
 
-        result = bazel.parse_maven_install([("maven", path)], label_to_overridden_fq_label)
+        result = maveninstallparser.parse_maven_install([("maven", path)], label_to_overridden_fq_label)
 
         dep, transitives = self._get_dep_and_transitives(
             result, "ch.qos.logback", "logback-classic", "maven")
@@ -133,7 +134,7 @@ class BazelTest(unittest.TestCase):
             guava.unqualified_bazel_label_name: antlr.bazel_label_name
         }
 
-        result = bazel.parse_maven_install(
+        result = maveninstallparser.parse_maven_install(
             [("maven", path1), ("nevam", path2)],
             label_to_overridden_fq_label)
 
@@ -165,7 +166,7 @@ class BazelTest(unittest.TestCase):
         with os.fdopen(fd, 'w') as f:
             f.write(MVN_INSTALL_JSON_CONTENT_CONFLICT_RESOLUTION)
 
-        result = bazel.parse_maven_install([("maven", path)])
+        result = maveninstallparser.parse_maven_install([("maven", path)])
 
         expected_guava = dependency.new_dep_from_maven_art_str("com.google.guava:guava:31.0.1-jre", "maven")
         self.assertEqual(2, len(result))
@@ -180,22 +181,6 @@ class BazelTest(unittest.TestCase):
         self.assertEqual(expected_guava, guava)
         self.assertEqual(expected_guava.version, guava.version)
 
-    def test_target_pattern_to_path(self):
-        """
-        Tests for bazel.target_pattern_to_path.
-        """
-        self.assertEqual("foo/blah", bazel.target_pattern_to_path("//foo/blah"))
-        self.assertEqual("foo/blah", bazel.target_pattern_to_path("/foo/blah"))
-        self.assertEqual("foo/blah", bazel.target_pattern_to_path("foo/blah:target_name"))
-        self.assertEqual("foo/blah", bazel.target_pattern_to_path("foo/blah/..."))
-        self.assertEqual("foo/blah", bazel.target_pattern_to_path("foo/blah"))
-
-    def test_ensure_unique_deps(self):
-        """
-        Tests for bazel._ensure_unique_deps
-        """
-        self.assertEqual(["//a", "//b", "//c"],
-                          bazel._ensure_unique_deps(["//a", "//b", "//c", "//a"]))
 
     def test_use_alt_lookup_coords(self):
         d1 = dependency.new_dep_from_maven_art_str("com.salesforce.servicelibs:pki-security-impl:jar:tests:1.0.0", "maven")
@@ -203,8 +188,8 @@ class BazelTest(unittest.TestCase):
         coord_wo_vers_to_dep = {d.maven_coordinates_name:d for d in top_level_deps}
         direct_dep_coords_wo_vers = ["com.salesforce.servicelibs:pki-security-impl:test-jar"]
 
-        direct_deps = bazel._get_direct_deps(direct_dep_coords_wo_vers,
-                                             coord_wo_vers_to_dep, "test_install.bzl", True, True)
+        direct_deps = maveninstallparser._get_direct_deps(
+            direct_dep_coords_wo_vers, coord_wo_vers_to_dep, "test_install.bzl", True, True)
 
         self.assertIn(d1, direct_deps)
 
@@ -216,6 +201,7 @@ class BazelTest(unittest.TestCase):
             if d.group_id == group_id and d.artifact_id == artifact_id and d.bazel_label_name.startswith("@" + rule_name):
                 return t
         assert False, "didn't find %s:%s in result:\n%s" % (group_id, artifact_id, result)
+
 
 
 MVN_INSTALL_JSON_CONTENT = """
