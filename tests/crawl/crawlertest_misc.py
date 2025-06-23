@@ -102,7 +102,7 @@ class CrawlerTest(unittest.TestCase):
         crawler = crawlerm.Crawler(self.ws, verbose=True)
         label = labelm.Label("//lib/a1")
 
-        filtered_label = crawler._filter_label(label)
+        filtered_label = crawler._filter_label(label, downstream_artifact_def=None)
 
         self.assertIs(label, filtered_label)
 
@@ -115,11 +115,11 @@ class CrawlerTest(unittest.TestCase):
         crawler = crawlerm.Crawler(self.ws, verbose=True)
 
         label = labelm.Label("@maven//:ch_qos_logback_logback_classic")
-        filtered_label = crawler._filter_label(label)
+        filtered_label = crawler._filter_label(label, downstream_artifact_def=None)
         self.assertIs(label, filtered_label) # not filtered
 
         label = labelm.Label("//projects/protos/grail:java_protos")
-        filtered_label = crawler._filter_label(label)
+        filtered_label = crawler._filter_label(label, downstream_artifact_def=None)
         self.assertIsNone(filtered_label) # filtered
 
     def test_filter_label__excluded_dependency_labels(self):
@@ -134,14 +134,14 @@ class CrawlerTest(unittest.TestCase):
         crawler = crawlerm.Crawler(self.ws, verbose=True)
 
         label = labelm.Label("@maven//:ch_qos_logback_logback_classic")
-        filtered_label = crawler._filter_label(label)
+        filtered_label = crawler._filter_label(label, downstream_artifact_def=None)
         self.assertIsNone(filtered_label) # filtered
 
         label = labelm.Label("//lib/a1")
-        filtered_label = crawler._filter_label(label)
+        filtered_label = crawler._filter_label(label, downstream_artifact_def=None)
         self.assertIs(filtered_label, label) # not filtered
 
-        filtered_label = crawler._filter_label(label)
+        filtered_label = crawler._filter_label(label,downstream_artifact_def=None)
 
         self.assertIs(label, filtered_label)
 
@@ -158,7 +158,7 @@ class CrawlerTest(unittest.TestCase):
         crawler = crawlerm.Crawler(self.ws, verbose=True)
         label = labelm.Label("//lib/lombok")
 
-        filtered_label = crawler._filter_label(label)
+        filtered_label = crawler._filter_label(label, downstream_artifact_def=None)
 
         self.assertIsNone(filtered_label)
 
@@ -278,6 +278,7 @@ rules_jvm_external_setup()
         workspace_file_path = os.path.join(path, "WORKSPACE")
         with open(workspace_file_path, "w") as f:
            f.write(workspace_file)
+
 
 if __name__ == '__main__':
     unittest.main()
