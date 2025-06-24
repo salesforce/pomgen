@@ -8,10 +8,10 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 This module is responsible for parsing BUILD.pom and BUILD.pom.released files.
 """
 
-from collections import namedtuple
-from common import code
-from common import mdfiles
-from common import pomgenmode
+import collections
+import common.code as code
+import common.mdfiles as mdfiles
+import common.pomgenmode as pomgenmode
 import os
 
 
@@ -21,7 +21,7 @@ class MavenArtifactDef(object):
     Information from the BUILD.pom.released file is added, if that file exists.
 
 
-    ==== Read out of the BUILD.pom file ====
+    ==== Read out of the metadata (for ex BUILD.pom) file ====
 
     group_id: the maven artifact groupId of the bazel package.
 
@@ -64,8 +64,11 @@ class MavenArtifactDef(object):
     version_increment_strategy_name: specifies how this artifacts version should
         be incremented.
 
+    1_1_1_mode: whether this artifact is in 1:1:1 mode: all bazel subpackages
+                of this bazel package use pomgenmode.SKIP
 
-    ==== Read out of the optional BUILD.pom.released file ====
+
+    ==== Read out of the optional released md file (for ex BUILD.pom.released)
 
     released_version: the previously released version to Nexus.
 
@@ -128,7 +131,8 @@ class MavenArtifactDef(object):
                  library_path=None,
                  requires_release=None,
                  released_pom_content=None,
-                 generation_strategy=None):
+                 generation_strategy=None,
+                 oneoneone_mode=False):
         self._group_id = group_id
         self._artifact_id = artifact_id
         self._version = version
@@ -150,6 +154,7 @@ class MavenArtifactDef(object):
         self._release_reason = None
         self._released_pom_content = released_pom_content
         self._generation_strategy = generation_strategy
+        self._oneoneone_mode = oneoneone_mode
 
         # data cleanup/verification/sanitization
         # these are separate methods for better readability
@@ -262,6 +267,10 @@ class MavenArtifactDef(object):
     def generation_strategy(self):
         return self._generation_strategy
 
+    @property
+    def oneoneone_mode(self):
+        return self._oneoneone_mode
+
     def __str__(self):
         return "%s:%s" % (self._group_id, self._artifact_id)
 
@@ -275,7 +284,7 @@ class MavenArtifactDef(object):
 
 
 # only used internally for parsing
-ReleasedMavenArtifactDef = namedtuple("ReleasedMavenArtifactDef", "version artifact_hash")
+ReleasedMavenArtifactDef = collections.namedtuple("ReleasedMavenArtifactDef", "version artifact_hash")
 
 
 def parse_maven_artifact_def(root_path, package, generation_strategy):
@@ -310,7 +319,9 @@ def parse_maven_artifact_def(root_path, package, generation_strategy):
         jar_path=ma_attrs.get("jar_path", None),
         bazel_target=ma_attrs.get("target_name", None),
         deps=ma_attrs.get("deps", []),
-        generation_strategy=generation_strategy)
+        generation_strategy=generation_strategy,
+        oneoneone_mode=ma_attrs.get("111_mode", False),
+    )
 
     md_dir_name = os.path.dirname(generation_strategy.metadata_path)        
     template_path = ma_attrs.get("pom_template_file", None)
@@ -396,4 +407,5 @@ def _augment_art_def_values(user_art_def, rel_art_def, bazel_package,
         bazel_package=bazel_package,
         released_pom_content=released_pom_content,
         version_increment_strategy_name=version_increment_strategy_name,
-        generation_strategy=user_art_def.generation_strategy)
+        generation_strategy=user_art_def.generation_strategy,
+        oneoneone_mode=user_art_def.oneoneone_mode)

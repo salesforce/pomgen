@@ -1,0 +1,11 @@
+artifact(
+    artifact_id = "hello-python-lib",
+    version = "0.0.1",
+    generation_mode = "dynamic",
+    target_name = "venv",
+    111_mode = True,
+)
+
+artifact_update(
+    version_increment_strategy = "patch",
+)

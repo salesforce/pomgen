@@ -102,10 +102,7 @@ class Crawler:
 
 
         # first we build the initial DAG, by starting with one or more packages
-        # and traversing references expressed in BUILD files, specifically
-        # deps and runtime deps of single java_library target.
-        # there must be only one java_library target defined in each processed
-        # bazel package/BUILD file
+        # and traversing deps and runtime_deps of single java_library target
         nodes = self._crawl_packages(packages, follow_references)
         if self.verbose:
             self._print_debug_output(nodes, "After initial crawl")
@@ -509,7 +506,9 @@ class Crawler:
         Returns a Node instance for the crawled package.
         """
         assert isinstance(label, labelm.Label)
-        artifact_def = self.workspace.parse_maven_artifact_def(label.package_path)
+        artifact_def = self.workspace.parse_maven_artifact_def(
+            label.package_path,
+            parent_node.artifact_def if parent_node is not None else None)
         if artifact_def is None:
             raise Exception("No artifact defined at package %s" % label)
         label = Crawler._merge(label, artifact_def)
@@ -543,7 +542,7 @@ class Crawler:
             self.genctxs.append(artifactctx)
             labels = self._discover_dependencies(artifact_def, label)
             source_labels, deps = self._partition_and_filter_labels(
-                labels, artifact_def.generation_strategy)
+                labels, artifact_def)
             if self.verbose:
                 logger.debug("Determined labels for artifact: [%s] with target key [%s]" % (artifact_def, label))
                 logger.debug("Labels: %s" % "\n".join([lbl.canonical_form for lbl in labels]))
@@ -640,7 +639,7 @@ class Crawler:
                 return label
         raise AssertionError("we should not get here " + str(label))
 
-    def _partition_and_filter_labels(self, labels, generation_strategy):
+    def _partition_and_filter_labels(self, labels, downstream_artifact_def):
         """
         For the given lables, filters and partitions by source labels.
         Returns a tuple of source labels and dependencies.
@@ -648,31 +647,30 @@ class Crawler:
         source_labels = []
         deps = []
         for lbl in labels:
-            lbl = self._filter_label(lbl)
+            lbl = self._filter_label(lbl, downstream_artifact_def)
             if lbl is None:
                 continue
             artifact_def = None
             if lbl.is_source_ref:
                 source_labels.append(lbl)
-                artifact_def = self.workspace.parse_maven_artifact_def(lbl.package_path)
-            dep = generation_strategy.load_dependency(lbl, artifact_def)
+                artifact_def = self.workspace.parse_maven_artifact_def(lbl.package_path, downstream_artifact_def)
+            dep = downstream_artifact_def.generation_strategy.load_dependency(lbl, artifact_def)
             deps.append(dep)
         return source_labels, deps
 
-    def _filter_label(self, label):
+    def _filter_label(self, label, downstream_artifact_def):
         if label.canonical_form in self.workspace.excluded_dependency_labels:
             return None
         elif label.is_source_ref:
             for excluded_dependency_path in self.workspace.excluded_dependency_paths:
                 if label.package_path.startswith(excluded_dependency_path):
                     return None
-            artifact_def = self.workspace.parse_maven_artifact_def(label.package_path)
+            artifact_def = self.workspace.parse_maven_artifact_def(label.package_path, downstream_artifact_def)
             if artifact_def is None:
                 if bazel.is_never_link_dep(self.workspace.repo_root_path, label.canonical_form):
                     return None
                 else:
-                    # TODO
-                    raise Exception("no BUILD.pom file in package [%s]" % label.package_path)
+                    raise Exception("cannot process this package because there is no metadata directory: [%s]" % label.package_path)
         return label
 
     def _store_if_leafnode(self, node):
