@@ -58,6 +58,7 @@ _for_each_pyproject() {
     local action=$1
     local repo_root=$2
     local pyproject_root_dir=$3
+    local pyproject_filter_path=$4
 
     if ! [[ "$action" =~ ^(clean|build)$ ]]; then
         echo "ERROR: Unknown action $action" && exit 1
@@ -69,7 +70,7 @@ _for_each_pyproject() {
     fi
 
     # look for pyproject files
-    find -L $pyproject_root_dir -name "pyproject.toml"|while read pyproject_path; do
+    find -L $pyproject_root_dir$pyproject_filter_path -name "pyproject.toml"|while read pyproject_path; do
         echo "INFO: Processing: $pyproject_path"
 
         if [ "$action" == "clean" ]; then
@@ -126,9 +127,12 @@ _run_actions() {
                 echo "[DEBUG] Running poppy with extra args ${extra_args}"
                 extra_args="${extra_args} --verbose"
             fi
-            bazel run @poppy//:gen -- --package $library_path --destdir $pyproject_root_dir
+            bazel run @poppy//:gen -- --package $library_path --destdir $pyproject_root_dir $extra_args
         else
-            _for_each_pyproject $action $repo_root $pyproject_root_dir
+            # for now we constrain the path where we look for generated toml 
+            # files - this won't work once we allow libraries referencing other
+            # libraries
+            _for_each_pyproject $action $repo_root $pyproject_root_dir $library_path
         fi
     done
 }
