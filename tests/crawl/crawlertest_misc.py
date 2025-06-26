@@ -4,12 +4,13 @@ All rights reserved.
 SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
-from common import label as labelm
-from config import config
-from crawl import crawler as crawlerm
-from crawl import pomcontent
-from crawl import workspace
-from generate import generationstrategyfactory
+import common.label as labelm
+import config.config as config
+import crawl.buildpom as buildpom
+import crawl.crawler as crawlerm
+import crawl.pomcontent as pomcontent
+import crawl.workspace as workspace
+import generate.generationstrategyfactory as generationstrategyfactory
 import os
 import tempfile
 import unittest
@@ -108,18 +109,38 @@ class CrawlerTest(unittest.TestCase):
 
     def test_filter_label__excluded_dependency_paths(self):
         """
-        Verifies that excluded dependency paths are filtered out.
+        Verifies that globally defined excluded dependency paths are filtered
+        out.
         """
         self.setUpCollaborators(self._get_config(excluded_dependency_paths=["projects/protos/",]))
-
         crawler = crawlerm.Crawler(self.ws, verbose=True)
-
         label = labelm.Label("@maven//:ch_qos_logback_logback_classic")
+
         filtered_label = crawler._filter_label(label, downstream_artifact_def=None)
         self.assertIs(label, filtered_label) # not filtered
 
         label = labelm.Label("//projects/protos/grail:java_protos")
         filtered_label = crawler._filter_label(label, downstream_artifact_def=None)
+        self.assertIsNone(filtered_label) # filtered
+
+    def test_filter_label__artifact_excluded_dependency_paths(self):
+        """
+        Verifies that locally defined excluded dependency paths are filtered
+        out.
+        """
+        self.setUpCollaborators(self._get_config())
+        crawler = crawlerm.Crawler(self.ws, verbose=True)
+        downstream_artifact_def = buildpom.MavenArtifactDef(
+            "g", "a", "v",
+            bazel_package="projects/libs/pastry",
+            excluded_dependency_paths=["src/abstractions",])
+
+        label = labelm.Label("@maven//:ch_qos_logback_logback_classic")
+        filtered_label = crawler._filter_label(label, downstream_artifact_def)
+        self.assertIs(label, filtered_label) # not filtered
+
+        label = labelm.Label("//projects/libs/pastry/src/abstractions:foo")
+        filtered_label = crawler._filter_label(label, downstream_artifact_def)
         self.assertIsNone(filtered_label) # filtered
 
     def test_filter_label__excluded_dependency_labels(self):
@@ -167,20 +188,23 @@ class CrawlerTest(unittest.TestCase):
 
     def _add_artifact(self, repo_root_path, package_rel_path,
                       pom_generation_mode,
-                      target_name=None, deps=[]):
+                      target_name=None, deps=[],
+                      excluded_dependency_paths=None):
         self._write_build_pom(repo_root_path, package_rel_path, 
                               pom_generation_mode,
                               artifact_id=os.path.basename(package_rel_path),
                               group_id="g1",
                               version="1.0.0-SNAPSHOT",
                               target_name=target_name,
-                              deps=deps)
+                              deps=deps,
+                              excluded_dependency_paths=excluded_dependency_paths)
 
     def _write_build_pom(self, repo_root_path, package_rel_path,
                          pom_generation_mode,
                          artifact_id, group_id, version,
                          target_name=None,
-                         deps=None):
+                         deps=None,
+                         excluded_dependency_paths=None):
         build_pom = """
 maven_artifact(
     artifact_id = "%s",
@@ -190,6 +214,7 @@ maven_artifact(
     pom_template_file = "%s",
     $deps$
     $target_name$
+    $excluded_dependency_paths$
 )
 
 maven_artifact_update(
@@ -208,6 +233,10 @@ maven_artifact_update(
             content = content.replace("$target_name$", "")
         else:
             content = content.replace("$target_name$", "target_name = \"%s\"" % target_name)
+        if excluded_dependency_paths is None:
+            content = content.replace("$excluded_dependency_paths$", "")
+        else:
+            content = content.replace("$excluded_dependency_paths$", "excluded_dependency_paths=[%s]," % ",".join(['"%s"' % p for p in excluded_dependency_paths]))
         with open(os.path.join(path, "BUILD.pom"), "w") as f:
             f.write(content)
 

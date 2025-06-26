@@ -118,12 +118,16 @@ maven_install_paths=
 override_file_paths=
 
 [crawler]
-# A list of path prefixes that are not crawled by pomgen.  Any source dependency
-# that starts with one of the specified paths is skipped and not processed
-# (and not included in the generated pom.xml).
+# A list of paths, or path prefixes, that are not crawled.
+# Any source dependency (a dependency prefixed with //) that starts with one of
+# the specified paths is skipped and not processed (and not included in the
+# generated pom.xml).
 # These dependencies are similar to Maven's "provided" scope: if they are
 # needed at runtime, it is expected that the final runtime assembly
 # contains them.
+# Note that this setting may also be specified in the artifact metadata file,
+# this can be useful if the "skipping" should only apply to specific source
+# dependencies for that single artifact only.
 # Default value: []
 # Example value: projects/protos/,
 excluded_dependency_paths=

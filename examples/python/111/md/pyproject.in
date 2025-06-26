@@ -1,9 +1,10 @@
 artifact(
-    artifact_id = "hello-python-lib",
+    artifact_id = "hello-python-111",
     version = "0.0.1",
     generation_mode = "dynamic",
     target_name = "venv",
     111_mode = True,
+    excluded_dependency_paths = ["tests"],
 )
 
 artifact_update(

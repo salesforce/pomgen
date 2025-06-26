@@ -662,9 +662,18 @@ class Crawler:
         if label.canonical_form in self.workspace.excluded_dependency_labels:
             return None
         elif label.is_source_ref:
-            for excluded_dependency_path in self.workspace.excluded_dependency_paths:
-                if label.package_path.startswith(excluded_dependency_path):
+            for excluded_path in self.workspace.excluded_dependency_paths:
+                # globally defined path exclusions are relative to the
+                # repository root
+                if label.package_path.startswith(excluded_path):
                     return None
+            if downstream_artifact_def is not None:
+                for excluded_path in downstream_artifact_def.excluded_dependency_paths:
+                    # per-artifact exclusions are relative to the artifact
+                    # package
+                    excluded_path = os.path.join(downstream_artifact_def.bazel_package, excluded_path)
+                    if label.package_path.startswith(excluded_path):
+                        return None
             artifact_def = self.workspace.parse_maven_artifact_def(label.package_path, downstream_artifact_def)
             if artifact_def is None:
                 if bazel.is_never_link_dep(self.workspace.repo_root_path, label.canonical_form):

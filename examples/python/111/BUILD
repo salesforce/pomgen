@@ -13,6 +13,7 @@ py_venv(
     deps = [
         "//examples/python/111/src:hello-world",
         "//examples/python/111/src/calculator:calculator",
+        "//examples/python/111/tests",
     ],
 )
 

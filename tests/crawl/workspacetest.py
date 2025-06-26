@@ -130,14 +130,5 @@ java_library(
            f.write(build_file)
 
 
-        java_file = """
-public class %s {}
-""" % name
-
-        java_file_path = os.path.join(path, name + ".java")
-        with open(build_file_path, "w") as f:
-           f.write(build_file)
-
-
 if __name__ == '__main__':
     unittest.main()
