@@ -40,6 +40,11 @@ def load(repo_root, verbose=False):
         """Read from [artifact] section """
         return _get_value_from_config(parser, "artifact", option, dflt, valid_values)
 
+    def manifest(option, dflt, valid_values=None):
+        """Read from [manifest] section """
+        return _get_value_from_config(parser, "manifest", option, dflt, valid_values)
+
+
     _load_cfg(repo_root, parser, verbose)
 
     pom_template_p = gen("pom_template_path", "")
@@ -59,6 +64,7 @@ def load(repo_root, verbose=False):
         transitives_versioning_mode=artifact("transitives_versioning_mode", "semver", valid_values=("semver", "counter")),
         jar_artifact_classifier=artifact("jar_classifier", None),
         change_detection_enabled=artifact("change_detection_enabled", True),
+        manifest_language_level=manifest("language_level", ""),
     )
 
     if verbose:
@@ -109,7 +115,8 @@ class Config:
         excluded_src_file_extensions=(),
         transitives_versioning_mode="semver",
         jar_artifact_classifier=None,
-        change_detection_enabled=True):
+        change_detection_enabled=True,
+        manifest_language_level=""):
 
         # general
         self.pom_template_path_and_content = pom_template_path_and_content
@@ -130,6 +137,9 @@ class Config:
         self.transitives_versioning_mode = transitives_versioning_mode
         self._jar_artifact_classifier = jar_artifact_classifier
         self._change_detection_enabled = _to_bool(change_detection_enabled)
+
+        # manifest
+        self.manifest_language_level = manifest_language_level
 
     @property
     def pom_template(self):

@@ -1,7 +1,6 @@
 import datetime
 
 
-# TODO requires-python should not be hardcoded
 _TEMPLATE = """
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
@@ -10,7 +9,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "$name$"
 version = "$version$"
-requires-python = ">=3.9"
+requires-python = ">=$python-version$"
 $dependencies$
 
 [tool.setuptools]
@@ -27,8 +26,9 @@ _VERSION_TS_TOKEN_END = "}"
 
 class PyProjectGenerator:
 
-    def __init__(self, artifact_def):
+    def __init__(self, artifact_def, python_version):
         self._artifact_def = artifact_def
+        self._python_version = python_version
         self._dependencies = set()
         self._dependencies_artifact_transitive_closure = set()
         self._dependencies_library_transitive_closure = set()
@@ -77,6 +77,7 @@ class PyProjectGenerator:
     def gen(self, pomcontenttype):
         content = _TEMPLATE.strip()
         content = content.replace("$name$", self._artifact_def.artifact_id)
+        content = content.replace("$python-version$", self._python_version)
         content = content.replace("$version$", _get_version(self._artifact_def.version))
         if len(self._dependencies) == 0:
             content = content.replace("$dependencies$", "dependencies = []")

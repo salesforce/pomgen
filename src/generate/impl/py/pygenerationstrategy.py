@@ -8,6 +8,9 @@ import generate
 import os
 
 
+_DEFAULT_PY_VERSION = "3.9"
+
+
 class PyGenerationStrategy(generate.AbstractGenerationStrategy):
 
     def __init__(self, repository_root, config, verbose):
@@ -16,6 +19,7 @@ class PyGenerationStrategy(generate.AbstractGenerationStrategy):
         self._repository_root = repository_root
         self._locked_requirements_paths = config.locked_requirements_paths
         self._base_filename = config.pyproject_base_filename
+        self._python_version = _DEFAULT_PY_VERSION if len(config.manifest_language_level) == 0 else config.manifest_language_level
         self._verbose = verbose
 
     def initialize(self):
@@ -55,7 +59,7 @@ class PyGenerationStrategy(generate.AbstractGenerationStrategy):
         return ()
 
     def _new_generator__hook(self, artifact_def):
-        return pyprojectgenerator.PyProjectGenerator(artifact_def)
+        return pyprojectgenerator.PyProjectGenerator(artifact_def, self._python_version)
 
     def _parse_locked_requirements(self):
         label_to_dep = {}
