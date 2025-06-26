@@ -171,6 +171,17 @@ transitives_versioning_mode=
 # value set in this cfg file
 # Default value: ""
 jar_classifier=
+
+
+[manifest]
+# This section contains opaque settings that are directly written into the
+# generated manifest (pom.xml, pyproject ...)
+
+# The "language level", the precise meaning depends on the manifest being
+# generated.
+# For Python, this is the value of the field 'requires-python'
+# Default value: ""
+language_level=
 ```
 
 

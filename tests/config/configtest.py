@@ -5,7 +5,7 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
-from config import config
+import config.config as config
 import os
 import tempfile
 import unittest
@@ -262,6 +262,19 @@ pom_base_filename=glue-test
         cfg = config.load(repo_root)
 
         self.assertEqual("glue-test", cfg.pom_base_filename)
+
+    def test_language_level(self):
+        repo_root = tempfile.mkdtemp("root")
+        os.makedirs(os.path.join(repo_root, "src/config"))
+        self._write_file(repo_root, "src/config/pom_template.xml", "foo")
+        self._write_file(repo_root, ".pomgenrc", """
+[manifest]
+language_level=10
+""")
+
+        cfg = config.load(repo_root)
+
+        self.assertEqual("10", cfg.manifest_language_level)
 
     def _write_pomgenrc(self, repo_root, pom_template_path, maven_install_paths):
         content = """[general]
