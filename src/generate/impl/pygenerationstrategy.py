@@ -55,5 +55,8 @@ class PyGenerationStrategy(generate.AbstractGenerationStrategy):
         """
         pass
 
+    def load_dependency_by_native_repr(self, str_repr):
+        pass
+
     def load_transitive_closure(self, dependency):
         pass

@@ -183,15 +183,33 @@ class Crawler:
         - the transitive closure of the library's dependencies
         """
         for ctx in self.genctxs:
-            directs = self.target_to_dependencies[ctx.label]
+            additional_deps, excluded_deps = self._load_custom_output_dependencies(ctx.artifact_def)
+            directs = [dep for dep in self.target_to_dependencies[ctx.label] if dep not in excluded_deps] + additional_deps
             ctx.register_artifact_directs(directs)
-            transitive_closure = target_to_transitive_closure_deps[ctx.label]
+
+            transitive_closure = [dep for dep in target_to_transitive_closure_deps[ctx.label] if dep not in excluded_deps]
             ctx.register_artifact_transitive_closure(transitive_closure)
-            lib_transitive_closure = self\
+
+            lib_transitive_closure = [dep for dep in self\
                 ._get_deps_transitive_closure_for_library(
                     ctx.artifact_def.library_path,
-                    target_to_transitive_closure_deps)
+                    target_to_transitive_closure_deps) if dep not in excluded_deps]
             ctx.register_library_transitive_closure(lib_transitive_closure)
+
+    def _load_custom_output_dependencies(self, artifact_def):
+        additional_deps = []
+        excluded_deps = []
+        for str_repr in artifact_def.emitted_dependencies:
+            exclude = False
+            if str_repr.startswith("-"):
+                str_repr = str_repr[1:]
+                exclude = True
+            dep = self.generation_strategy.load_dependency_by_native_repr(str_repr)
+            if exclude:
+                excluded_deps.append(dep)
+            else:
+                additional_deps.append(dep)
+        return additional_deps, excluded_deps
 
     def _get_deps_transitive_closure_for_library(
             self, library_path, target_to_transitive_closure_deps):

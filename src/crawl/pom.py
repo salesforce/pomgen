@@ -637,7 +637,6 @@ def _sort(s):
     """
     Converts the specified set to a list, and returns the list, sorted.
     """
-    assert isinstance(s, set), "Expected a set"
-    the_list = list(s)
+    the_list = list(s) if isinstance(s, set) else s
     the_list.sort()
     return the_list

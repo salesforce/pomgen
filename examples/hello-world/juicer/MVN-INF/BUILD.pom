@@ -4,6 +4,7 @@ maven_artifact(
     version = "10.0.0-qual1-SNAPSHOT",
     pom_generation_mode = "dynamic",
     target_name = "juicer_lib",
+    emitted_dependencies = ["com.sales:foo:1.0.0"],
 )
 
 maven_artifact_update(
