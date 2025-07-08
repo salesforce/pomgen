@@ -5,6 +5,7 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
+import common.label as label
 from config import config
 import os
 import tempfile
@@ -186,12 +187,13 @@ change_detection_enabled=False
         self._write_file(repo_root, "src/config/pom_template.xml", "foo")
         self._write_file(repo_root, ".pomgenrc", """
 [crawler]
-excluded_dependency_labels=  123    ,   444
+excluded_dependency_labels=  //a/b/c    ,   //a/b/c:foo
 """)
 
         cfg = config.load(repo_root)
 
-        self.assertEqual(("123", "444"), cfg.excluded_dependency_labels)
+        self.assertEqual((label.Label("//a/b/c:c"), label.Label("a/b/c:foo")),
+                         cfg.excluded_dependency_labels)
 
     def test_str(self):
         repo_root = tempfile.mkdtemp("root")
