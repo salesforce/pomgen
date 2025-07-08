@@ -94,9 +94,10 @@ class Workspace:
 
     def _parse_dep_label(self, dep_label):
         """
-        TODO: this has been move to the crawler class and can be removed.
+        TODO: this has been moved to the crawler class and can be removed.
         """
-        if dep_label in self.excluded_dependency_labels:
+        import common.label
+        if common.label.Label(dep_label) in self.excluded_dependency_labels:
             return None
 
         if dep_label.startswith("@"):

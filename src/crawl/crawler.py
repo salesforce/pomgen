@@ -672,7 +672,7 @@ class Crawler:
         return source_labels, deps
 
     def _filter_label(self, label):
-        if label.canonical_form in self.workspace.excluded_dependency_labels:
+        if label in self.workspace.excluded_dependency_labels:
             return None
         elif label.is_source_ref:
             for excluded_dependency_path in self.workspace.excluded_dependency_paths:

@@ -117,6 +117,9 @@ class LabelTest(unittest.TestCase):
         self.assertEqual(n1, n2)
         self.assertFalse(n1 != n2)
 
+        self.assertNotEqual(label.Label("//foo"), None)
+        self.assertNotEqual(label.Label("//foo"), "//foo")
+
     def test_trailing_slash(self):
         n1 = label.Label("//foo/blah/")
         self.assertEqual("blah", n1.target)
