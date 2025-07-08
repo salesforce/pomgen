@@ -19,6 +19,7 @@ py_library(
                  "src/generate/impl/py/*.py"]),
     data = ["src/config/pom_template.xml"],
     visibility = ["//misc:__pkg__",],
+    imports = ["src"],
 )
 
 py_binary(

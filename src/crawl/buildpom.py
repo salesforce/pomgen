@@ -64,6 +64,10 @@ class MavenArtifactDef(object):
     version_increment_strategy_name: specifies how this artifacts version should
         be incremented.
 
+    emitted_dependencies: specifies extra dependencies to include, or exclude,
+        in the generated manifest. Use manifest-native syntax, and prefix with
+        '-' to exclude.
+
 
     ==== Read out of the optional BUILD.pom.released file ====
 
@@ -126,7 +130,8 @@ class MavenArtifactDef(object):
                  bazel_target=None,
                  library_path=None,
                  requires_release=None,
-                 released_pom_content=None):
+                 released_pom_content=None,
+                 emitted_dependencies=[]):
         self._group_id = group_id
         self._artifact_id = artifact_id
         self._version = version
@@ -147,6 +152,7 @@ class MavenArtifactDef(object):
         self._requires_release = requires_release
         self._release_reason = None
         self._released_pom_content = released_pom_content
+        self._emitted_dependencies = emitted_dependencies
 
         # data cleanup/verification/sanitization
         # these are separate methods for better readability
@@ -252,6 +258,10 @@ class MavenArtifactDef(object):
         return self._released_pom_content
 
     @property
+    def emitted_dependencies(self):
+        return self._emitted_dependencies
+
+    @property
     def version_increment_strategy_name(self):
         return self._version_increment_strategy_name
 
@@ -294,7 +304,8 @@ def parse_maven_artifact_def(root_path, package):
         gen_dependency_management_pom=ma_attrs.get("generate_dependency_management_pom", False),
         jar_path=ma_attrs.get("jar_path", None),
         bazel_target=ma_attrs.get("target_name", None),
-        deps=ma_attrs.get("deps", []))
+        deps=ma_attrs.get("deps", []),
+        emitted_dependencies=ma_attrs.get("emitted_dependencies", []))
 
     template_path = ma_attrs.get("pom_template_file", None)
     if template_path is not None:
@@ -368,4 +379,5 @@ def _augment_art_def_values(user_art_def, rel_art_def, bazel_package,
         released_artifact_hash=rel_art_def.artifact_hash if rel_art_def is not None else None,
         bazel_package=bazel_package,
         released_pom_content=released_pom_content,
-        version_increment_strategy_name=version_increment_strategy_name)
+        version_increment_strategy_name=version_increment_strategy_name,
+        emitted_dependencies=user_art_def.emitted_dependencies)
