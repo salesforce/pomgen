@@ -6,7 +6,7 @@ class ArtifactGenerationContext:
     Information about a single artifact that was crawled.
     """
 
-    def __init__(self, workspace, pom_template, artifact_def, label):
+    def __init__(self, workspace, pom_template, artifact_def, label, excluded_deps):
         self._artifact_def = artifact_def
         self._label = label
 
@@ -15,7 +15,7 @@ class ArtifactGenerationContext:
         self._library_transitive_closure = []
 
         self._generator = crawl.pom.get_pom_generator(
-            workspace, pom_template, artifact_def)
+            workspace, pom_template, artifact_def, excluded_deps)
 
     @property
     def artifact_def(self):

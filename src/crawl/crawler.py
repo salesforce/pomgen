@@ -548,8 +548,10 @@ class Crawler:
             self.package_to_artifact[label.package_path] = artifact_def
             self.library_to_artifact[artifact_def.library_path].append(artifact_def)
 
+            _, excluded_deps = self._load_custom_output_dependencies(artifact_def)
             artifactctx = artifactgenctx.ArtifactGenerationContext(
-                self.workspace, self.pom_template, artifact_def, label)
+                self.workspace, self.pom_template, artifact_def, label,
+                excluded_deps)
             self.genctxs.append(artifactctx)
             labels = self._discover_dependencies(artifact_def, label)
             # TODO abstract this, as it assumes maven_install
