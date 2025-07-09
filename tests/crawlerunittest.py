@@ -576,7 +576,7 @@ class CrawlerUnitTest(unittest.TestCase):
                                  library_path=library_path)
         ws = self._get_workspace()
         ctx = artifactgenctx.ArtifactGenerationContext(
-            ws, pom_template, node1.artifact_def, node1.label)
+            ws, pom_template, node1.artifact_def, node1.label, excluded_deps=[])
         strategy = pomgenerationstrategy.PomGenerationStrategy(ws, pom_template)
         crawler = crawlerm.Crawler(ws, strategy, pom_template)
         crawler.library_to_nodes[library_path].append(node1)
@@ -608,7 +608,7 @@ class CrawlerUnitTest(unittest.TestCase):
                                  library_path=library_path)
         ws = self._get_workspace()
         ctx = artifactgenctx.ArtifactGenerationContext(
-            ws, pom_template, node1.artifact_def, node1.label)
+            ws, pom_template, node1.artifact_def, node1.label, excluded_deps=[])
         strategy = pomgenerationstrategy.PomGenerationStrategy(ws, pom_template)
         crawler = crawlerm.Crawler(ws, strategy, pom_template)
         crawler.library_to_nodes[library_path].append(node1)

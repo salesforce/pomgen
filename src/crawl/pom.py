@@ -34,7 +34,7 @@ class PomContentType:
     MASKED_VERSION = "***"
 
 
-def get_pom_generator(workspace, pom_template, artifact_def):
+def get_pom_generator(workspace, pom_template, artifact_def, excluded_deps):
     """
     Returns a pom.xml generator (AbstractPomGen implementation) for the
     specified artifact_def.
@@ -52,9 +52,9 @@ def get_pom_generator(workspace, pom_template, artifact_def):
         also_generate_dep_man_pom = artifact_def.gen_dependency_management_pom
         if also_generate_dep_man_pom:
             return PomWithCompanionDependencyManagementPomGen(
-                workspace, artifact_def, pom_template)
+                workspace, artifact_def, pom_template, excluded_deps)
         else:
-            return DynamicPomGen(workspace, artifact_def, pom_template)
+            return DynamicPomGen(workspace, artifact_def, pom_template, excluded_deps)
     elif mode is pomgenmode.TEMPLATE:
         return TemplatePomGen(workspace, artifact_def)
     elif mode is pomgenmode.SKIP:
@@ -471,10 +471,11 @@ class DynamicPomGen(AbstractPomGen):
        #{group_id}
        #{version}
     """
-    def __init__(self, workspace, artifact_def, pom_template):
+    def __init__(self, workspace, artifact_def, pom_template, excluded_deps):
         super(DynamicPomGen, self).__init__(workspace, artifact_def)
         self.pom_content = workspace.pom_content
         self.pom_template = pom_template
+        self.excluded_deps = excluded_deps
 
     def gen(self, pomcontenttype):
         content = self.pom_template.replace("#{group_id}", self._artifact_def.group_id)
@@ -538,8 +539,14 @@ class DynamicPomGen(AbstractPomGen):
                     # <dependencies> section, we don't need to include it again
                     pass
                 else:
-                    transitives.append(transitive)
-                    transitives_set.add(transitive)
+                    if transitive not in self.excluded_deps:
+                        # TODO stoens: this loop should really use
+                        # self.dependencies_library_transitive_closure instead
+                        # of dependencies (the directs)
+                        # the exclusions have been applied to that former list
+                        # already - review if that is possible
+                        transitives.append(transitive)
+                        transitives_set.add(transitive)
 
         return transitives
 
@@ -606,9 +613,9 @@ class PomWithCompanionDependencyManagementPomGen(AbstractPomGen):
     Composite PomGen implementation with a companion PomGen the generates a
     DependencyManagement pom.
     """
-    def __init__(self, workspace, artifact_def, pom_template):
+    def __init__(self, workspace, artifact_def, pom_template, excluded_deps):
         super(PomWithCompanionDependencyManagementPomGen, self).__init__(workspace, artifact_def)
-        self.pomgen = DynamicPomGen(workspace, artifact_def, pom_template)
+        self.pomgen = DynamicPomGen(workspace, artifact_def, pom_template, excluded_deps)
         self.depmanpomgen = DependencyManagementPomGen(workspace, artifact_def, pom_template)
 
     def register_dependencies(self, dependencies):

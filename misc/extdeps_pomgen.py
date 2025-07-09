@@ -52,8 +52,8 @@ def _parse_arguments(args):
 class ThirdPartyDepsPomGen(pom.DynamicPomGen):
 
     def __init__(self, workspace, artifact_def, dependencies, pom_template):
-        super(ThirdPartyDepsPomGen, self).__init__(workspace, artifact_def,
-                                                   pom_template=pom_template)
+        super(ThirdPartyDepsPomGen, self).__init__(
+            workspace, artifact_def, pom_template=pom_template, excluded_deps=[])
         self.dependencies = dependencies
 
 

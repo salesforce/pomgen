@@ -70,7 +70,7 @@ class PomTest(unittest.TestCase):
                                  label_to_overridden_fq_label={})
         artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3")
         artifact_def = buildpom._augment_art_def_values(artifact_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
-        pomgen = pom.DynamicPomGen(ws, artifact_def, TEST_POM_TEMPLATE)
+        pomgen = pom.DynamicPomGen(ws, artifact_def, TEST_POM_TEMPLATE, [])
 
         deps = [self.guava_dep,
                 self.logback_dep,
@@ -201,7 +201,7 @@ class PomTest(unittest.TestCase):
 </project>
 """
         artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3", bazel_target="t1")
-        pomgen = pom.DynamicPomGen(ws, artifact_def, pom_template)
+        pomgen = pom.DynamicPomGen(ws, artifact_def, pom_template, [])
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
         self.assertEqual(exepcted_pom, generated_pom)
 
@@ -227,7 +227,7 @@ class PomTest(unittest.TestCase):
 </project>
 """
         artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3", bazel_target="t1")
-        pomgen = pom.DynamicPomGen(ws, artifact_def, pom_template)
+        pomgen = pom.DynamicPomGen(ws, artifact_def, pom_template, [])
 
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
 
@@ -253,7 +253,7 @@ class PomTest(unittest.TestCase):
                                  pomcontent.NOOP,
                                  depmd,
                                  label_to_overridden_fq_label={})
-        pomgen = pom.DynamicPomGen(ws, artifact_def, TEST_POM_TEMPLATE)
+        pomgen = pom.DynamicPomGen(ws, artifact_def, TEST_POM_TEMPLATE, [])
         pomgen.register_dependencies([self.guava_dep])
 
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
@@ -279,7 +279,7 @@ class PomTest(unittest.TestCase):
                                  label_to_overridden_fq_label={})
         root_artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3")
         root_artifact_def = buildpom._augment_art_def_values(root_artifact_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
-        pomgen = pom.DynamicPomGen(ws, root_artifact_def, TEST_POM_TEMPLATE)
+        pomgen = pom.DynamicPomGen(ws, root_artifact_def, TEST_POM_TEMPLATE, [])
         dep_art_def = buildpom.MavenArtifactDef("class-group", "class-art", "1", bazel_target="g1")
         dep = dependency.new_dep_from_maven_artifact_def(dep_art_def)
 
@@ -306,7 +306,7 @@ class PomTest(unittest.TestCase):
                                  label_to_overridden_fq_label={})
         artifact_def = buildpom.MavenArtifactDef(
             "g1", "a2", "1.2.3", bazel_target="t1", include_deps=False)
-        pomgen = pom.DynamicPomGen(ws, artifact_def, "")
+        pomgen = pom.DynamicPomGen(ws, artifact_def, "", [])
 
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
 
@@ -325,7 +325,7 @@ class PomTest(unittest.TestCase):
                                  label_to_overridden_fq_label={})
         artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3", bazel_target="t1")
         artifact_def = buildpom._augment_art_def_values(artifact_def, None, "pack1", None, None, pomgenmode.DYNAMIC)
-        pomgen = pom.DynamicPomGen(ws, artifact_def, TEST_POM_TEMPLATE)
+        pomgen = pom.DynamicPomGen(ws, artifact_def, TEST_POM_TEMPLATE, [])
         deps = [self.guava_dep, self.aop_dep]
         pomgen.register_dependencies(deps)
 
