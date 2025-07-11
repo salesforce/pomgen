@@ -12,13 +12,11 @@ from common import common
 from common import maveninstallinfo
 from config import config
 from crawl import buildpom
-from crawl import dependency
 from crawl import dependencymd as dependencymdm
 from crawl import pom
 from crawl import pomcontent
 from crawl import workspace
 import argparse
-import os
 import sys
 
 
@@ -42,10 +40,6 @@ def _parse_arguments(args):
         help="optional - the artifactId to use in the generated pom")
     parser.add_argument("--version", type=str, required=False,
         help="optional - the version to use in the generated pom")
-    parser.add_argument("--exclude_all_transitives", action="store_true",
-                        required=False,
-        help="optional - adds a *:* <exclusion> to all dependencies in the generated pom")
-
     return parser.parse_args(args)
 
 
@@ -110,32 +104,18 @@ def main(args):
     # to be nice:
     dependencies.sort()
 
-    if args.exclude_all_transitives:
-        # since all dependencies are treated equally (no transitives),
-        # we can dedupe them without losing anything
-        # we use a representation that includes the version when checking
-        # whether we have already included the dep
-        deps_set = set()
-        updated_dependencies = []
-        for dep in dependencies:
-            dedupe_key = dep.maven_coordinates_name + ":" + dep.version
-            if dedupe_key not in deps_set:
-                deps_set.add(dedupe_key)
-                updated_dependencies.append(dep)
-        dependencies = updated_dependencies
-
-        # ignore what was specified in the pinned dependencies files and instead
-        # exclude all transitives: add an "exclude all dependency"
-        # (* exclusions) for all dependencies that end up in the generated pom
-        ws.dependency_metadata.clear()
-        for dep in dependencies:
-            ws.dependency_metadata.register_exclusions(
-                dep, [dependency.EXCLUDE_ALL_PLACEHOLDER_DEP])
-    else:
-        # it is possible to end up with duplicate dependencies
-        # because different labels may point to the same dependency (gav)
-        # (for ex: @maven//:org_antlr_ST4 and @antlr//:org_antlr_ST4)
-        pass
+    # since all dependencies are treated equally (no transitives),
+    # we can dedupe them without losing anything
+    # we use a representation that includes the version when checking
+    # whether we have already included the dep
+    deps_set = set()
+    updated_dependencies = []
+    for dep in dependencies:
+        dedupe_key = dep.maven_coordinates_name + ":" + dep.version
+        if dedupe_key not in deps_set:
+            deps_set.add(dedupe_key)
+            updated_dependencies.append(dep)
+    dependencies = updated_dependencies
 
     pomgen = ThirdPartyDepsPomGen(ws, artifact_def, dependencies,
                                   cfg.pom_template)
