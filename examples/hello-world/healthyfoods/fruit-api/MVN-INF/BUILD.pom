@@ -3,6 +3,9 @@ maven_artifact(
     artifact_id = "fruit-api",
     version = "1.0.0-SNAPSHOT",
     pom_generation_mode = "dynamic",
+    emitted_dependencies = ["extra:dependency:1.0.0",
+                            "-com.google.guava:guava",
+                            "-org.antlr:antlr-runtime",]
 )
 
 maven_artifact_update(

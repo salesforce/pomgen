@@ -504,6 +504,7 @@ class DynamicPomGen(AbstractPomGen):
         # we also add the transitives of the deps to dependencies - this is to
         # account for any version overrides that need to carry over to the
         # Maven build.
+        # this is done ONLY for 3rd party jars from maven_install files
         transitives = self._get_transitive_deps(self.dependencies)
         if len(transitives) > 0:
             content += self._xml_comment("The transitives of the dependencies above", indent)
@@ -530,13 +531,18 @@ class DynamicPomGen(AbstractPomGen):
     def _get_transitive_deps(self, dependencies):
         """
         Given an iterable of dependency instances, returns all transitive
-        dependencies.
+        dependencies, iff the input dependency is maven_install defined.
         """
         transitives = []
         transitives_set = set()
         dependencies_set = set(dependencies)
         for dep in dependencies:
             for transitive in self._dependency_md.get_transitive_closure(dep):
+                if transitive not in self.dependencies_artifact_transitive_closure:
+                    # this is to honor the "emitted_dependencies" filtering that
+                    # can be defined in BUILD.pom files
+                    # filtered deps are not in the "full transitives" list
+                    continue
                 if transitive in transitives_set:
                     # avoid duplication
                     pass
@@ -644,7 +650,6 @@ def _sort(s):
     """
     Converts the specified set to a list, and returns the list, sorted.
     """
-    assert isinstance(s, set), "Expected a set"
-    the_list = list(s)
+    the_list = list(s) if isinstance(s, set) else s
     the_list.sort()
     return the_list

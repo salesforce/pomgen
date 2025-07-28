@@ -38,7 +38,8 @@ class PomTest(unittest.TestCase):
         self.logback_dep = f("ch.qos.logback:logback-classic:1.2.3", "maven")
         self.aop_dep = f("aopalliance:aopalliance:jar:1.0.0", "maven")
         self.dependencymd = dependencymdm.DependencyMetadata(None)
-        self.dependencymd.register_transitives(self.guava_dep, [self.t1_dep, self.t2_dep])
+        skipped_transitive = f("gt3:skipped:1.0.0", "maven")
+        self.dependencymd.register_transitives(self.guava_dep, [self.t1_dep, self.t2_dep, skipped_transitive])
     
     def test_dynamic_pom__sanity(self):
         """
@@ -56,14 +57,16 @@ class PomTest(unittest.TestCase):
                 self.aop_dep,
                 self.t2_dep,
         ]
+
         # appending a dependency that is built from source
         # (should not have an exclusions block)
         artifact_def = buildpom.MavenArtifactDef(
             "repo", "my-dep", "1.2.3", bazel_target="t1")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         deps.append(dep)
-        deps = tuple(deps)
         pomgen.register_dependencies(deps)
+        # skipped_transitive (see above) is NOT added
+        pomgen.register_dependencies_transitive_closure__artifact([self.t1_dep, self.t2_dep])
         generated_pom = pomgen.gen(pom.PomContentType.RELEASE)
 
         self.assertIn("""<groupId>g1</groupId>
@@ -136,6 +139,11 @@ class PomTest(unittest.TestCase):
                 </exclusion>
             </exclusions>
         </dependency>""", generated_pom)
+
+        # the "skipped" transitive of guava is not there
+        # see skipped_transitive above
+        self.assertNotIn("skipped", generated_pom)
+
 
         # deps are BUILD file order
         aop_index = generated_pom.index("<artifactId>aopalliance</artifactId>")

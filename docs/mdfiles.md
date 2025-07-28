@@ -91,6 +91,12 @@ Default value: `None`
 
 See the `java_import` [example](../examples/java-import).
 
+##### maven_artifact.emitted_dependencies
+
+Additional dependencies, as a list of strings to include/exclude in/from the generated manifest. Exclusions are specified by prefixing the dependency with a `-`. The dependencies are specified using their "target manifest" syntax, for example, for pom files, they use "gav" syntax for inclusion and `-group_id:artifact_id` for exclusion.
+
+Default value: `[]`
+
 
 ### LIBRARY.root (required)
 

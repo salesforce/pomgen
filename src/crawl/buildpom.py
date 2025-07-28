@@ -67,6 +67,10 @@ class MavenArtifactDef(object):
     1_1_1_mode: whether this artifact is in 1:1:1 mode: all bazel subpackages
                 of this bazel package use pomgenmode.SKIP
 
+    emitted_dependencies: specifies extra dependencies to include, or exclude,
+        in the generated manifest. Use manifest-native syntax, and prefix with
+        '-' to exclude.
+
     excluded_dependency_paths: for source dependencies of this artifact,
         a list of paths or path prefixes, to not crawl, relative to the package
         of this artifact.
@@ -140,7 +144,8 @@ class MavenArtifactDef(object):
                  released_pom_content=None,
                  generation_strategy=None,
                  oneoneone_mode=False,
-                 excluded_dependency_paths=[]):
+                 excluded_dependency_paths=[],
+                 emitted_dependencies=[]):
         self._group_id = group_id
         self._artifact_id = artifact_id
         self._version = version
@@ -164,6 +169,7 @@ class MavenArtifactDef(object):
         self._generation_strategy = generation_strategy
         self._oneoneone_mode = oneoneone_mode
         self._excluded_dependency_paths = excluded_dependency_paths
+        self._emitted_dependencies = emitted_dependencies
 
         # data cleanup/verification/sanitization
         # these are separate methods for better readability
@@ -269,6 +275,10 @@ class MavenArtifactDef(object):
         return self._released_pom_content
 
     @property
+    def emitted_dependencies(self):
+        return self._emitted_dependencies
+
+    @property
     def version_increment_strategy_name(self):
         return self._version_increment_strategy_name
 
@@ -335,6 +345,7 @@ def parse_maven_artifact_def(root_path, package, generation_strategy):
         generation_strategy=generation_strategy,
         oneoneone_mode=ma_attrs.get("111_mode", False),
         excluded_dependency_paths=ma_attrs.get("excluded_dependency_paths", []),
+        emitted_dependencies=ma_attrs.get("emitted_dependencies", []),
     )
 
     md_dir_name = os.path.dirname(generation_strategy.metadata_path)        
@@ -423,4 +434,6 @@ def _augment_art_def_values(user_art_def, rel_art_def, bazel_package,
         version_increment_strategy_name=version_increment_strategy_name,
         generation_strategy=user_art_def.generation_strategy,
         oneoneone_mode=user_art_def.oneoneone_mode,
-        excluded_dependency_paths=user_art_def.excluded_dependency_paths)
+        excluded_dependency_paths=user_art_def.excluded_dependency_paths,
+        emitted_dependencies=user_art_def.emitted_dependencies,
+    )

@@ -7,6 +7,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 import common.label as label
 import common.pomgenmode as pomgenmode
 import config.config as config
+import crawl.artifactgenctx as artifactgenctx
 import crawl.buildpom as buildpom
 import crawl.crawler as crawlerm
 import crawl.pomcontent as pomcontent
@@ -550,6 +551,67 @@ class CrawlerUnitTest(unittest.TestCase):
         labels = crawlerm.Crawler._remove_package_private_labels([l1, l2, l3, l4], art)
 
         self.assertEqual([l1, l2, l3, l4], labels)
+
+    def test_register_dependencies(self):
+        library_path = "projects/libs/lib"
+        d1 = self._get_3rdparty_dep("com:d1:1.0.0", "d1")
+        d2 = self._get_3rdparty_dep("com:d2:1.0.0", "d2")
+        d3 = self._get_3rdparty_dep("com:d3:1.0.0", "d3")
+        d4 = self._get_3rdparty_dep("com:d4:1.0.0", "d4")
+        strategy = self._get_strategy()
+        node1 = self._build_node("art1", "projects/libs/lib/p1", strategy,
+                                 library_path=library_path)
+        node2 = self._build_node("art2", "projects/libs/lib/p2", strategy,
+                                 library_path=library_path)
+        ws = self._get_workspace()
+        crawler = crawlerm.Crawler(ws, strategy)
+        crawler.library_to_nodes[library_path].append(node1)
+        crawler.library_to_nodes[library_path].append(node2)
+        ctx = artifactgenctx.ArtifactGenerationContext(node1.artifact_def, node1.label)
+        crawler.genctxs = [ctx]
+        crawler.target_to_dependencies = {node1.label: [d1,d2]}
+        target_to_transitive_closure_deps = {
+            node1.label: [d1, d2, d3],
+            node2.label: [d4],
+        }
+
+        crawler._register_dependencies(target_to_transitive_closure_deps)
+
+        self.assertEqual(set([d1, d2]), set(ctx.direct_dependencies))
+        self.assertEqual(set([d1, d2, d3]), set(ctx.artifact_transitive_closure))
+        self.assertEqual(set([d1, d2, d3, d4]), set(ctx.library_transitive_closure))
+
+    def test_register_dependencies_with_exclusions(self):
+        library_path = "projects/libs/lib"
+        d1 = self._get_3rdparty_dep("com:d1:1.0.0", "d1")
+        d2 = self._get_3rdparty_dep("com:d2:1.0.0", "d2")
+        d3 = self._get_3rdparty_dep("com:d3:1.0.0", "d3")
+        d4 = self._get_3rdparty_dep("com:d4:1.0.0", "d4")
+        d5 = self._get_3rdparty_dep("com:d5:1.0.0", "d5")
+        strategy = self._get_strategy()
+        node1 = self._build_node("art1", "projects/libs/lib/p1", strategy,
+                                 library_path=library_path)
+        node2 = self._build_node("art2", "projects/libs/lib/p2", strategy,
+                                 library_path=library_path)
+        ws = self._get_workspace()
+        crawler = crawlerm.Crawler(ws, strategy)
+        crawler.library_to_nodes[library_path].append(node1)
+        crawler.library_to_nodes[library_path].append(node2)
+        ctx = artifactgenctx.ArtifactGenerationContext(node1.artifact_def, node1.label)
+        crawler.genctxs = [ctx]
+        crawler.target_to_dependencies = {node1.label: [d1,d2]}
+        target_to_transitive_closure_deps = {
+            node1.label: [d1, d2, d3],
+            node2.label: [d4],
+        }
+        # add one additional dependency and exclude d2
+        node1.artifact_def._emitted_dependencies = ["com:d5:1.0.0", "-com:d2",]
+
+        crawler._register_dependencies(target_to_transitive_closure_deps)
+
+        self.assertEqual(set([d1, d5]), set(ctx.direct_dependencies))
+        self.assertEqual(set([d1, d3]), set(ctx.artifact_transitive_closure))
+        self.assertEqual(set([d1, d3, d4]), set(ctx.library_transitive_closure))
 
     def _build_node(self, artifact_id, bazel_package, strategy,
                     pom_generation_mode=pomgenmode.DYNAMIC,

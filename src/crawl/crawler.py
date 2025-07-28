@@ -176,15 +176,33 @@ class Crawler:
         - the transitive closure of the library's dependencies
         """
         for ctx in self.genctxs:
-            directs = self.target_to_dependencies[ctx.label]
+            additional_deps, excluded_deps = self._load_custom_output_dependencies(ctx.artifact_def)
+            directs = [dep for dep in self.target_to_dependencies[ctx.label] if dep not in excluded_deps] + additional_deps
             ctx.register_artifact_directs(directs)
-            transitive_closure = target_to_transitive_closure_deps[ctx.label]
+
+            transitive_closure = [dep for dep in target_to_transitive_closure_deps[ctx.label] if dep not in excluded_deps]
             ctx.register_artifact_transitive_closure(transitive_closure)
-            lib_transitive_closure = self\
+
+            lib_transitive_closure = [dep for dep in self\
                 ._get_deps_transitive_closure_for_library(
                     ctx.artifact_def.library_path,
-                    target_to_transitive_closure_deps)
+                    target_to_transitive_closure_deps) if dep not in excluded_deps]
             ctx.register_library_transitive_closure(lib_transitive_closure)
+
+    def _load_custom_output_dependencies(self, artifact_def):
+        additional_deps = []
+        excluded_deps = []
+        for str_repr in artifact_def.emitted_dependencies:
+            exclude = False
+            if str_repr.startswith("-"):
+                str_repr = str_repr[1:]
+                exclude = True
+            dep = artifact_def.generation_strategy.load_dependency_by_native_repr(str_repr)
+            if exclude:
+                excluded_deps.append(dep)
+            else:
+                additional_deps.append(dep)
+        return additional_deps, excluded_deps
 
     def _get_deps_transitive_closure_for_library(
             self, library_path, target_to_transitive_closure_deps):
@@ -537,8 +555,8 @@ class Crawler:
             self.package_to_artifact[label.package_path] = artifact_def
             self.library_to_artifact[artifact_def.library_path].append(artifact_def)
 
-            artifactctx = artifactgenctx.ArtifactGenerationContext(
-                self.workspace, artifact_def, label)
+            _, excluded_deps = self._load_custom_output_dependencies(artifact_def)
+            artifactctx = artifactgenctx.ArtifactGenerationContext(artifact_def, label)
             self.genctxs.append(artifactctx)
             labels = self._discover_dependencies(artifact_def, label)
             source_labels, deps = self._partition_and_filter_labels(
@@ -659,7 +677,7 @@ class Crawler:
         return source_labels, deps
 
     def _filter_label(self, label, downstream_artifact_def):
-        if label.canonical_form in self.workspace.excluded_dependency_labels:
+        if label in self.workspace.excluded_dependency_labels:
             return None
         elif label.is_source_ref:
             for excluded_path in self.workspace.excluded_dependency_paths:

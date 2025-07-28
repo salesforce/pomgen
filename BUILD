@@ -24,9 +24,9 @@ py_library(
                  "src/generate/impl/py/*.py"]),
     data = ["examples/java/pom_template.xml"],
     deps = ["@pip//lxml"],
+    imports = ["src"],
     visibility = ["@poppy//:__subpackages__",],
 )
-
 
 # we will rename pomgen to gen
 alias(

@@ -131,7 +131,9 @@ class Label(object):
         return hash((self.repository_prefix, self.package_path, self.target))
 
     def __eq__(self, other):
-        if other is None:
+        if other is self:
+            return True
+        if not isinstance(other, Label):
             return False
         return (self.repository_prefix == other.repository_prefix and
                 self.package_path == other.package_path and

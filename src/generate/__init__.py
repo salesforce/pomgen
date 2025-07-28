@@ -79,6 +79,10 @@ class AbstractGenerationStrategy(ABC):
         pass
 
     @abstractmethod
+    def load_dependency_by_native_repr(self, str_repr):
+        pass
+
+    @abstractmethod
     def load_transitive_closure(self, dependency):
         """
         Given a dependency instance, returns the transitive closure of
