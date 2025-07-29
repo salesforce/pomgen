@@ -3,12 +3,12 @@ class ArtifactGenerationContext:
     Information about a single artifact that was crawled.
     """
 
-    def __init__(self, workspace, artifact_def, label):
+    def __init__(self, artifact_def, label):
         self._artifact_def = artifact_def
         self._label = label
-        self._direct_dependencies = None
-        self._artifact_transitive_closure = None
-        self._library_transitive_closure = None
+        self._direct_dependencies = []
+        self._artifact_transitive_closure = []
+        self._library_transitive_closure = []
 
     @property
     def artifact_def(self):

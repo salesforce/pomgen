@@ -9,6 +9,7 @@ Responsible for loading a config file. For the config file format, see /README.m
 """
 
 
+from common import label
 from common import logger
 from config import exclusions
 import configparser
@@ -128,7 +129,8 @@ class Config:
 
         # crawler
         self.excluded_dependency_paths = _add_pathsep(_to_tuple(excluded_dependency_paths))
-        self.excluded_dependency_labels = _to_tuple(excluded_dependency_labels)
+        # stored as common.label.Label instances
+        self.excluded_dependency_labels = _to_tuple_of_labels(excluded_dependency_labels)
 
         # artifact
         self.excluded_src_relpaths = _add_pathsep(_to_tuple(excluded_src_relpaths))
@@ -208,6 +210,10 @@ def _to_tuple(thing):
         filtered_tokens = [t.strip() for t in tokens if len(t.strip()) > 0]
         return tuple(filtered_tokens)
     raise Exception("Cannot convert to tuple [%s] % thing")
+
+
+def _to_tuple_of_labels(thing):
+    return tuple([label.Label(lbl) for lbl in _to_tuple(thing)])
 
 
 def _to_bool(thing):

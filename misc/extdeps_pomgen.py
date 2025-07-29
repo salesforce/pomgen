@@ -8,7 +8,6 @@ Generates a single pom to stdout that has <dependency/> entries for 3rd party
 dependencies.
 """
 
-
 import argparse
 import common.common as common
 import common.label as labelm
@@ -44,12 +43,8 @@ def _parse_arguments(args):
         help="optional - the artifactId to use in the generated pom")
     parser.add_argument("--version", type=str, required=False,
         help="optional - the version to use in the generated pom")
-    parser.add_argument("--exclude_all_transitives", action="store_true",
-                        required=False,
-        help="optional - adds a *:* <exclusion> to all dependencies in the generated pom")
-    parser.add_argument("--verbose", action="store_true",
-                        required=False,
-        help="optional - verbose output")
+    parser.add_argument("--verbose", required=False, action="store_true",
+        help="Verbose output")
     return parser.parse_args(args)
 
 
@@ -116,25 +111,18 @@ def main(args):
     # to be nice:
     dependencies.sort()
 
-    if args.exclude_all_transitives:
-        # since all dependencies are treated equally (no transitives),
-        # we can dedupe them without losing anything
-        # we use a representation that includes the version when checking
-        # whether we have already included the dep
-        deps_set = set()
-        updated_dependencies = []
-        for dep in dependencies:
-            dedupe_key = dep.maven_coordinates_name + ":" + dep.version
-            if dedupe_key not in deps_set:
-                deps_set.add(dedupe_key)
-                updated_dependencies.append(dep)
-        dependencies = updated_dependencies
-
-    else:
-        # it is possible to end up with duplicate dependencies
-        # because different labels may point to the same dependency (gav)
-        # (for ex: @maven//:org_antlr_ST4 and @antlr//:org_antlr_ST4)
-        pass
+    # since all dependencies are treated equally (no transitives),
+    # we can dedupe them without losing anything
+    # we use a representation that includes the version when checking
+    # whether we have already included the dep
+    deps_set = set()
+    updated_dependencies = []
+    for dep in dependencies:
+        dedupe_key = dep.maven_coordinates_name + ":" + dep.version
+        if dedupe_key not in deps_set:
+            deps_set.add(dedupe_key)
+            updated_dependencies.append(dep)
+    dependencies = updated_dependencies
 
     pomgen = ThirdPartyDepsPomGen(
         artifact_def, dependencies, cfg.pom_template, dependencymd)

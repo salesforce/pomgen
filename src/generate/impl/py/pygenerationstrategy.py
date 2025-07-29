@@ -55,6 +55,9 @@ class PyGenerationStrategy(generate.AbstractGenerationStrategy):
             assert label in self._label_to_ext_dep, "unknown third party dependency [%s]" % label
             return self._label_to_ext_dep[label]
 
+    def load_dependency_by_native_repr(self, str_repr):
+        return None
+
     def load_transitive_closure(self, dependency):
         return ()
 

@@ -77,6 +77,11 @@ class PomGenerationStrategy(generate.AbstractGenerationStrategy):
                 raise Exception("Unknown external dependency - please make sure all maven install json files have been registered with pomgen (by setting maven_install_paths in the pomgen config file): [%s]" % label.canonical_form)
             return self._label_to_ext_dep[label.canonical_form]
 
+    def load_dependency_by_native_repr(self, str_repr):
+        if str_repr.count(":") == 1:
+            str_repr += ":-1"
+        return dependency.new_dep_from_maven_art_str(str_repr, None)
+
     def load_transitive_closure(self, dependency):
         return self._dependency_md.get_transitive_closure(dependency)
 

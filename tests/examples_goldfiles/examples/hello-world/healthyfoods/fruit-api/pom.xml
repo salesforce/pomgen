@@ -28,12 +28,10 @@
                 </exclusion>
             </exclusions>
         </dependency>
-
-        <!-- The transitives of the dependencies above -->
         <dependency>
-            <groupId>org.antlr</groupId>
-            <artifactId>antlr-runtime</artifactId>
-            <version>3.5</version>
+            <groupId>extra</groupId>
+            <artifactId>dependency</artifactId>
+            <version>1.0.0</version>
             <exclusions>
                 <exclusion>
                     <groupId>*</groupId>
@@ -41,6 +39,8 @@
                 </exclusion>
             </exclusions>
         </dependency>
+
+        <!-- The transitives of the dependencies above -->
         <dependency>
             <groupId>org.antlr</groupId>
             <artifactId>stringtemplate</artifactId>
