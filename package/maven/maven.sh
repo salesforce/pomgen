@@ -36,7 +36,7 @@ Usage: bazel run @poppy//package/maven.sh -a action(s) -l path/to/library/root/d
     enables debug logging
 
   -f (force)
-    runs pomgen even if no changes to artifacts have been made
+    always processes artifacts, even when no changes are detected
 
   -h (help)
     this message
@@ -260,14 +260,14 @@ if [ -f "${this_script_dir}/${helper_functions_file}" ]; then
     source "${this_script_dir}/${helper_functions_file}"
 else
     # to support running through "bazel run", look in a few other places
-    p="external/pomgen/package/maven/${helper_functions_file}"
+    p="external/poppy/package/maven/${helper_functions_file}"
     if [ -f "${p}" ]; then
         # remote repository
         source "${p}"
     else
         p="package/maven/${helper_functions_file}"
         if [ -f "${p}" ]; then
-            # local pomgen repository
+            # local poppy repository
             source "${p}"
         else
             echo "[ERROR] Unable to locate ${helper_functions_file}" && exit 1
