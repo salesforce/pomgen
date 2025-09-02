@@ -15,7 +15,7 @@ from common import version_increment_strategy as vis
 from config import config
 from crawl import pomcontent
 from generate import generationstrategyfactory
-from pomupdate import buildpomupdate
+from common import buildpomupdate
 import argparse
 import sys
 
