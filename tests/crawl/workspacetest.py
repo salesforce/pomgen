@@ -6,7 +6,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 """
 import config.config as config
 import crawl.pomcontent as pomcontent
-import common.pomgenmode as pomgenmode
+import common.genmode as genmode
 import crawl.workspace as workspace
 import generate.generationstrategyfactory as generationstrategyfactory
 import os
@@ -36,7 +36,7 @@ class WorkspaceTest(unittest.TestCase):
 
         self.assertEqual(art_def.bazel_package, "lib/a1")
         self.assertEqual(art_def.version, "1.0.0-SNAPSHOT")
-        self.assertIs(art_def.pom_generation_mode, pomgenmode.DYNAMIC)
+        self.assertIs(art_def.generation_mode, genmode.DYNAMIC)
         self.assertFalse(art_def.oneoneone_mode)
 
     def test_parse_child_package_without_art_def(self):
@@ -46,7 +46,7 @@ class WorkspaceTest(unittest.TestCase):
 
         parent_art_def = self.ws.parse_maven_artifact_def("lib/src")
         self.assertFalse(parent_art_def.oneoneone_mode)
-        self.assertIs(parent_art_def.pom_generation_mode, pomgenmode.DYNAMIC)
+        self.assertIs(parent_art_def.generation_mode, genmode.DYNAMIC)
 
         art_def = self.ws.parse_maven_artifact_def("lib/src/a1", parent_art_def)
         self.assertIsNone(art_def)
@@ -59,11 +59,11 @@ class WorkspaceTest(unittest.TestCase):
 
         parent_art_def = self.ws.parse_maven_artifact_def("lib/src")
         self.assertTrue(parent_art_def.oneoneone_mode)
-        self.assertIs(parent_art_def.pom_generation_mode, pomgenmode.DYNAMIC)
+        self.assertIs(parent_art_def.generation_mode, genmode.DYNAMIC)
 
         art_def = self.ws.parse_maven_artifact_def("lib/src/a1", parent_art_def)
         self.assertFalse(art_def.oneoneone_mode)
-        self.assertIs(art_def.pom_generation_mode, pomgenmode.SKIP)
+        self.assertIs(art_def.generation_mode, genmode.SKIP)
 
     def _get_config(self, **kwargs):
         return config.Config(**kwargs)
@@ -92,7 +92,7 @@ maven_artifact(
     artifact_id = "%s",
     group_id = "%s",
     version = "%s",
-    pom_generation_mode = "dynamic",
+    generation_mode = "dynamic",
     $oneoneone$    
 )
 

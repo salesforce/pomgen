@@ -23,7 +23,7 @@ class Dependency:
         if self.artifact_def is None:
             return True # 3rd party dep
         else:
-            return self.artifact_def.pom_generation_mode.produces_artifact
+            return self.artifact_def.generation_mode.produces_artifact
 
     def to_pyproject_format(self):
         """Convert the dependency to pyproject.toml format."""

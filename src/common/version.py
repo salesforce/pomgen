@@ -21,7 +21,7 @@ def parse_build_pom_version(build_pom_content):
     """
     m = version_re.search(build_pom_content)
     if m is None:
-        # possible if pom_generation_mode=skip
+        # possible if generation_mode=skip
         return None
     else:
         return m.group(2).strip()

@@ -125,7 +125,7 @@ def _walk(artifact_node, library_path_to_library_node):
         version = artifact_def.version if artifact_def.requires_release else artifact_def.released_version
         if version is None:
             # make sure that version is None for the expected reason:
-            assert not artifact_def.pom_generation_mode.produces_artifact
+            assert not artifact_def.generation_mode.produces_artifact
         library_node = LibraryNode(library_path, artifact_def.requires_release,
                                    artifact_def.release_reason, version,
                                    artifact_def.released_version,

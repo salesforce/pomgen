@@ -6,7 +6,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 """
 
 
-import common.pomgenmode as pomgenmode
+import common.genmode as genmode
 import config.config as config
 import crawl.buildpom as buildpom
 import crawl.pomcontent as pomcontent
@@ -40,7 +40,7 @@ class BuildPomTest(unittest.TestCase):
         self.assertEqual(artifact_id, art_def.artifact_id)
         self.assertEqual(version, art_def.version)
         self.assertEqual(["//a/b/c", "//d/e/f"], art_def.deps)
-        self.assertIs(pomgenmode.TEMPLATE, art_def.pom_generation_mode)
+        self.assertIs(genmode.TEMPLATE, art_def.generation_mode)
         self.assertEqual(None, art_def.custom_pom_template_content)
         self.assertFalse(art_def.include_deps)
         self.assertTrue(art_def.change_detection)
@@ -147,7 +147,7 @@ class BuildPomTest(unittest.TestCase):
         self.assertEqual(artifact_id, art_def.artifact_id)
         self.assertEqual(version, art_def.version)
         self.assertEqual([], art_def.deps)
-        self.assertIs(pomgenmode.DYNAMIC, art_def.pom_generation_mode)
+        self.assertIs(genmode.DYNAMIC, art_def.generation_mode)
         self.assertEqual(None, art_def.custom_pom_template_content)
         self.assertTrue(art_def.include_deps)
         self.assertTrue(art_def.change_detection)
@@ -168,7 +168,7 @@ class BuildPomTest(unittest.TestCase):
         art_def = buildpom.parse_maven_artifact_def(
             repo_root, package_rel_path, self._get_strategy())
 
-        self.assertIs(pomgenmode.DYNAMIC, art_def.pom_generation_mode)
+        self.assertIs(genmode.DYNAMIC, art_def.generation_mode)
 
     def test_parse_BUILD_pom__dynamic_pomgen_mode(self):
         package_rel_path = "package1/package2"
@@ -183,8 +183,8 @@ class BuildPomTest(unittest.TestCase):
         art_def = buildpom.parse_maven_artifact_def(
             repo_root, package_rel_path, self._get_strategy())
 
-        self.assertIs(pomgenmode.DYNAMIC, art_def.pom_generation_mode)
-        self.assertTrue(art_def.pom_generation_mode.produces_artifact)
+        self.assertIs(genmode.DYNAMIC, art_def.generation_mode)
+        self.assertTrue(art_def.generation_mode.produces_artifact)
 
     def test_parse_BUILD_pom__template_pomgen_mode(self):
         package_rel_path = "package1/package2"
@@ -199,8 +199,8 @@ class BuildPomTest(unittest.TestCase):
         art_def = buildpom.parse_maven_artifact_def(
             repo_root, package_rel_path, self._get_strategy())
 
-        self.assertIs(pomgenmode.TEMPLATE, art_def.pom_generation_mode)
-        self.assertTrue(art_def.pom_generation_mode.produces_artifact)
+        self.assertIs(genmode.TEMPLATE, art_def.generation_mode)
+        self.assertTrue(art_def.generation_mode.produces_artifact)
 
     def test_parse_BUILD_pom__additional_change_detected_packages(self):
         package_rel_path = "package1/package2"
@@ -231,7 +231,7 @@ class BuildPomTest(unittest.TestCase):
         art_def = buildpom.parse_maven_artifact_def(
             repo_root, package_rel_path, self._get_strategy())
 
-        self.assertIs(pomgenmode.SKIP, art_def.pom_generation_mode)
+        self.assertIs(genmode.SKIP, art_def.generation_mode)
         self.assertEqual(None, art_def.group_id)
         self.assertEqual(None, art_def.artifact_id)
         self.assertEqual(None, art_def.version)
@@ -243,7 +243,7 @@ class BuildPomTest(unittest.TestCase):
         self.assertEqual(None, art_def.released_version)
         self.assertEqual(None, art_def.released_artifact_hash)
         self.assertEqual(None, art_def.version_increment_strategy_name)
-        self.assertFalse(art_def.pom_generation_mode.produces_artifact)
+        self.assertFalse(art_def.generation_mode.produces_artifact)
 
     def test_parse_BUILD_pom__jar_path(self):
         package_rel_path = "package1/package2"
@@ -335,7 +335,7 @@ maven_artifact(
     artifact_id = "%s",
     group_id = "%s",
     version = "%s",
-    pom_generation_mode = '%s',
+    generation_mode = '%s',
     %s
     %s
     %s
@@ -368,7 +368,7 @@ maven_artifact_update(
     def _write_build_pom_skip_generation_mode(self, package_path):
         build_pom = """
 maven_artifact(
-    pom_generation_mode = "skip",
+    generation_mode = "skip",
 )
 """
         path = os.path.join(package_path, "MVN-INF")

@@ -11,7 +11,7 @@ it would be good to find a better home for the remaining pieces here.
 """
 
 
-import common.pomgenmode as pomgenmode
+import common.genmode as genmode
 import crawl.artifactprocessor as artifactprocessor
 import crawl.buildpom as buildpom
 import os.path
@@ -79,11 +79,11 @@ class Workspace:
         Given a list of packages, returns those that are actually producing
         a Maven artifact. 
 
-        This is based on the pom_generation_mode specified in the BUILD.pom 
-        file.
+        This is based on the generation_mode specified in the metadata
+        (for ex BUILD.pom file).
         """
         art_defs = [self.parse_maven_artifact_def(p) for p in packages]
-        return [art_def.bazel_package for art_def in art_defs if art_def.pom_generation_mode.produces_artifact]
+        return [art_def.bazel_package for art_def in art_defs if art_def.generation_mode.produces_artifact]
 
     def _get_parent_metadata_path(self, package, downstream_artifact_def):
         """
@@ -104,7 +104,7 @@ class Workspace:
 
 def _build_skipped_artifact_def(package, parent_artifact_def):
     return buildpom.MavenArtifactDef(
-        pom_generation_mode=pomgenmode.SKIP,
+        generation_mode=genmode.SKIP,
         bazel_package=package,
         bazel_target=os.path.basename(package),
         generation_strategy=parent_artifact_def.generation_strategy,

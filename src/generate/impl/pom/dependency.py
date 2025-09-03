@@ -248,11 +248,11 @@ class MonorepoDependency(AbstractJarDependency):
     @property
     def bazel_buildable(self):
         pom_template = self._artifact_def.custom_pom_template_content
-        return self._artifact_def.pom_generation_mode.bazel_produced_artifact(pom_template)
+        return self._artifact_def.generation_mode.bazel_produced_artifact(pom_template)
 
     @property
     def references_artifact(self):
-        return self._artifact_def.pom_generation_mode.produces_artifact
+        return self._artifact_def.generation_mode.produces_artifact
 
     def _use_previously_released_artifact(self):
         if self._artifact_def.requires_release is not None:

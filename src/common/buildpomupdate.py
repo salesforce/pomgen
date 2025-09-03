@@ -10,7 +10,7 @@ This module is responsible for updating BUILD.pom and BUILD.pom.released files.
 
 
 import common.mdfiles as mdfiles
-import common.pomgenmode as pomgenmode
+import common.genmode as genmode
 import common.version as version
 import common.version_increment_strategy as vis
 import crawl.buildpom as buildpom
@@ -29,14 +29,14 @@ def update_build_pom_file(root_path,
                           set_version_to_last_released_version=False,
                           version_qualifier_to_add=None,
                           version_qualifier_to_remove=None,
-                          new_pom_generation_mode=None,
-                          add_pom_generation_mode_if_missing=False):
+                          new_generation_mode=None,
+                          add_generation_mode_if_missing=False):
     """
     If a non-None value is provided, updates the following values in BUILD.pom 
     files in the specified packages:
         - version (also version qualifier)
         - version_increment_strategy
-        - pom_generation_mode
+        - generation_mode
     """
     for package in packages:
         strategy = generation_strategy_factory.get_strategy_for_package(package)
@@ -46,10 +46,10 @@ def update_build_pom_file(root_path,
             current_version = version.parse_build_pom_version(build_pom_content)
 
             if current_version is None:
-                # only possible if pom_generation_mode=skip. this isn't quite
+                # only possible if generation_mode=skip. this isn't quite
                 # right, but we'll just ignore these type of packages
                 # for simplicitly, because there isn't much metadata to
-                # update anyway (only pom_generation_mode is specified)
+                # update anyway (only generation_mode is specified)
                 continue
 
             updated_version = new_version
@@ -99,10 +99,10 @@ def update_build_pom_file(root_path,
                 build_pom_content = _update_version_in_build_pom_content(build_pom_content, updated_version)
             if new_version_incr_strat is not None:
                 build_pom_content = _update_version_incr_strategy_in_build_pom_content(build_pom_content, new_version_incr_strat)
-            if new_pom_generation_mode is not None:
-                build_pom_content = _update_pom_generation_mode_in_build_pom_content(build_pom_content, new_pom_generation_mode)
-            if add_pom_generation_mode_if_missing:
-                build_pom_content = _add_pom_generation_mode_if_missing_in_build_pom_content(build_pom_content)
+            if new_generation_mode is not None:
+                build_pom_content = _update_generation_mode_in_build_pom_content(build_pom_content, new_generation_mode)
+            if add_generation_mode_if_missing:
+                build_pom_content = _add_generation_mode_if_missing_in_build_pom_content(build_pom_content)
                     
             mdfiles.write_file(build_pom_content, root_path, package, strategy.metadata_path)
         except:
@@ -176,12 +176,12 @@ maven_artifact_update(
     else:
         return "%s%s%s" % (m.group(1), new_version_increment_strategy.strip(), m.group(3))
 
-pom_generation_mode_re = re.compile("(^.*pom_generation_mode *= *[\"'])(.*?)([\"'].*)$", re.S)
+generation_mode_re = re.compile("(^.*generation_mode *= *[\"'])(.*?)([\"'].*)$", re.S)
 
 
-def _update_pom_generation_mode_in_build_pom_content(build_pom_content, new_pom_generation_mode):
-    value = new_pom_generation_mode.strip()
-    m = pom_generation_mode_re.search(build_pom_content)
+def _update_generation_mode_in_build_pom_content(build_pom_content, new_generation_mode):
+    value = new_generation_mode.strip()
+    m = generation_mode_re.search(build_pom_content)
     if m is None:
         # add it to the end of maven_artifact
         maven_artifact = "maven_artifact("
@@ -189,16 +189,16 @@ def _update_pom_generation_mode_in_build_pom_content(build_pom_content, new_pom_
         j = build_pom_content.index(")", i + len(maven_artifact))
         insert_at = j
         return build_pom_content[:insert_at] + \
-            '    pom_generation_mode = "%s",%s' % (value, os.linesep) + \
+            '    generation_mode = "%s",%s' % (value, os.linesep) + \
                 build_pom_content[insert_at:]
     else:
         return "%s%s%s" % (m.group(1), value, m.group(3))
 
 
-def _add_pom_generation_mode_if_missing_in_build_pom_content(build_pom_content):
-    m = pom_generation_mode_re.search(build_pom_content)
+def _add_generation_mode_if_missing_in_build_pom_content(build_pom_content):
+    m = generation_mode_re.search(build_pom_content)
     if m is None:
-        return _update_pom_generation_mode_in_build_pom_content(build_pom_content, pomgenmode.DEFAULT.name)
+        return _update_generation_mode_in_build_pom_content(build_pom_content, genmode.DEFAULT.name)
     else:
         return build_pom_content
 
