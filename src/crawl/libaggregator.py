@@ -88,17 +88,17 @@ class LibraryNode:
     def _get_rel_indicator(self, release_reason):
         if release_reason is None:
             return "-" # not released
-        elif release_reason == releasereason.ReleaseReason.TRANSITIVE:
+        elif release_reason == releasereason.TRANSITIVE:
             return "*"
-        elif release_reason == releasereason.ReleaseReason.POM:
+        elif release_reason == releasereason.MANIFEST:
             return "#"
-        elif release_reason == releasereason.ReleaseReason.ARTIFACT:
+        elif release_reason == releasereason.ARTIFACT:
             return "+"
-        elif release_reason == releasereason.ReleaseReason.FIRST:
+        elif release_reason == releasereason.FIRST:
             return "++"
-        elif release_reason == releasereason.ReleaseReason.ALWAYS:
+        elif release_reason == releasereason.ALWAYS:
             return "!"
-        elif release_reason == releasereason.ReleaseReason.UNCOMMITTED_CHANGES:
+        elif release_reason == releasereason.UNCOMMITTED_CHANGES:
             return "<>"
         else:
             raise Exception("Unhandled release reason: %s - this is a bug" % self.release_reason)
@@ -148,32 +148,32 @@ def _get_lib_release_reason(current_release_reason, proposed_release_reason):
     Since we are concerned with libraries here, not artifacts, this method
     defines the precedence for release reasons.
     """
-    if current_release_reason == releasereason.ReleaseReason.ALWAYS:
+    if current_release_reason == releasereason.ALWAYS:
         pass
-    if current_release_reason == releasereason.ReleaseReason.FIRST:
-        if proposed_release_reason in (releasereason.ReleaseReason.ALWAYS,):
+    if current_release_reason == releasereason.FIRST:
+        if proposed_release_reason in (releasereason.ALWAYS,):
             return proposed_release_reason
-    if current_release_reason == releasereason.ReleaseReason.UNCOMMITTED_CHANGES:
-        if proposed_release_reason in (releasereason.ReleaseReason.FIRST,
-                                       releasereason.ReleaseReason.ALWAYS,):
+    if current_release_reason == releasereason.UNCOMMITTED_CHANGES:
+        if proposed_release_reason in (releasereason.FIRST,
+                                       releasereason.ALWAYS,):
             return proposed_release_reason
-    if current_release_reason == releasereason.ReleaseReason.ARTIFACT:
-        if proposed_release_reason in (releasereason.ReleaseReason.FIRST,
-                                       releasereason.ReleaseReason.ALWAYS,
-                                       releasereason.ReleaseReason.UNCOMMITTED_CHANGES,):
+    if current_release_reason == releasereason.ARTIFACT:
+        if proposed_release_reason in (releasereason.FIRST,
+                                       releasereason.ALWAYS,
+                                       releasereason.UNCOMMITTED_CHANGES,):
             return proposed_release_reason
-    if current_release_reason == releasereason.ReleaseReason.POM:
-        if proposed_release_reason in (releasereason.ReleaseReason.FIRST,
-                                       releasereason.ReleaseReason.ALWAYS,
-                                       releasereason.ReleaseReason.ARTIFACT,
-                                       releasereason.ReleaseReason.UNCOMMITTED_CHANGES,):
+    if current_release_reason == releasereason.MANIFEST:
+        if proposed_release_reason in (releasereason.FIRST,
+                                       releasereason.ALWAYS,
+                                       releasereason.ARTIFACT,
+                                       releasereason.UNCOMMITTED_CHANGES,):
             return proposed_release_reason
-    if current_release_reason == releasereason.ReleaseReason.TRANSITIVE:
-        if proposed_release_reason in (releasereason.ReleaseReason.FIRST,
-                                       releasereason.ReleaseReason.ALWAYS,
-                                       releasereason.ReleaseReason.ARTIFACT,
-                                       releasereason.ReleaseReason.POM,
-                                       releasereason.ReleaseReason.UNCOMMITTED_CHANGES):
+    if current_release_reason == releasereason.TRANSITIVE:
+        if proposed_release_reason in (releasereason.FIRST,
+                                       releasereason.ALWAYS,
+                                       releasereason.ARTIFACT,
+                                       releasereason.MANIFEST,
+                                       releasereason.UNCOMMITTED_CHANGES):
             return proposed_release_reason
 
     return current_release_reason

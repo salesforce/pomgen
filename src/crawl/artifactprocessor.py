@@ -30,25 +30,25 @@ def augment_artifact_def(repo_root_path,
     if art_def.released_version is None or art_def.released_artifact_hash is None:
         # never released?
         art_def.requires_release = True
-        art_def.release_reason = releasereason.ReleaseReason.FIRST
+        art_def.release_reason = releasereason.FIRST
     else:
         if change_detection_enabled and art_def.change_detection:
             has_changed = _has_changed_since_last_release(repo_root_path, art_def, source_exclusions)
             if has_changed:
                 art_def.requires_release = True
-                art_def.release_reason = releasereason.ReleaseReason.ARTIFACT
+                art_def.release_reason = releasereason.ARTIFACT
             else:
                 # check for local edits - if found, set requires_release -
                 # this is to support a better local dev experience
                 local_edits = git.has_uncommitted_changes(repo_root_path, art_def.bazel_package, source_exclusions)
                 if local_edits:
                     art_def.requires_release = True
-                    art_def.release_reason = releasereason.ReleaseReason.UNCOMMITTED_CHANGES
+                    art_def.release_reason = releasereason.UNCOMMITTED_CHANGES
                 else:
                     art_def.requires_release = False
         else:
             art_def.requires_release = True
-            art_def.release_reason = releasereason.ReleaseReason.ALWAYS
+            art_def.release_reason = releasereason.ALWAYS
     return art_def
 
 

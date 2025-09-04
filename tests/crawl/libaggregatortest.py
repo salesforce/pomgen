@@ -31,7 +31,7 @@ class LibAggregatorTest(unittest.TestCase):
         self.assertEqual("1.0.0-SNAPSHOT", lib_nodes[0].version)
         self.assertEqual(lib_nodes[0].library_path, "mylib")
         self.assertTrue(lib_nodes[0].requires_release)
-        self.assertEqual(rr.ReleaseReason.ARTIFACT, lib_nodes[0].release_reason)
+        self.assertEqual(rr.ARTIFACT, lib_nodes[0].release_reason)
 
     def test_single_lib__does_not_require_release(self):
         a1 = self._create_library_artifact_node("g1", "a1", "1.0.0", "mylib",
@@ -53,7 +53,7 @@ class LibAggregatorTest(unittest.TestCase):
     def test_pretty_print__single_lib__requires_release(self):
         a1 = self._create_library_artifact_node("g1", "a1", "1.0.0", "mylib",
                                                 requires_release=True,
-                                                release_reason=rr.ReleaseReason.FIRST)
+                                                release_reason=rr.FIRST)
 
         lib_nodes = libaggregator.get_libraries_to_release([a1,])
         pretty_output = lib_nodes[0].pretty_print()
@@ -68,7 +68,7 @@ class LibAggregatorTest(unittest.TestCase):
         """
         a1 = self._create_library_artifact_node("g1", "a1", "1.0.0", "mylib",
                                                 requires_release=False,
-                                                release_reason=rr.ReleaseReason.FIRST)
+                                                release_reason=rr.FIRST)
 
         lib_nodes = libaggregator.get_libraries_to_release([a1,])
         pretty_output = lib_nodes[0].pretty_print()
@@ -98,61 +98,61 @@ class LibAggregatorTest(unittest.TestCase):
         self.assertEqual("1.0.0-SNAPSHOT", lib.version)
         self.assertEqual(lib.library_path, "mylib")
         self.assertTrue(lib.requires_release)
-        self.assertEqual(rr.ReleaseReason.ARTIFACT, lib.release_reason)
+        self.assertEqual(rr.ARTIFACT, lib.release_reason)
 
         lib = lib.children[0]
         self.assertEqual("2.0.0-SNAPSHOT", lib.version)
         self.assertEqual(lib.library_path, "mylib2")
         self.assertTrue(lib.requires_release)
-        self.assertEqual(rr.ReleaseReason.ARTIFACT, lib.release_reason)
+        self.assertEqual(rr.ARTIFACT, lib.release_reason)
 
     def test_release_reason_precedence__always(self):
-        self.assertEqual(rr.ReleaseReason.ALWAYS, libaggregator._get_lib_release_reason(rr.ReleaseReason.ALWAYS, rr.ReleaseReason.ALWAYS))
-        self.assertEqual(rr.ReleaseReason.ALWAYS, libaggregator._get_lib_release_reason(rr.ReleaseReason.ALWAYS, rr.ReleaseReason.FIRST))
-        self.assertEqual(rr.ReleaseReason.ALWAYS, libaggregator._get_lib_release_reason(rr.ReleaseReason.ALWAYS, rr.ReleaseReason.ARTIFACT))
-        self.assertEqual(rr.ReleaseReason.ALWAYS, libaggregator._get_lib_release_reason(rr.ReleaseReason.ALWAYS, rr.ReleaseReason.POM))
-        self.assertEqual(rr.ReleaseReason.ALWAYS, libaggregator._get_lib_release_reason(rr.ReleaseReason.ALWAYS, rr.ReleaseReason.TRANSITIVE))
-        self.assertEqual(rr.ReleaseReason.ALWAYS, libaggregator._get_lib_release_reason(rr.ReleaseReason.ALWAYS, rr.ReleaseReason.UNCOMMITTED_CHANGES))
+        self.assertEqual(rr.ALWAYS, libaggregator._get_lib_release_reason(rr.ALWAYS, rr.ALWAYS))
+        self.assertEqual(rr.ALWAYS, libaggregator._get_lib_release_reason(rr.ALWAYS, rr.FIRST))
+        self.assertEqual(rr.ALWAYS, libaggregator._get_lib_release_reason(rr.ALWAYS, rr.ARTIFACT))
+        self.assertEqual(rr.ALWAYS, libaggregator._get_lib_release_reason(rr.ALWAYS, rr.MANIFEST))
+        self.assertEqual(rr.ALWAYS, libaggregator._get_lib_release_reason(rr.ALWAYS, rr.TRANSITIVE))
+        self.assertEqual(rr.ALWAYS, libaggregator._get_lib_release_reason(rr.ALWAYS, rr.UNCOMMITTED_CHANGES))
 
     def test_release_reason_precedence__first(self):
-        self.assertEqual(rr.ReleaseReason.ALWAYS, libaggregator._get_lib_release_reason(rr.ReleaseReason.FIRST, rr.ReleaseReason.ALWAYS))
-        self.assertEqual(rr.ReleaseReason.FIRST, libaggregator._get_lib_release_reason(rr.ReleaseReason.FIRST, rr.ReleaseReason.FIRST))
-        self.assertEqual(rr.ReleaseReason.FIRST, libaggregator._get_lib_release_reason(rr.ReleaseReason.FIRST, rr.ReleaseReason.ARTIFACT))
-        self.assertEqual(rr.ReleaseReason.FIRST, libaggregator._get_lib_release_reason(rr.ReleaseReason.FIRST, rr.ReleaseReason.POM))
-        self.assertEqual(rr.ReleaseReason.FIRST, libaggregator._get_lib_release_reason(rr.ReleaseReason.FIRST, rr.ReleaseReason.TRANSITIVE))
-        self.assertEqual(rr.ReleaseReason.FIRST, libaggregator._get_lib_release_reason(rr.ReleaseReason.FIRST, rr.ReleaseReason.UNCOMMITTED_CHANGES))
+        self.assertEqual(rr.ALWAYS, libaggregator._get_lib_release_reason(rr.FIRST, rr.ALWAYS))
+        self.assertEqual(rr.FIRST, libaggregator._get_lib_release_reason(rr.FIRST, rr.FIRST))
+        self.assertEqual(rr.FIRST, libaggregator._get_lib_release_reason(rr.FIRST, rr.ARTIFACT))
+        self.assertEqual(rr.FIRST, libaggregator._get_lib_release_reason(rr.FIRST, rr.MANIFEST))
+        self.assertEqual(rr.FIRST, libaggregator._get_lib_release_reason(rr.FIRST, rr.TRANSITIVE))
+        self.assertEqual(rr.FIRST, libaggregator._get_lib_release_reason(rr.FIRST, rr.UNCOMMITTED_CHANGES))
 
     def test_release_reason_precedence__artifact(self):
-        self.assertEqual(rr.ReleaseReason.ALWAYS, libaggregator._get_lib_release_reason(rr.ReleaseReason.ARTIFACT, rr.ReleaseReason.ALWAYS))
-        self.assertEqual(rr.ReleaseReason.FIRST, libaggregator._get_lib_release_reason(rr.ReleaseReason.ARTIFACT, rr.ReleaseReason.FIRST))
-        self.assertEqual(rr.ReleaseReason.UNCOMMITTED_CHANGES, libaggregator._get_lib_release_reason(rr.ReleaseReason.ARTIFACT, rr.ReleaseReason.UNCOMMITTED_CHANGES))
-        self.assertEqual(rr.ReleaseReason.ARTIFACT, libaggregator._get_lib_release_reason(rr.ReleaseReason.ARTIFACT, rr.ReleaseReason.ARTIFACT))
-        self.assertEqual(rr.ReleaseReason.ARTIFACT, libaggregator._get_lib_release_reason(rr.ReleaseReason.ARTIFACT, rr.ReleaseReason.POM))
-        self.assertEqual(rr.ReleaseReason.ARTIFACT, libaggregator._get_lib_release_reason(rr.ReleaseReason.ARTIFACT, rr.ReleaseReason.TRANSITIVE))
+        self.assertEqual(rr.ALWAYS, libaggregator._get_lib_release_reason(rr.ARTIFACT, rr.ALWAYS))
+        self.assertEqual(rr.FIRST, libaggregator._get_lib_release_reason(rr.ARTIFACT, rr.FIRST))
+        self.assertEqual(rr.UNCOMMITTED_CHANGES, libaggregator._get_lib_release_reason(rr.ARTIFACT, rr.UNCOMMITTED_CHANGES))
+        self.assertEqual(rr.ARTIFACT, libaggregator._get_lib_release_reason(rr.ARTIFACT, rr.ARTIFACT))
+        self.assertEqual(rr.ARTIFACT, libaggregator._get_lib_release_reason(rr.ARTIFACT, rr.MANIFEST))
+        self.assertEqual(rr.ARTIFACT, libaggregator._get_lib_release_reason(rr.ARTIFACT, rr.TRANSITIVE))
 
     def test_release_reason_precedence__pom(self):
-        self.assertEqual(rr.ReleaseReason.ALWAYS, libaggregator._get_lib_release_reason(rr.ReleaseReason.POM, rr.ReleaseReason.ALWAYS))
-        self.assertEqual(rr.ReleaseReason.FIRST, libaggregator._get_lib_release_reason(rr.ReleaseReason.POM, rr.ReleaseReason.FIRST))
-        self.assertEqual(rr.ReleaseReason.UNCOMMITTED_CHANGES, libaggregator._get_lib_release_reason(rr.ReleaseReason.POM, rr.ReleaseReason.UNCOMMITTED_CHANGES))
-        self.assertEqual(rr.ReleaseReason.ARTIFACT, libaggregator._get_lib_release_reason(rr.ReleaseReason.POM, rr.ReleaseReason.ARTIFACT))
-        self.assertEqual(rr.ReleaseReason.POM, libaggregator._get_lib_release_reason(rr.ReleaseReason.POM, rr.ReleaseReason.POM))
-        self.assertEqual(rr.ReleaseReason.POM, libaggregator._get_lib_release_reason(rr.ReleaseReason.POM, rr.ReleaseReason.TRANSITIVE))
+        self.assertEqual(rr.ALWAYS, libaggregator._get_lib_release_reason(rr.MANIFEST, rr.ALWAYS))
+        self.assertEqual(rr.FIRST, libaggregator._get_lib_release_reason(rr.MANIFEST, rr.FIRST))
+        self.assertEqual(rr.UNCOMMITTED_CHANGES, libaggregator._get_lib_release_reason(rr.MANIFEST, rr.UNCOMMITTED_CHANGES))
+        self.assertEqual(rr.ARTIFACT, libaggregator._get_lib_release_reason(rr.MANIFEST, rr.ARTIFACT))
+        self.assertEqual(rr.MANIFEST, libaggregator._get_lib_release_reason(rr.MANIFEST, rr.MANIFEST))
+        self.assertEqual(rr.MANIFEST, libaggregator._get_lib_release_reason(rr.MANIFEST, rr.TRANSITIVE))
 
     def test_release_reason_precedence__transitive(self):
-        self.assertEqual(rr.ReleaseReason.ALWAYS, libaggregator._get_lib_release_reason(rr.ReleaseReason.TRANSITIVE, rr.ReleaseReason.ALWAYS))
-        self.assertEqual(rr.ReleaseReason.FIRST, libaggregator._get_lib_release_reason(rr.ReleaseReason.TRANSITIVE, rr.ReleaseReason.FIRST))
-        self.assertEqual(rr.ReleaseReason.UNCOMMITTED_CHANGES, libaggregator._get_lib_release_reason(rr.ReleaseReason.TRANSITIVE, rr.ReleaseReason.UNCOMMITTED_CHANGES))
-        self.assertEqual(rr.ReleaseReason.ARTIFACT, libaggregator._get_lib_release_reason(rr.ReleaseReason.TRANSITIVE, rr.ReleaseReason.ARTIFACT))
-        self.assertEqual(rr.ReleaseReason.POM, libaggregator._get_lib_release_reason(rr.ReleaseReason.TRANSITIVE, rr.ReleaseReason.POM))
-        self.assertEqual(rr.ReleaseReason.TRANSITIVE, libaggregator._get_lib_release_reason(rr.ReleaseReason.TRANSITIVE, rr.ReleaseReason.TRANSITIVE))
+        self.assertEqual(rr.ALWAYS, libaggregator._get_lib_release_reason(rr.TRANSITIVE, rr.ALWAYS))
+        self.assertEqual(rr.FIRST, libaggregator._get_lib_release_reason(rr.TRANSITIVE, rr.FIRST))
+        self.assertEqual(rr.UNCOMMITTED_CHANGES, libaggregator._get_lib_release_reason(rr.TRANSITIVE, rr.UNCOMMITTED_CHANGES))
+        self.assertEqual(rr.ARTIFACT, libaggregator._get_lib_release_reason(rr.TRANSITIVE, rr.ARTIFACT))
+        self.assertEqual(rr.MANIFEST, libaggregator._get_lib_release_reason(rr.TRANSITIVE, rr.MANIFEST))
+        self.assertEqual(rr.TRANSITIVE, libaggregator._get_lib_release_reason(rr.TRANSITIVE, rr.TRANSITIVE))
 
     def test_release_reason_precedence__uncommitted(self):
-        self.assertEqual(rr.ReleaseReason.ALWAYS, libaggregator._get_lib_release_reason(rr.ReleaseReason.UNCOMMITTED_CHANGES, rr.ReleaseReason.ALWAYS))
-        self.assertEqual(rr.ReleaseReason.FIRST, libaggregator._get_lib_release_reason(rr.ReleaseReason.UNCOMMITTED_CHANGES, rr.ReleaseReason.FIRST))
-        self.assertEqual(rr.ReleaseReason.UNCOMMITTED_CHANGES, libaggregator._get_lib_release_reason(rr.ReleaseReason.UNCOMMITTED_CHANGES, rr.ReleaseReason.ARTIFACT))
-        self.assertEqual(rr.ReleaseReason.UNCOMMITTED_CHANGES, libaggregator._get_lib_release_reason(rr.ReleaseReason.UNCOMMITTED_CHANGES, rr.ReleaseReason.POM))
-        self.assertEqual(rr.ReleaseReason.UNCOMMITTED_CHANGES, libaggregator._get_lib_release_reason(rr.ReleaseReason.UNCOMMITTED_CHANGES, rr.ReleaseReason.TRANSITIVE))
-        self.assertEqual(rr.ReleaseReason.UNCOMMITTED_CHANGES, libaggregator._get_lib_release_reason(rr.ReleaseReason.UNCOMMITTED_CHANGES, rr.ReleaseReason.UNCOMMITTED_CHANGES))
+        self.assertEqual(rr.ALWAYS, libaggregator._get_lib_release_reason(rr.UNCOMMITTED_CHANGES, rr.ALWAYS))
+        self.assertEqual(rr.FIRST, libaggregator._get_lib_release_reason(rr.UNCOMMITTED_CHANGES, rr.FIRST))
+        self.assertEqual(rr.UNCOMMITTED_CHANGES, libaggregator._get_lib_release_reason(rr.UNCOMMITTED_CHANGES, rr.ARTIFACT))
+        self.assertEqual(rr.UNCOMMITTED_CHANGES, libaggregator._get_lib_release_reason(rr.UNCOMMITTED_CHANGES, rr.MANIFEST))
+        self.assertEqual(rr.UNCOMMITTED_CHANGES, libaggregator._get_lib_release_reason(rr.UNCOMMITTED_CHANGES, rr.TRANSITIVE))
+        self.assertEqual(rr.UNCOMMITTED_CHANGES, libaggregator._get_lib_release_reason(rr.UNCOMMITTED_CHANGES, rr.UNCOMMITTED_CHANGES))
 
     def _create_library_artifact_node(self, group_id, artifact_id, version,
                                       library_path, requires_release,
@@ -160,7 +160,7 @@ class LibAggregatorTest(unittest.TestCase):
         dev_version = version + "-SNAPSHOT"
         released_version = version
         if requires_release and release_reason is None:
-            release_reason = rr.ReleaseReason.ARTIFACT
+            release_reason = rr.ARTIFACT
         artifact_def =\
             buildpom.MavenArtifactDef(group_id, artifact_id, dev_version,
                                       released_version=released_version,

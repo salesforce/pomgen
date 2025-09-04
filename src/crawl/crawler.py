@@ -274,7 +274,7 @@ class Crawler:
                 if manifest_changed:
                     art_def.requires_release = True
                     # TODO release reason
-                    art_def.release_reason = releasereason.ReleaseReason.POM
+                    art_def.release_reason = releasereason.MANIFEST
 
                     if self.verbose:
                         logger.debug("pom diff %s %s" % (art_def, art_def.bazel_package))
@@ -462,12 +462,12 @@ class Crawler:
                     artifact_def.requires_release = True
                     updated_artifact_defs.append(artifact_def)
                     if force_release:
-                        artifact_def.release_reason = releasereason.ReleaseReason.ALWAYS
+                        artifact_def.release_reason = releasereason.ALWAYS
                     else:
                         if sibling_artifact_requires_release:
                             artifact_def.release_reason = sibling_release_reason
                         elif transitive_dep_requires_release:
-                            artifact_def.release_reason = releasereason.ReleaseReason.TRANSITIVE
+                            artifact_def.release_reason = releasereason.TRANSITIVE
                         else:
                             raise Exception("release_reason not set on artifact - this is a bug")
         else: # release not required

@@ -88,7 +88,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions(), change_detection_enabled=True)
 
         self.assertNotEqual(None, art_def.requires_release)
-        self.assertEqual(releasereason.ReleaseReason.ALWAYS, art_def.release_reason)
+        self.assertEqual(releasereason.ALWAYS, art_def.release_reason)
         self.assertTrue(art_def.requires_release, "Expected artifact to require release")
 
     def test_artifact_without_changes__disabled_change_detection__globally(self):
@@ -102,7 +102,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         art_def = artifactprocessor.augment_artifact_def(repo_root_path, art_def, exclusions.src_exclusions(), change_detection_enabled=False)
 
         self.assertNotEqual(None, art_def.requires_release)
-        self.assertEqual(releasereason.ReleaseReason.ALWAYS, art_def.release_reason)
+        self.assertEqual(releasereason.ALWAYS, art_def.release_reason)
         self.assertTrue(art_def.requires_release, "Expected artifact to require release")
 
     def test_artifact_with_changes_since_last_release__new_file(self):
@@ -121,7 +121,7 @@ class ArtifactProcessorTest(unittest.TestCase):
 
         self.assertNotEqual(None, art_def.requires_release)
         self.assertTrue(art_def.requires_release, "Expected artifact to require release")
-        self.assertIs(releasereason.ReleaseReason.ARTIFACT, art_def.release_reason)
+        self.assertIs(releasereason.ARTIFACT, art_def.release_reason)
 
     def test_artifact_with_changes_since_last_release__modified_file(self):
         package = "pack1/pack2"
@@ -140,7 +140,7 @@ class ArtifactProcessorTest(unittest.TestCase):
 
         self.assertNotEqual(None, art_def.requires_release)
         self.assertTrue(art_def.requires_release, "Expected artifact to require release")
-        self.assertIs(releasereason.ReleaseReason.ARTIFACT, art_def.release_reason)
+        self.assertIs(releasereason.ARTIFACT, art_def.release_reason)
 
     def test_additional_change_detected_packages__set(self):
         package1 = "path/pack1" # change detected (by default)
@@ -212,7 +212,7 @@ class ArtifactProcessorTest(unittest.TestCase):
 
         self.assertNotEqual(None, art_def.requires_release)
         self.assertTrue(art_def.requires_release, "Expected artifact to require release")
-        self.assertIs(releasereason.ReleaseReason.UNCOMMITTED_CHANGES, art_def.release_reason)
+        self.assertIs(releasereason.UNCOMMITTED_CHANGES, art_def.release_reason)
 
     def test_build_pom_changes_are_ignored(self):
         package = "a/b/c"
