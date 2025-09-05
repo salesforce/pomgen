@@ -65,10 +65,10 @@ class BuildPomUpdateTest(unittest.TestCase):
         pack2_path = os.path.join(self.repo_root, pack2)
         os.makedirs(os.path.join(pack2_path))
         self._write_build_pom(pack1_path, "p1", "g1", "0.0.0",
-                              pom_generation_mode="dynamic")
+                              generation_mode="dynamic")
         self._write_build_pom_released(pack1_path, "1.0.0", "aaa")
         self._write_build_pom(pack2_path, "p2", "g2", "0.0.0",
-                              pom_generation_mode="dynamic",
+                              generation_mode="dynamic",
                               additional_change_detected_packages=[pack1])
         self._write_build_pom_released(pack2_path, "1.0.0", "bbb")
         self._setup_repo(self.repo_root)
@@ -97,7 +97,7 @@ class BuildPomUpdateTest(unittest.TestCase):
         repo_package = os.path.join(self.repo_root, package_rel_path)
         os.makedirs(repo_package)
         self._write_build_pom(repo_package, "p1", "g1", "0.0.0",
-                              pom_generation_mode="dynamic")
+                              generation_mode="dynamic")
         self._write_build_pom_released(repo_package, "1.0.0", "aaa")
         # sanity:
         with open(os.path.join(repo_package, "MVN-INF", "BUILD.pom.released"), "r") as f:
@@ -120,7 +120,7 @@ class BuildPomUpdateTest(unittest.TestCase):
         repo_package = os.path.join(self.repo_root, package_rel_path)
         os.makedirs(repo_package)
         self._write_build_pom(repo_package, "p1", "g1", "0.0.0",
-                              pom_generation_mode="dynamic")
+                              generation_mode="dynamic")
 
         buildpomupdate.update_released_artifact(
             self.repo_root, [package_rel_path], self.fac,
@@ -675,16 +675,16 @@ maven_artifact_update(
             self.assertIn('version = "3.2.1-SNAPSHOT"', content)
             self.assertIn(')', content)
 
-    def test_update_pom_generation_mode_in_BUILD_pom(self):
+    def test_update_generation_mode_in_BUILD_pom(self):
         pack1 = "somedir/p1"
         pack1_path = os.path.join(self.repo_root, pack1)
         os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1",
-                              pom_generation_mode="jar")
+                              generation_mode="jar")
 
         buildpomupdate.update_build_pom_file(
             self.repo_root, [pack1], self.fac,
-            new_pom_generation_mode="template")
+            new_generation_mode="template")
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
@@ -692,19 +692,19 @@ maven_artifact_update(
             self.assertIn('group_id = "p1g"', content)
             self.assertIn('artifact_id = "p1a"', content)
             self.assertIn('version = "3.2.1"', content)
-            self.assertIn('pom_generation_mode = "template"', content)
+            self.assertIn('generation_mode = "template"', content)
             self.assertIn(')', content)
 
-    def test_add_pom_generation_mode_to_BUILD_pom(self):
+    def test_add_generation_mode_to_BUILD_pom(self):
         pack1 = "somedir/p1"
         pack1_path = os.path.join(self.repo_root, pack1)
         os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1",
-                              pom_generation_mode=None)
+                              generation_mode=None)
 
         buildpomupdate.update_build_pom_file(
             self.repo_root, [pack1], self.fac,
-            new_pom_generation_mode="mypomgenmode")
+            new_generation_mode="mypomgenmode")
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
@@ -713,11 +713,11 @@ maven_artifact_update(
             self.assertIn('    group_id = "p1g"', content)
             self.assertIn('    artifact_id = "p1a"', content)
             self.assertIn('    version = "3.2.1"', content)
-            self.assertIn('    pom_generation_mode = "mypomgenmode"', content)
+            self.assertIn('    generation_mode = "mypomgenmode"', content)
             self.assertIn(')', content)
 
     def _write_build_pom(self, package_path, artifact_id, group_id, version,
-                         pom_generation_mode=None,
+                         generation_mode=None,
                          version_increment_strategy="minor",
                          additional_change_detected_packages=None):
         build_pom = """
@@ -728,8 +728,8 @@ maven_artifact(
 
         build_pom = build_pom % (artifact_id, group_id, version)
 
-        if pom_generation_mode is not None:
-            build_pom += "    pom_generation_mode = \"%s\",\n" % pom_generation_mode
+        if generation_mode is not None:
+            build_pom += "    generation_mode = \"%s\",\n" % generation_mode
 
         if additional_change_detected_packages is not None:
               build_pom += "    additional_change_detected_packages = [%s]," % ",".join(["'%s'" % p for p in additional_change_detected_packages])

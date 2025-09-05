@@ -5,7 +5,7 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 import common.label as label
-import common.pomgenmode as pomgenmode
+import common.genmode as genmode
 import config.config as config
 import crawl.artifactgenctx as artifactgenctx
 import crawl.buildpom as buildpom
@@ -38,9 +38,9 @@ class CrawlerUnitTest(unittest.TestCase):
         """
         strategy = self._get_strategy()
         parent_node = self._build_node("a1", "a/b/c", strategy,
-                                       pom_generation_mode=pomgenmode.DYNAMIC)
+                                       generation_mode=genmode.DYNAMIC)
         node = self._build_node("x1", "x/y/z", strategy,
-                                pom_generation_mode=pomgenmode.SKIP,
+                                generation_mode=genmode.SKIP,
                                 parent_node=parent_node)
         parent_node.children = (node,)
 
@@ -529,7 +529,7 @@ class CrawlerUnitTest(unittest.TestCase):
     def test_remove_package_private_labels(self):
         package = "a/b/c"
         art = buildpom.MavenArtifactDef("g1", "a1", "1", bazel_package=package,
-                                        pom_generation_mode=pomgenmode.DYNAMIC)
+                                        generation_mode=genmode.DYNAMIC)
         l1 = label.Label(package)
         l2 = label.Label("%s:foo" % package)
         l3 = label.Label("//something_else:foo")
@@ -542,7 +542,7 @@ class CrawlerUnitTest(unittest.TestCase):
     def test_remove_package_private_labels__skip_mode_allows_them(self):
         package = "a/b/c"
         art = buildpom.MavenArtifactDef("g1", "a1", "1", bazel_package=package,
-                                        pom_generation_mode=pomgenmode.SKIP)
+                                        generation_mode=genmode.SKIP)
         l1 = label.Label(package)
         l2 = label.Label("%s:foo" % package)
         l3 = label.Label("//something_else:foo")
@@ -614,12 +614,12 @@ class CrawlerUnitTest(unittest.TestCase):
         self.assertEqual(set([d1, d3, d4]), set(ctx.library_transitive_closure))
 
     def _build_node(self, artifact_id, bazel_package, strategy,
-                    pom_generation_mode=pomgenmode.DYNAMIC,
+                    generation_mode=genmode.DYNAMIC,
                     parent_node=None, library_path=None):
         art_def = buildpom.MavenArtifactDef(
             "g1", artifact_id, "1.0.0",
             bazel_package=bazel_package,
-            pom_generation_mode=pom_generation_mode,
+            generation_mode=generation_mode,
             library_path=library_path,
             bazel_target="t1", generation_strategy=strategy)
         

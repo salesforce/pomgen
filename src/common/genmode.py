@@ -6,35 +6,35 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 """
 import types
 
-def from_string(pomgenmode_string):
+
+def from_string(generation_mode_string):
     """
-    Returns a PomGenMode instance for the specified string value of 
-    `pom_generation_mode`.
+    Returns a GenerationMode instance matching the specified string.
     """
-    if pomgenmode_string is None:
-        raise Exception("pom_generation_mode must be specified")
+    assert generation_mode_string is not None
+
     for mode in ALL_MODES:
-        if pomgenmode_string == mode.name:
+        if generation_mode_string == mode.name:
             return mode
-    raise Exception("Unknown pom_generation_mode: %s" % pomgenmode_string)
+    raise Exception("Unknown generation_mode: %s" % generation_mode_string)
 
 
-class PomGenMode:
+class GenerationMode:
     """
-    The pom generation mode, as specified by the `pom_generation_mode` attribute
-    of the `maven_artifact` rule.
+    The generation mode of a given artifact.
+
 
     The following attributes are available:
 
         name:
-          The name of this pom_generation_mode
+          The name of this generation_mode
 
         produces_artifact:
-          Whether this pomgen mode produces a maven artifact
+          Whether this generation mode produces a artifact (for example a maven
+          jar, pom or a python wheel)
 
         bazel_produced_artifact:
-          Whether this pomgen mode represents an artifact that is built by
-          Bazel (ie a jar)
+          Whether the artifact is built by bazel
 
         query_dependency_attributes:
           Whether to query the rule attributes that point to other dependencies
@@ -43,8 +43,9 @@ class PomGenMode:
 
         additional_dependency_attrs:
           The rule attributes that point to other dependencies to process.
-          For all pomgen modes, these attributes are "deps" and "runtime_deps".
-          Additional attributes may be added using this parameter
+          For all generation modes, these attributes are "deps" and
+          "runtime_deps".
+          Additional attributes may be added using this attribute.
     """
     def __init__(self, name, produces_artifact, query_dependency_attributes,
                  additional_dependency_attrs=()):
@@ -63,22 +64,21 @@ class PomGenMode:
     __repr__ = __str__
 
 
-# the pom is generated from scratch, using a common skeleton base template
-# dynamic pom content is only the <dependencies> section, which is based on
-# BUILD file content
-DYNAMIC = PomGenMode("dynamic", produces_artifact=True,
-                     query_dependency_attributes=True)
+# the manifest is generated from scratch, using a repository-wide common base
+# template
+DYNAMIC = GenerationMode("dynamic", produces_artifact=True,
+                         query_dependency_attributes=True)
 DYNAMIC.bazel_produced_artifact = types.MethodType(
     lambda self, pom_template_content: True, DYNAMIC)
 
 
-# the pom is generated based on a custom template file only
-TEMPLATE = PomGenMode("template", produces_artifact=True,
-                      # False here because pom templates may or may not
-                      # have a build file - if there is a build file, it
-                      # is generally not related to the pom template
+# the manifest is generated based on a custom template file only
+TEMPLATE = GenerationMode("template", produces_artifact=True,
+                          # False here because pom templates may or may not
+                          # have a BUILD file - if there is one, it
+                          # is generally not related to the template
                       query_dependency_attributes=False)
-# this is an edge case - for custom pom templates, the packaging tends to be
+# this is a hack for custom pom templates - their packaging tends to be
 # "pom" - that's the whole point. but we have a couple of cases with different
 # values (such as maven-plugin), in which case bazel is expected to build
 # something also
@@ -86,15 +86,16 @@ TEMPLATE.bazel_produced_artifact = types.MethodType(
     lambda self, pom_template_content: pom_template_content.find("<packaging>pom</packaging>") == -1, TEMPLATE)
 
 
-# this bazel package is skipped over at pom generation time
+# this bazel package is skipped over at manifest generation time
 # dependencies from this bazel package are "pushed up" to the closest parent
-# that has an artifact producing pom_generation_mode
-SKIP = PomGenMode("skip", produces_artifact=False,
-                  query_dependency_attributes=True,
-                  additional_dependency_attrs=("exports",))
+# that has an artifact producing generation_mode
+SKIP = GenerationMode("skip", produces_artifact=False,
+                      query_dependency_attributes=True,
+                      additional_dependency_attrs=("exports",))
 SKIP.bazel_produced_artifact = types.MethodType(
     lambda self, pom_template_content: False, SKIP)
 
 
 DEFAULT = DYNAMIC
+
 ALL_MODES = (DYNAMIC, TEMPLATE, SKIP,)

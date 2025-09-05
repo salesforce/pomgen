@@ -7,7 +7,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 This module contains pom.xml generation logic.
 """
 
-import common.pomgenmode as pomgenmode
+import common.genmode as genmode
 import copy
 import crawl.pomcontent as pomcontentm
 import generate.impl.pom.pomparser as pomparser
@@ -51,20 +51,20 @@ def get_pom_generator(pom_template, artifact_def, external_dependencies,
     """
     assert artifact_def is not None
     assert isinstance(pom_content_md, pomcontentm.PomContent)
-    mode = artifact_def.pom_generation_mode
-    if mode is pomgenmode.DYNAMIC:
+    mode = artifact_def.generation_mode
+    if mode is genmode.DYNAMIC:
         also_generate_dep_man_pom = artifact_def.gen_dependency_management_pom
         if also_generate_dep_man_pom:
             return PomWithCompanionDependencyManagementPomGen(
                 artifact_def, pom_template, pom_content_md, dependency_md)
         else:
             return DynamicPomGen(artifact_def, pom_template, pom_content_md, dependency_md)
-    elif mode is pomgenmode.TEMPLATE:
+    elif mode is genmode.TEMPLATE:
         return TemplatePomGen(artifact_def, external_dependencies, dependency_md)
-    elif mode is pomgenmode.SKIP:
+    elif mode is genmode.SKIP:
         return NoopPomGen(artifact_def, dependency_md)
     else:
-        raise Exception("Bug: unknown pom_generation_mode [%s] for %s" % (mode, artifact_def.bazel_package))
+        raise Exception("Bug: unknown generation_mode [%s] for %s" % (mode, artifact_def.bazel_package))
 
 
 class AbstractPomGen(object):

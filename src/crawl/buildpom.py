@@ -11,7 +11,7 @@ This module is responsible for parsing BUILD.pom and BUILD.pom.released files.
 import collections
 import common.code as code
 import common.mdfiles as mdfiles
-import common.pomgenmode as pomgenmode
+import common.genmode as genmode
 import os
 
 
@@ -29,11 +29,11 @@ class MavenArtifactDef(object):
 
     version: the maven artifact version of the bazel package.
 
-    pom_generation_mode: the pom generation strategy, the type is
-        common.pomgenmode.PomGenMode
+    generation_mode: the generation strategy, the type is
+        common.genmode.GenerationMode
 
-    custom_pom_template: if the pom_generation_mode is "template",
-        this is the content of the specified pom template file
+    custom_pom_template: if the generation_mode is "template",
+        this is the content of the specified template file
 
     include_deps: whether pomgen should include dependencies in the generated
         pom. This defaults to True, because figuring out dependencies and 
@@ -65,7 +65,7 @@ class MavenArtifactDef(object):
         be incremented.
 
     1_1_1_mode: whether this artifact is in 1:1:1 mode: all bazel subpackages
-                of this bazel package use pomgenmode.SKIP
+                of this bazel package use genmode.SKIP
 
     emitted_dependencies: specifies extra dependencies to include, or exclude,
         in the generated manifest. Use manifest-native syntax, and prefix with
@@ -126,7 +126,7 @@ class MavenArtifactDef(object):
                  group_id,
                  artifact_id,
                  version,
-                 pom_generation_mode=pomgenmode.DEFAULT,
+                 generation_mode=genmode.DEFAULT,
                  custom_pom_template_content=None,
                  include_deps=True,
                  change_detection=True,
@@ -149,7 +149,7 @@ class MavenArtifactDef(object):
         self._group_id = group_id
         self._artifact_id = artifact_id
         self._version = version
-        self._pom_generation_mode = pom_generation_mode
+        self._generation_mode = generation_mode
         self._custom_pom_template_content = custom_pom_template_content
         self._include_deps = include_deps
         self._change_detection = change_detection
@@ -188,8 +188,8 @@ class MavenArtifactDef(object):
         return self._version
 
     @property
-    def pom_generation_mode(self):
-        return self._pom_generation_mode
+    def generation_mode(self):
+        return self._generation_mode
 
     @property
     def custom_pom_template_content(self):
@@ -253,7 +253,7 @@ class MavenArtifactDef(object):
 
     @property
     def requires_release(self):
-        if not self._pom_generation_mode.produces_artifact:
+        if not self._generation_mode.produces_artifact:
             # nothing ever to release
             return False
         return self._requires_release
@@ -332,8 +332,9 @@ def parse_maven_artifact_def(root_path, package, generation_strategy):
         group_id=ma_attrs.get("group_id", None),
         artifact_id=ma_attrs.get("artifact_id", None),
         version=ma_attrs.get("version", None),
-        # pom_generation_mode is deprecated
-        pom_generation_mode=ma_attrs.get(
+        # pom_generation_mode will be removed but we still look for it for now
+        # to make the transition to the new name (generation_mode) easier
+        generation_mode=ma_attrs.get(
             "generation_mode", ma_attrs.get("pom_generation_mode")),
         include_deps=ma_attrs.get("include_deps", True),
         change_detection=ma_attrs.get("change_detection", True),
@@ -355,9 +356,9 @@ def parse_maven_artifact_def(root_path, package, generation_strategy):
         template_content, _ = mdfiles.read_file(root_path, package, template_path, must_exist=True)
         art_def.custom_pom_template_content = template_content
     
-    pom_generation_mode = pomgenmode.from_string(art_def.pom_generation_mode)
+    generation_mode = genmode.from_string(art_def.generation_mode)
 
-    if pom_generation_mode.produces_artifact:
+    if generation_mode.produces_artifact:
         rel_art_def = _parse_released_maven_artifact_def(root_path, package, generation_strategy)
         released_pom_content = _read_released_manifest(root_path, package, generation_strategy)
 
@@ -371,7 +372,7 @@ def parse_maven_artifact_def(root_path, package, generation_strategy):
                                        md_dir_name,
                                        released_pom_content,
                                        vers_inc_strat_name,
-                                       pom_generation_mode)
+                                       generation_mode)
     else:
         return _augment_art_def_values(art_def, 
                                        rel_art_def=None,
@@ -379,7 +380,7 @@ def parse_maven_artifact_def(root_path, package, generation_strategy):
                                        md_dir_name=md_dir_name,
                                        released_pom_content=None,
                                        version_increment_strategy_name=None,
-                                       pom_generation_mode=pom_generation_mode)
+                                       generation_mode=generation_mode)
 
 
 def _read_released_manifest(root_path, package, generation_strategy):
@@ -410,7 +411,7 @@ def _augment_art_def_values(user_art_def, rel_art_def, bazel_package,
                             md_dir_name,
                             released_pom_content,
                             version_increment_strategy_name,
-                            pom_generation_mode):
+                            generation_mode):
     """
     Defaults values that have not been provided in the BUILD.pom file.
     """
@@ -418,7 +419,7 @@ def _augment_art_def_values(user_art_def, rel_art_def, bazel_package,
         group_id=user_art_def.group_id,
         artifact_id=user_art_def.artifact_id,
         version=user_art_def.version,
-        pom_generation_mode=pom_generation_mode,
+        generation_mode=generation_mode,
         custom_pom_template_content=user_art_def.custom_pom_template_content,
         include_deps=True if user_art_def.include_deps is None else user_art_def.include_deps,
         change_detection=True if user_art_def.change_detection is None else user_art_def.change_detection,

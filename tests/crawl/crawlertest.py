@@ -153,8 +153,7 @@ class CrawlerTest(unittest.TestCase):
 
         self.assertEqual(6, len(result.artifact_generation_contexts))
         for ctx in result.artifact_generation_contexts:
-            self.assertEqual(rr.ReleaseReason.ALWAYS,
-                ctx.artifact_def.release_reason)
+            self.assertEqual(rr.ALWAYS, ctx.artifact_def.release_reason)
 
     def test_all_libs_changed(self):
         """
@@ -169,8 +168,7 @@ class CrawlerTest(unittest.TestCase):
         all = set(["libs/a/a1", "libs/a/a2", "libs/b/a1", "libs/b/a2", "libs/c/a1", "libs/c/a2"])
         self.assertEqual(all, set([ctx.artifact_def.bazel_package for ctx in result.artifact_generation_contexts]))
         for ctx in result.artifact_generation_contexts:
-            self.assertEqual(rr.ReleaseReason.ARTIFACT,
-                ctx.artifact_def.release_reason)
+            self.assertEqual(rr.ARTIFACT, ctx.artifact_def.release_reason)
 
     def test_all_libs_changed__force_release(self):
         """
@@ -185,8 +183,7 @@ class CrawlerTest(unittest.TestCase):
         all = set(["libs/a/a1", "libs/a/a2", "libs/b/a1", "libs/b/a2", "libs/c/a1", "libs/c/a2"])
         self.assertEqual(all, set([ctx.artifact_def.bazel_package for ctx in result.artifact_generation_contexts]))
         for ctx in result.artifact_generation_contexts:
-            self.assertEqual(rr.ReleaseReason.ALWAYS,
-                ctx.artifact_def.release_reason)
+            self.assertEqual(rr.ALWAYS, ctx.artifact_def.release_reason)
 
     def test_all_libs_changed__dont_follow_refs(self):
         """
@@ -212,9 +209,9 @@ class CrawlerTest(unittest.TestCase):
         self.assertEqual(set(["libs/a/a1", "libs/a/a2"]),
                           set([ctx.artifact_def.bazel_package for ctx in result.artifact_generation_contexts]))
         a_a1 = self._get_node_by_bazel_package(result.nodes, "libs/a/a1")
-        self.assertIs(a_a1.artifact_def.release_reason, rr.ReleaseReason.ARTIFACT)
+        self.assertIs(a_a1.artifact_def.release_reason, rr.ARTIFACT)
         a_a2 = self._get_node_by_bazel_package(result.nodes, "libs/a/a2")
-        self.assertIs(a_a2.artifact_def.release_reason, rr.ReleaseReason.ARTIFACT)
+        self.assertIs(a_a2.artifact_def.release_reason, rr.ARTIFACT)
 
         b_a1 = a_a1.children[0]
         self.assertEqual("libs/b/a1", b_a1.artifact_def.bazel_package)
@@ -242,9 +239,9 @@ class CrawlerTest(unittest.TestCase):
         self.assertEqual(set(["libs/a/a1", "libs/a/a2"]),
                           set([ctx.artifact_def.bazel_package for ctx in result.artifact_generation_contexts]))
         a_a1 = self._get_node_by_bazel_package(result.nodes, "libs/a/a1")
-        self.assertIs(a_a1.artifact_def.release_reason, rr.ReleaseReason.ARTIFACT)
+        self.assertIs(a_a1.artifact_def.release_reason, rr.ARTIFACT)
         a_a2 = self._get_node_by_bazel_package(result.nodes, "libs/a/a2")
-        self.assertIs(a_a2.artifact_def.release_reason, rr.ReleaseReason.ARTIFACT)
+        self.assertIs(a_a2.artifact_def.release_reason, rr.ARTIFACT)
 
         b_a1 = a_a1.children[0]
         self.assertEqual("libs/b/a1", b_a1.artifact_def.bazel_package)
@@ -273,16 +270,16 @@ class CrawlerTest(unittest.TestCase):
                          set([ctx.artifact_def.bazel_package for ctx in result.artifact_generation_contexts]))
 
         a_a1 = self._get_node_by_bazel_package(result.nodes, "libs/a/a1")
-        self.assertIs(a_a1.artifact_def.release_reason, rr.ReleaseReason.TRANSITIVE)
+        self.assertIs(a_a1.artifact_def.release_reason, rr.TRANSITIVE)
         a_a2 = self._get_node_by_bazel_package(result.nodes, "libs/a/a2")
-        self.assertIs(a_a2.artifact_def.release_reason, rr.ReleaseReason.TRANSITIVE)
+        self.assertIs(a_a2.artifact_def.release_reason, rr.TRANSITIVE)
 
         b_a1 = a_a1.children[0]
         self.assertEqual("libs/b/a1", b_a1.artifact_def.bazel_package)
-        self.assertIs(b_a1.artifact_def.release_reason, rr.ReleaseReason.ARTIFACT)
+        self.assertIs(b_a1.artifact_def.release_reason, rr.ARTIFACT)
         b_a2 = self._get_node_by_bazel_package(result.nodes, "libs/b/a2")
         self.assertEqual("libs/b/a2", b_a2.artifact_def.bazel_package)
-        self.assertIs(b_a2.artifact_def.release_reason, rr.ReleaseReason.ARTIFACT)
+        self.assertIs(b_a2.artifact_def.release_reason, rr.ARTIFACT)
 
         c_a1 = b_a1.children[0]
         self.assertEqual("libs/c/a1", c_a1.artifact_def.bazel_package)
@@ -304,16 +301,16 @@ class CrawlerTest(unittest.TestCase):
                          set([ctx.artifact_def.bazel_package for ctx in result.artifact_generation_contexts]))
 
         a_a1 = self._get_node_by_bazel_package(result.nodes, "libs/a/a1")
-        self.assertIs(a_a1.artifact_def.release_reason, rr.ReleaseReason.TRANSITIVE)
+        self.assertIs(a_a1.artifact_def.release_reason, rr.TRANSITIVE)
         a_a2 = self._get_node_by_bazel_package(result.nodes, "libs/a/a2")
-        self.assertIs(a_a2.artifact_def.release_reason, rr.ReleaseReason.TRANSITIVE)
+        self.assertIs(a_a2.artifact_def.release_reason, rr.TRANSITIVE)
 
         b_a1 = a_a1.children[0]
         self.assertEqual("libs/b/a1", b_a1.artifact_def.bazel_package)
-        self.assertIs(b_a1.artifact_def.release_reason, rr.ReleaseReason.ARTIFACT)
+        self.assertIs(b_a1.artifact_def.release_reason, rr.ARTIFACT)
         b_a2 = self._get_node_by_bazel_package(result.nodes, "libs/b/a2")
         self.assertEqual("libs/b/a2", b_a2.artifact_def.bazel_package)
-        self.assertIs(b_a2.artifact_def.release_reason, rr.ReleaseReason.ARTIFACT)
+        self.assertIs(b_a2.artifact_def.release_reason, rr.ARTIFACT)
 
         c_a1 = b_a1.children[0]
         self.assertEqual("libs/c/a1", c_a1.artifact_def.bazel_package)
@@ -335,23 +332,23 @@ class CrawlerTest(unittest.TestCase):
                          set([ctx.artifact_def.bazel_package for ctx in result.artifact_generation_contexts]))
 
         a_a1 = self._get_node_by_bazel_package(result.nodes, "libs/a/a1")
-        self.assertIs(a_a1.artifact_def.release_reason, rr.ReleaseReason.TRANSITIVE)
+        self.assertIs(a_a1.artifact_def.release_reason, rr.TRANSITIVE)
         a_a2 = self._get_node_by_bazel_package(result.nodes, "libs/a/a2")
-        self.assertIs(a_a2.artifact_def.release_reason, rr.ReleaseReason.TRANSITIVE)
+        self.assertIs(a_a2.artifact_def.release_reason, rr.TRANSITIVE)
 
         b_a1 = a_a1.children[0]
         self.assertEqual("libs/b/a1", b_a1.artifact_def.bazel_package)
-        self.assertIs(b_a1.artifact_def.release_reason, rr.ReleaseReason.TRANSITIVE)
+        self.assertIs(b_a1.artifact_def.release_reason, rr.TRANSITIVE)
         b_a2 = self._get_node_by_bazel_package(result.nodes, "libs/b/a2")
         self.assertEqual("libs/b/a2", b_a2.artifact_def.bazel_package)
-        self.assertIs(b_a2.artifact_def.release_reason, rr.ReleaseReason.TRANSITIVE)
+        self.assertIs(b_a2.artifact_def.release_reason, rr.TRANSITIVE)
 
         c_a1 = b_a1.children[0]
         self.assertEqual("libs/c/a1", c_a1.artifact_def.bazel_package)
-        self.assertEqual(c_a1.artifact_def.release_reason, rr.ReleaseReason.ARTIFACT)
+        self.assertEqual(c_a1.artifact_def.release_reason, rr.ARTIFACT)
         c_a2 = self._get_node_by_bazel_package(result.nodes, "libs/c/a2")
         self.assertEqual("libs/c/a2", c_a2.artifact_def.bazel_package)
-        self.assertEqual(c_a1.artifact_def.release_reason, rr.ReleaseReason.ARTIFACT)
+        self.assertEqual(c_a1.artifact_def.release_reason, rr.ARTIFACT)
 
     def test_C_a2_changed(self):
         """
@@ -366,23 +363,23 @@ class CrawlerTest(unittest.TestCase):
                          set([ctx.artifact_def.bazel_package for ctx in result.artifact_generation_contexts]))
 
         a_a1 = self._get_node_by_bazel_package(result.nodes, "libs/a/a1")
-        self.assertIs(a_a1.artifact_def.release_reason, rr.ReleaseReason.TRANSITIVE)
+        self.assertIs(a_a1.artifact_def.release_reason, rr.TRANSITIVE)
         a_a2 = self._get_node_by_bazel_package(result.nodes, "libs/a/a2")
-        self.assertIs(a_a2.artifact_def.release_reason, rr.ReleaseReason.TRANSITIVE)
+        self.assertIs(a_a2.artifact_def.release_reason, rr.TRANSITIVE)
 
         b_a1 = a_a1.children[0]
         self.assertEqual("libs/b/a1", b_a1.artifact_def.bazel_package)
-        self.assertIs(b_a1.artifact_def.release_reason, rr.ReleaseReason.TRANSITIVE)
+        self.assertIs(b_a1.artifact_def.release_reason, rr.TRANSITIVE)
         b_a2 = self._get_node_by_bazel_package(result.nodes, "libs/b/a2")
         self.assertEqual("libs/b/a2", b_a2.artifact_def.bazel_package)
-        self.assertIs(b_a2.artifact_def.release_reason, rr.ReleaseReason.TRANSITIVE)
+        self.assertIs(b_a2.artifact_def.release_reason, rr.TRANSITIVE)
 
         c_a1 = b_a1.children[0]
         self.assertEqual("libs/c/a1", c_a1.artifact_def.bazel_package)
-        self.assertEqual(c_a1.artifact_def.release_reason, rr.ReleaseReason.ARTIFACT)
+        self.assertEqual(c_a1.artifact_def.release_reason, rr.ARTIFACT)
         c_a2 = self._get_node_by_bazel_package(result.nodes, "libs/c/a2")
         self.assertEqual("libs/c/a2", c_a2.artifact_def.bazel_package)
-        self.assertEqual(c_a1.artifact_def.release_reason, rr.ReleaseReason.ARTIFACT)
+        self.assertEqual(c_a1.artifact_def.release_reason, rr.ARTIFACT)
 
     def test_released_pom_exists_without_changes(self):
         """
@@ -418,10 +415,10 @@ class CrawlerTest(unittest.TestCase):
         self.assertEqual(set(["libs/a/a1", "libs/a/a2", "libs/b/a1", "libs/b/a2"]),
                           set([ctx.artifact_def.bazel_package for ctx in result.artifact_generation_contexts]))
         node_a_a1 = result.nodes[0]
-        self.assertIs(node_a_a1.artifact_def.release_reason, rr.ReleaseReason.TRANSITIVE)
+        self.assertIs(node_a_a1.artifact_def.release_reason, rr.TRANSITIVE)
         node_b_a1 = node_a_a1.children[0]
         self.assertEqual("libs/b/a1", node_b_a1.artifact_def.bazel_package)
-        self.assertIs(node_b_a1.artifact_def.release_reason, rr.ReleaseReason.POM)
+        self.assertIs(node_b_a1.artifact_def.release_reason, rr.MANIFEST)
 
     def test_pomgen_dependencies_state(self):
         """

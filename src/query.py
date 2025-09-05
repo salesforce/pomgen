@@ -67,7 +67,7 @@ def _parse_arguments(args):
 
 def _get_version_increment_strategy(node, increment_rel_qualifier):
     if node.version is None:
-        # edge case when uncommon (never used?) pom_generation_mode is "skip"
+        # edge case when the generation_mode is "skip"
         return None
     if increment_rel_qualifier:
         return vis.get_rel_qualifier_increment_strategy(node.released_version)

@@ -6,7 +6,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 """
 
 
-import common.pomgenmode as pomgenmode
+import common.genmode as genmode
 import crawl.buildpom as buildpom
 import crawl.pomcontent as pomcontent
 import generate.impl.pom.dependency as dependency
@@ -48,7 +48,7 @@ class PomTest(unittest.TestCase):
         artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3")
         artifact_def = buildpom._augment_art_def_values(
             artifact_def, None, "pack1", "MVN-INF", None, None,
-            pomgenmode.DYNAMIC)
+            genmode.DYNAMIC)
         pomgen = pom.DynamicPomGen(artifact_def, TEST_POM_TEMPLATE,
                                    pomcontent.NOOP,
                                    self.dependencymd)
@@ -221,7 +221,7 @@ class PomTest(unittest.TestCase):
         artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3", bazel_target="t2")
         artifact_def = buildpom._augment_art_def_values(
             artifact_def, None, "pack1", "WEB-INF", None, None,
-            pomgenmode.DYNAMIC)
+            genmode.DYNAMIC)
         pomgen = pom.DynamicPomGen(artifact_def, TEST_POM_TEMPLATE,
                                    pomcontent.NOOP,
                                    self.dependencymd)
@@ -245,7 +245,7 @@ class PomTest(unittest.TestCase):
         root_artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3")
         root_artifact_def = buildpom._augment_art_def_values(
             root_artifact_def, None, "pack1", "WEB-INF", None, None,
-            pomgenmode.DYNAMIC)
+            genmode.DYNAMIC)
         pomgen = pom.DynamicPomGen(root_artifact_def, TEST_POM_TEMPLATE,
                                    pomcontent.NOOP, depmd)
         dep_art_def = buildpom.MavenArtifactDef("class-group", "class-art", "1", bazel_target="g1")
@@ -282,7 +282,7 @@ class PomTest(unittest.TestCase):
         artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3", bazel_target="t1")
         artifact_def = buildpom._augment_art_def_values(
             artifact_def, None, "pack1", "WEB-INF", None, None,
-            pomgenmode.DYNAMIC)
+            genmode.DYNAMIC)
         pomgen = pom.DynamicPomGen(artifact_def, TEST_POM_TEMPLATE,
                                    pomcontent.NOOP,
                                    self.dependencymd)
@@ -483,7 +483,7 @@ v2 #{@maven2//:org_apache_maven_mult_versions.version}
                                                       "srpc-api", "5.6.7")
         srpc_artifact_def = buildpom._augment_art_def_values(
             srpc_artifact_def, None, "pack1", "WEB-INF", None, None,
-            pomgenmode.DYNAMIC)
+            genmode.DYNAMIC)
         srpc_dep = dependency.MonorepoDependency(srpc_artifact_def)
         artifact_def.custom_pom_template_content = """
 this artifact version #{version}

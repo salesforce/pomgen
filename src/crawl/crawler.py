@@ -133,7 +133,7 @@ class Crawler:
         # crawling is complete at this point, now process the nodes
         
         # for bazel targets that do not generate a pom 
-        # (pom_generation_mode=skip), we still need to handle dependencies;
+        # (generation_mode=skip), we still need to handle dependencies;
         # this is the "import bundle" use case.
         # push the dependencies up to the closest parent node that does
         # generate a pom
@@ -274,7 +274,7 @@ class Crawler:
                 if manifest_changed:
                     art_def.requires_release = True
                     # TODO release reason
-                    art_def.release_reason = releasereason.ReleaseReason.POM
+                    art_def.release_reason = releasereason.MANIFEST
 
                     if self.verbose:
                         logger.debug("pom diff %s %s" % (art_def, art_def.bazel_package))
@@ -363,7 +363,7 @@ class Crawler:
     def _push_transitives_to_parent(self):
         """
         For special pom generation modes that do not actually produce
-        maven artifacts (pom_generation_mode="skip"):
+        maven artifacts (generation_mode="skip"):
         Given artifacts A->B->C->D, if B and C have "skip" generation mode,
         their deps need to be pushed up to A, so that they are included in
         A's pom.xml. So the final poms generated will be: A->D
@@ -377,7 +377,7 @@ class Crawler:
     def _push_transitives_and_walk(self, node, collected_dep_lists, 
                                    processed_nodes):
         deps = self.target_to_dependencies[node.label]
-        if node.artifact_def.pom_generation_mode.produces_artifact:
+        if node.artifact_def.generation_mode.produces_artifact:
             if len(collected_dep_lists) > 0:
                 deps = self.target_to_dependencies[node.label]
                 collected_dep_lists.append(deps)
@@ -462,12 +462,12 @@ class Crawler:
                     artifact_def.requires_release = True
                     updated_artifact_defs.append(artifact_def)
                     if force_release:
-                        artifact_def.release_reason = releasereason.ReleaseReason.ALWAYS
+                        artifact_def.release_reason = releasereason.ALWAYS
                     else:
                         if sibling_artifact_requires_release:
                             artifact_def.release_reason = sibling_release_reason
                         elif transitive_dep_requires_release:
-                            artifact_def.release_reason = releasereason.ReleaseReason.TRANSITIVE
+                            artifact_def.release_reason = releasereason.TRANSITIVE
                         else:
                             raise Exception("release_reason not set on artifact - this is a bug")
         else: # release not required
@@ -588,7 +588,7 @@ class Crawler:
         labels = ()
         if artifact_def.deps is not None:
             labels = [labelm.Label(lbl) for lbl in artifact_def.deps]
-        if artifact_def.pom_generation_mode.query_dependency_attributes:
+        if artifact_def.generation_mode.query_dependency_attributes:
             labels += self._query_labels(artifact_def, label)
         return labels
 
@@ -606,7 +606,7 @@ class Crawler:
                 labels = bazel.query_java_library_deps_attributes(
                     self.workspace.repo_root_path,
                     label.canonical_form,
-                    artifact_def.pom_generation_mode.dependency_attributes,
+                    artifact_def.generation_mode.dependency_attributes,
                     self.verbose)
                 labels = [labelm.Label(lbl) for lbl in labels]
                 return Crawler._remove_package_private_labels(labels, artifact_def)
@@ -632,7 +632,7 @@ class Crawler:
                 # this label has the same package as the artifact referencing it
                 # is is therefore a private target ref - skip it unless this
                 # package does not produce any artifact
-                if owning_artifact_def.pom_generation_mode.produces_artifact:
+                if owning_artifact_def.generation_mode.produces_artifact:
                     continue
             updated_labels.append(label)
         return updated_labels
