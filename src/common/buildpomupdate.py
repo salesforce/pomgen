@@ -122,9 +122,16 @@ def update_released_artifact(root_path, packages, generation_strategy_factory,
     Creates the BUILD.pom.released file if it does not exist.
     """
     for package in packages:
-        print(">>>>", package)
         strategy = generation_strategy_factory.get_strategy_for_package(package)
         assert strategy is not None, "Invalid package [%s]" % package
+
+        released_file_path = strategy.released_metadata_path
+        content, _ = mdfiles.read_file(root_path, package, released_file_path)
+        if content is None and new_artifact_hash is None:
+            # there is no released md file yet and a hash was not specified
+            # explicitly: we have to compute the current hash so we can gen
+            # the file below
+            use_current_artifact_hash = True
 
         if use_current_artifact_hash:
             assert new_artifact_hash is None
@@ -142,8 +149,6 @@ def update_released_artifact(root_path, packages, generation_strategy_factory,
             artifact_hash = new_artifact_hash
 
         try:
-            released_file_path = strategy.released_metadata_path
-            content, _ = mdfiles.read_file(root_path, package, released_file_path)
             if content is None:
                 content = _get_build_pom_released_content(new_version, artifact_hash)
             else:
