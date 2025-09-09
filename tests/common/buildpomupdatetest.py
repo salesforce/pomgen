@@ -128,12 +128,12 @@ class BuildPomUpdateTest(unittest.TestCase):
 
         with open(os.path.join(repo_package, "MVN-INF", "BUILD.pom.released"), "r") as f:
             content = f.read()
-            self.assertIn('released_maven_artifact(', content)
+            self.assertIn('released_artifact(', content)
             self.assertIn('version = "1.2.3"', content)
             self.assertIn('artifact_hash = "abc"', content)
 
     def test_get_build_pom_released_content(self):
-        expected_content = """released_maven_artifact(
+        expected_content = """released_artifact(
     version = "1.0.0",
     artifact_hash = "abcdefghi",
 )
@@ -334,7 +334,7 @@ maven_artifact(
     version = "1.2.3",
 )
 
-maven_artifact_update(
+artifact_update(
     version_increment_strategy = "patch",
 )
 """

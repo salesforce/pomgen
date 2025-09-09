@@ -173,7 +173,7 @@ def _update_version_incr_strategy_in_build_pom_content(build_pom_content, new_ve
     m = version_incr_strat_re.search(build_pom_content)
     if m is None:
         build_pom_content += """
-maven_artifact_update(
+artifact_update(
     version_increment_strategy = "%s",
 )
 """
@@ -189,9 +189,12 @@ def _update_generation_mode_in_build_pom_content(build_pom_content, new_generati
     m = generation_mode_re.search(build_pom_content)
     if m is None:
         # add it to the end of maven_artifact
-        maven_artifact = "maven_artifact("
-        i = build_pom_content.index(maven_artifact)
-        j = build_pom_content.index(")", i + len(maven_artifact))
+        artifact_rule_name = "maven_artifact("
+        i = build_pom_content.find(artifact_rule_name)
+        if i == -1:
+            artifact_rule_name = "artifact("
+            i = build_pom_content.index(artifact_rule_name)
+        j = build_pom_content.index(")", i + len(artifact_rule_name))
         insert_at = j
         return build_pom_content[:insert_at] + \
             '    generation_mode = "%s",%s' % (value, os.linesep) + \
@@ -228,7 +231,7 @@ def _update_artifact_hash_in_build_pom_released_content(build_pom_released_conte
 def _get_build_pom_released_content(version, artifact_hash):
     assert version is not None, "a released version must be specified, use --new_released_version"
     assert artifact_hash is not None, "artifact_hash cannot be None"
-    content = """released_maven_artifact(
+    content = """released_artifact(
     version = "%s",
     artifact_hash = "%s",
 )
