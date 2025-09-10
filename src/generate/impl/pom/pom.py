@@ -106,7 +106,7 @@ class AbstractPomGen(object):
         """
         self.dependencies_library_transitive_closure = dependencies
 
-    def gen(self, pomcontenttype):
+    def generate_manifest(self, pomcontenttype):
         """
         Returns the generated pom.xml as a string.  This method may be called
         multiple times, and must therefore be idempotent.
@@ -253,7 +253,7 @@ class TemplatePomGen(AbstractPomGen):
         super(TemplatePomGen, self).__init__(artifact_def, dependency_md)
         self._external_dependencies = external_dependencies
 
-    def gen(self, pomcontenttype):
+    def generate_manifest(self, pomcontenttype):
         pom_content = self.artifact_def.custom_pom_template_content
         pom_content, parsed_dependencies = self._process_pom_template_content(pom_content)
 
@@ -483,7 +483,7 @@ class DynamicPomGen(AbstractPomGen):
         self.pom_template = pom_template
         self.pom_content_md = pom_content_md
 
-    def gen(self, pomcontenttype):
+    def generate_manifest(self, pomcontenttype):
         content = self.pom_template.replace("#{group_id}", self._artifact_def.group_id)
         content = content.replace("#{artifact_id}", self._artifact_def.artifact_id)
         version = self._artifact_def_version(pomcontenttype)
@@ -578,7 +578,7 @@ class DependencyManagementPomGen(AbstractPomGen):
         self.pom_template = pom_template
         self.pom_content_md = pom_content_md
 
-    def gen(self, pomcontenttype):
+    def generate_manifest(self, pomcontenttype):
         assert pomcontenttype == PomContentType.RELEASE
         content = self.pom_template.replace("#{group_id}", self._artifact_def.group_id)
         # by convention, we add the suffix ".depmanagement" to the artifactId
@@ -636,8 +636,8 @@ class PomWithCompanionDependencyManagementPomGen(AbstractPomGen):
         self.pomgen.register_dependencies_transitive_closure__library(d)
         self.depmanpomgen.register_dependencies_transitive_closure__library(d)
 
-    def gen(self, pomcontenttype):
-        return self.pomgen.gen(pomcontenttype)
+    def generate_manifest(self, pomcontenttype):
+        return self.pomgen.generate_manifest(pomcontenttype)
 
     def get_companion_generators(self):
         return (self.depmanpomgen,)

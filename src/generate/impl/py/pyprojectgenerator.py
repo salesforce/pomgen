@@ -74,7 +74,7 @@ class PyProjectGenerator:
         """
         return ()
 
-    def gen(self, pomcontenttype):
+    def generate_manifest(self, pomcontenttype):
         content = _TEMPLATE.strip()
         content = content.replace("$name$", self._artifact_def.artifact_id)
         content = content.replace("$python-version$", self._python_version)

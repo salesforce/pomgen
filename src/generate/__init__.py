@@ -16,7 +16,7 @@ class AbstractManifestGenerator(ABC):
     """
 
     @abstractmethod
-    def gen():
+    def generate_manifest():
         pass
 
 
