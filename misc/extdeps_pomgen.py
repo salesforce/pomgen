@@ -14,12 +14,11 @@ import common.label as labelm
 import config.config as config
 import crawl.buildpom as buildpom
 import crawl.pomcontent as pomcontent
-import generate.impl.pom.dependency as dependency
+import generate
 import generate.impl.pom.dependencymd as dependencymdm
 import generate.impl.pom.maveninstallinfo as maveninstallinfo
 import generate.impl.pom.pom as pom
 import generate.impl.pom.pomgenerationstrategy as pomgenerationstrategy
-import os
 import sys
 
 
@@ -127,7 +126,7 @@ def main(args):
     pomgen = ThirdPartyDepsPomGen(
         artifact_def, dependencies, cfg.pom_template, dependencymd)
 
-    return pomgen.generate_manifest(pom.PomContentType.RELEASE)
+    return pomgen.generate_manifest(generate.ManifestContentType.RELEASE)
 
 
 if __name__ == "__main__":

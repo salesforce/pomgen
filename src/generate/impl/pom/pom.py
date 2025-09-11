@@ -10,29 +10,10 @@ This module contains pom.xml generation logic.
 import common.genmode as genmode
 import copy
 import crawl.pomcontent as pomcontentm
+import generate
 import generate.impl.pom.pomparser as pomparser
 import os
 import re
-
-
-class PomContentType:
-    """
-    Available pom content types:
-      
-      RELEASE - this is the default, standard pom.xml, based on BUILD file or
-          pom.template content.
-
-      GOLDFILE - this pom content is meant for comparing against another
-                 previously generated pom (the "goldfile" pom). This content
-                 type differs from the default RELEASE type in the following 
-                 ways:
-                   - dependencies are explictly ordered (default is BUILD order)
-                   - versions of monorepo-based dependencies are removed
-    """
-    RELEASE = 0
-    GOLDFILE = 1
-
-    MASKED_VERSION = "***"
 
 
 def get_pom_generator(pom_template, artifact_def, external_dependencies,
@@ -128,20 +109,20 @@ class AbstractPomGen(object):
     def _artifact_def_version(self, pomcontenttype):
         """
         Returns the associated artifact's version, based on the specified 
-        PomContentType.
+        ManifestContentType.
 
         This method is only intended to be called by subclasses.
         """
-        return PomContentType.MASKED_VERSION if pomcontenttype is PomContentType.GOLDFILE else self._artifact_def.version
+        return generate.ManifestContentType.MASKED_VERSION if pomcontenttype is generate.ManifestContentType.GOLDFILE else self._artifact_def.version
 
     def _dep_version(self, pomcontenttype, dep):
         """
         Returns the given dependency's version, based on the specified
-        PomContentType.
+        ManifestContentType.
 
         This method is only intended to be called by subclasses.
         """
-        return PomContentType.MASKED_VERSION if pomcontenttype is PomContentType.GOLDFILE and dep.bazel_package is not None else dep.version
+        return generate.ManifestContentType.MASKED_VERSION if pomcontenttype is generate.ManifestContentType.GOLDFILE and dep.bazel_package is not None else dep.version
 
     def _xml(self, content, element, indent, value=None, close_element=False):
         """
@@ -514,7 +495,7 @@ class DynamicPomGen(AbstractPomGen):
         return content
 
     def _gen_dependencies_xml(self, pomcontenttype, dependencies, indent):
-        if pomcontenttype == PomContentType.GOLDFILE:
+        if pomcontenttype == generate.ManifestContentType.GOLDFILE:
             dependencies = sorted(dependencies)
         content = ""
         for dep in dependencies:
@@ -579,7 +560,7 @@ class DependencyManagementPomGen(AbstractPomGen):
         self.pom_content_md = pom_content_md
 
     def generate_manifest(self, pomcontenttype):
-        assert pomcontenttype == PomContentType.RELEASE
+        assert pomcontenttype == generate.ManifestContentType.RELEASE
         content = self.pom_template.replace("#{group_id}", self._artifact_def.group_id)
         # by convention, we add the suffix ".depmanagement" to the artifactId
         # so com.blah is the real jar artifact and com.blah.depmanagement
@@ -608,7 +589,7 @@ class DependencyManagementPomGen(AbstractPomGen):
         content, indent = self._xml(content, "dependencyManagement", indent=_INDENT)
         content, indent = self._xml(content, "dependencies", indent)
         for dep in deps:
-            content, indent = self._gen_dependency_element(PomContentType.RELEASE, dep, content, indent, close_element=True)
+            content, indent = self._gen_dependency_element(generate.ManifestContentType.RELEASE, dep, content, indent, close_element=True)
         content, indent = self._xml(content, "dependencies", indent, close_element=True)
         content, indent = self._xml(content, "dependencyManagement", indent, close_element=True)
         return content

@@ -2,6 +2,26 @@ from abc import ABC, abstractmethod
 import os
 
 
+class ManifestContentType:
+    """
+    Available manifest content types:
+
+      RELEASE - this is the default, standard manifest, based on BUILD file or
+          template content.
+
+      GOLDFILE - this manifest content is meant for comparing against another
+                 previously generated manifest (the "goldfile" manifest). This content
+                 type differs from the default RELEASE type in the following
+                 ways:
+                   - dependencies are explictly ordered (default is BUILD order)
+                   - versions of monorepo-based dependencies are removed
+    """
+    RELEASE = 0
+    GOLDFILE = 1
+
+    MASKED_VERSION = "***"
+
+
 class AbstractDependency(ABC):
     """
     TODO for source dependencies, abstract here how we decide whether a 
