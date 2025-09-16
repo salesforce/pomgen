@@ -16,6 +16,27 @@ import os
 import re
 
 
+class PomContentType:
+    """
+    Available pom content types:
+
+      RELEASE - this is the default, standard manifest, based on BUILD file or
+          template content.
+
+      GOLDFILE - this manifest content is meant for comparing against another
+                 previously generated manifest (the "goldfile" manifest). This content
+                 type differs from the default RELEASE type in the following
+                 ways:
+                   - dependencies are explictly ordered (default is BUILD order)
+                   - versions of monorepo-based dependencies are removed
+    """
+    RELEASE = 0
+    GOLDFILE = 1
+
+
+MASKED_VERSION = "***"
+
+
 def get_pom_generator(pom_template, artifact_def, external_dependencies,
                       pom_content_md, dependency_md):
     """
@@ -48,7 +69,7 @@ def get_pom_generator(pom_template, artifact_def, external_dependencies,
         raise Exception("Bug: unknown generation_mode [%s] for %s" % (mode, artifact_def.bazel_package))
 
 
-class AbstractPomGen(object):
+class AbstractPomGen(generate.AbstractManifestGenerator):
 
     def __init__(self, artifact_def, dependency_md):
         self._artifact_def = artifact_def
@@ -96,6 +117,19 @@ class AbstractPomGen(object):
         """
         raise Exception("must be implemented by subclass")
 
+    def generate_release_manifest(self):
+        """
+        Returns the generated pom.xml as a string.
+        """
+        return self.generate_manifest(PomContentType.RELEASE)
+
+    def generate_goldfile_manifest(self):
+        """
+        Returns the generated pom as a string, for comparison against a
+        previously generated goldfile pom.
+        """
+        return self.generate_manifest(PomContentType.GOLDFILE)
+
     def get_companion_generators(self):
         """
         Returns an iterable of companion generators. These poms are not used
@@ -109,20 +143,20 @@ class AbstractPomGen(object):
     def _artifact_def_version(self, pomcontenttype):
         """
         Returns the associated artifact's version, based on the specified 
-        ManifestContentType.
+        PomContentType.
 
         This method is only intended to be called by subclasses.
         """
-        return generate.ManifestContentType.MASKED_VERSION if pomcontenttype is generate.ManifestContentType.GOLDFILE else self._artifact_def.version
+        return MASKED_VERSION if pomcontenttype is PomContentType.GOLDFILE else self._artifact_def.version
 
     def _dep_version(self, pomcontenttype, dep):
         """
         Returns the given dependency's version, based on the specified
-        ManifestContentType.
+        PomContentType.
 
         This method is only intended to be called by subclasses.
         """
-        return generate.ManifestContentType.MASKED_VERSION if pomcontenttype is generate.ManifestContentType.GOLDFILE and dep.bazel_package is not None else dep.version
+        return MASKED_VERSION if pomcontenttype is PomContentType.GOLDFILE and dep.bazel_package is not None else dep.version
 
     def _xml(self, content, element, indent, value=None, close_element=False):
         """
@@ -495,7 +529,7 @@ class DynamicPomGen(AbstractPomGen):
         return content
 
     def _gen_dependencies_xml(self, pomcontenttype, dependencies, indent):
-        if pomcontenttype == generate.ManifestContentType.GOLDFILE:
+        if pomcontenttype == PomContentType.GOLDFILE:
             dependencies = sorted(dependencies)
         content = ""
         for dep in dependencies:
@@ -560,7 +594,7 @@ class DependencyManagementPomGen(AbstractPomGen):
         self.pom_content_md = pom_content_md
 
     def generate_manifest(self, pomcontenttype):
-        assert pomcontenttype == generate.ManifestContentType.RELEASE
+        assert pomcontenttype == PomContentType.RELEASE
         content = self.pom_template.replace("#{group_id}", self._artifact_def.group_id)
         # by convention, we add the suffix ".depmanagement" to the artifactId
         # so com.blah is the real jar artifact and com.blah.depmanagement
@@ -581,7 +615,7 @@ class DependencyManagementPomGen(AbstractPomGen):
         if expected_packaging not in content:
             raise Exception("The pom template must have %s" % expected_packaging)
         content = content.replace(expected_packaging, expected_packaging.replace("jar", "pom"))
-        
+
         return content
 
     def _gen_dependency_management(self, deps):
@@ -589,7 +623,7 @@ class DependencyManagementPomGen(AbstractPomGen):
         content, indent = self._xml(content, "dependencyManagement", indent=_INDENT)
         content, indent = self._xml(content, "dependencies", indent)
         for dep in deps:
-            content, indent = self._gen_dependency_element(generate.ManifestContentType.RELEASE, dep, content, indent, close_element=True)
+            content, indent = self._gen_dependency_element(PomContentType.RELEASE, dep, content, indent, close_element=True)
         content, indent = self._xml(content, "dependencies", indent, close_element=True)
         content, indent = self._xml(content, "dependencyManagement", indent, close_element=True)
         return content

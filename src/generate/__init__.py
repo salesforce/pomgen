@@ -2,42 +2,25 @@ from abc import ABC, abstractmethod
 import os
 
 
-class ManifestContentType:
-    """
-    Available manifest content types:
-
-      RELEASE - this is the default, standard manifest, based on BUILD file or
-          template content.
-
-      GOLDFILE - this manifest content is meant for comparing against another
-                 previously generated manifest (the "goldfile" manifest). This content
-                 type differs from the default RELEASE type in the following
-                 ways:
-                   - dependencies are explictly ordered (default is BUILD order)
-                   - versions of monorepo-based dependencies are removed
-    """
-    RELEASE = 0
-    GOLDFILE = 1
-
-    MASKED_VERSION = "***"
-
-
-class AbstractDependency(ABC):
-    """
-    TODO for source dependencies, abstract here how we decide whether a 
-    previously released version should be used or not
-    """
-    pass
-
-
 class AbstractManifestGenerator(ABC):
     """
-    TODO add dependencies related methods
+    The manifest generator contract.
     """
 
     @abstractmethod
-    def generate_manifest():
+    def generate_release_manifest(self):
+        """
+        Returns the production manifest as a string.
+        """
         pass
+
+    def generate_goldfile_manifest(self):
+        """
+        Returns a version of the production manifest that is "stable", ie
+        suitable for comparision against a previous version of the production
+        manifest.
+        """
+        return self.generate_release_manifest()
 
 
 class AbstractGenerationStrategy(ABC):
@@ -141,3 +124,11 @@ class AbstractGenerationStrategy(ABC):
         Hook method, only meant to be implementation in subclasses.
         """
         pass
+
+
+class AbstractDependency(ABC):
+    """
+    TODO for source dependencies, abstract here how we decide whether a 
+    previously released version should be used or not
+    """
+    pass
