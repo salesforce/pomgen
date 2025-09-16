@@ -1,12 +1,13 @@
+import generate
 from functools import total_ordering
 
 
 @total_ordering
-class Dependency:
+class Dependency(generate.AbstractDependency):
     """
     Represents a Python package dependency.
 
-    TODO - abstract common shape into ABC.
+    TODO - abstract common shape with maven dep into ABC.
     """
 
     def __init__(self, name, version, artifact_def=None, extras=None):

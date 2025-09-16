@@ -1,4 +1,5 @@
 import datetime
+import generate
 
 
 _TEMPLATE = """
@@ -24,7 +25,8 @@ include = ["*"]
 _VERSION_TS_TOKEN_START = "${timestamp:"
 _VERSION_TS_TOKEN_END = "}"
 
-class PyProjectGenerator:
+
+class PyProjectGenerator(generate.AbstractManifestGenerator):
 
     def __init__(self, artifact_def, python_version):
         self._artifact_def = artifact_def
@@ -74,7 +76,10 @@ class PyProjectGenerator:
         """
         return ()
 
-    def generate_manifest(self, pomcontenttype):
+    def generate_release_manifest(self):
+        """
+        Generate release version of pyproject.toml.
+        """
         content = _TEMPLATE.strip()
         content = content.replace("$name$", self._artifact_def.artifact_id)
         content = content.replace("$python-version$", self._python_version)
@@ -89,6 +94,7 @@ class PyProjectGenerator:
 %s
 ]""" % "\n".join(['%s"%s",' % (" "*4, dep.to_pyproject_format()) for dep in deps]))
         return content
+
 
 
 

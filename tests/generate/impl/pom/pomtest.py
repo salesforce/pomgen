@@ -9,7 +9,6 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 import common.genmode as genmode
 import crawl.buildpom as buildpom
 import crawl.pomcontent as pomcontent
-import generate
 import generate.impl.pom.dependency as dependency
 import generate.impl.pom.dependencymd as dependencymdm
 import generate.impl.pom.pom as pom
@@ -68,7 +67,7 @@ class PomTest(unittest.TestCase):
         pomgen.register_dependencies(deps)
         # skipped_transitive (see above) is NOT added
         pomgen.register_dependencies_transitive_closure__artifact([self.t1_dep, self.t2_dep])
-        generated_pom = pomgen.generate_manifest(generate.ManifestContentType.RELEASE)
+        generated_pom = pomgen.generate_release_manifest()
 
         self.assertIn("""<groupId>g1</groupId>
     <artifactId>a2</artifactId>
@@ -186,7 +185,7 @@ class PomTest(unittest.TestCase):
         pomgen = pom.DynamicPomGen(artifact_def, pom_template, pc,
                                    self.dependencymd)
 
-        generated_pom = pomgen.generate_manifest(generate.ManifestContentType.RELEASE)
+        generated_pom = pomgen.generate_release_manifest()
         self.assertEqual(exepcted_pom, generated_pom)
 
     def test_dynamic_pom__remove_description_token_if_no_value(self):
@@ -207,7 +206,7 @@ class PomTest(unittest.TestCase):
         pomgen = pom.DynamicPomGen(artifact_def, pom_template, pc,
                                    self.dependencymd)
 
-        generated_pom = pomgen.generate_manifest(generate.ManifestContentType.RELEASE)
+        generated_pom = pomgen.generate_release_manifest()
 
         self.assertEqual(exepcted_pom, generated_pom)
 
@@ -228,7 +227,7 @@ class PomTest(unittest.TestCase):
                                    self.dependencymd)
         pomgen.register_dependencies([self.guava_dep])
 
-        generated_pom = pomgen.generate_manifest(generate.ManifestContentType.RELEASE)
+        generated_pom = pomgen.generate_release_manifest()
 
         self.assertIn("""<dependency>
             <groupId>com.google.guava</groupId>
@@ -253,7 +252,7 @@ class PomTest(unittest.TestCase):
         dep = dependency.new_dep_from_maven_artifact_def(dep_art_def)
 
         dep_element, _ = pomgen._gen_dependency_element(
-            generate.ManifestContentType.RELEASE, dep, "", indent=0, close_element=True)
+            pom.PomContentType.RELEASE, dep, "", indent=0, close_element=True)
         
         self.assertIn("""<dependency>
     <groupId>class-group</groupId>
@@ -272,7 +271,7 @@ class PomTest(unittest.TestCase):
                                    pomcontent.NOOP,
                                    self.dependencymd)
 
-        generated_pom = pomgen.generate_manifest(generate.ManifestContentType.RELEASE)
+        generated_pom = pomgen.generate_release_manifest()
 
         self.assertNotIn("dependencies", generated_pom)
 
@@ -291,7 +290,7 @@ class PomTest(unittest.TestCase):
         deps = [self.guava_dep, self.aop_dep]
         pomgen.register_dependencies(deps)
 
-        generated_pom = pomgen.generate_manifest(generate.ManifestContentType.GOLDFILE)
+        generated_pom = pomgen.generate_goldfile_manifest()
 
         self.assertIn("""<groupId>g1</groupId>
     <artifactId>a2</artifactId>
@@ -327,7 +326,7 @@ monorepo artifact version #{version}
         pomgen = pom.TemplatePomGen(artifact_def, external_dependencies,
                                     self.dependencymd)
 
-        generated_pom = pomgen.generate_manifest(generate.ManifestContentType.RELEASE)
+        generated_pom = pomgen.generate_release_manifest()
 
         self.assertIn("unqualified 1.2.3", generated_pom)
         self.assertIn("qualified 1.2.3", generated_pom)
@@ -345,7 +344,7 @@ monorepo artifact version #{version}
         pomgen = pom.TemplatePomGen(artifact_def, [], self.dependencymd)
         pomgen.register_dependencies_transitive_closure__library(set([srpc_dep]))
 
-        generated_pom = pomgen.generate_manifest(generate.ManifestContentType.RELEASE)
+        generated_pom = pomgen.generate_release_manifest()
         
         self.assertIn("srpc 5.6.7", generated_pom)
 
@@ -372,7 +371,7 @@ monorepo artifact version #{version}
         pomgen = pom.TemplatePomGen(artifact_def, external_dependencies,
                                     self.dependencymd)
 
-        generated_pom = pomgen.generate_manifest(generate.ManifestContentType.RELEASE)
+        generated_pom = pomgen.generate_release_manifest()
 
         self.assertIn("1 v1 1.0.0", generated_pom)
         self.assertIn("2 v2 1.0.0", generated_pom)
@@ -397,7 +396,7 @@ v2 #{@maven2//:org_apache_maven_mult_versions.version}
         pomgen = pom.TemplatePomGen(artifact_def, external_dependencies,
                                     self.dependencymd)
 
-        generated_pom = pomgen.generate_manifest(generate.ManifestContentType.RELEASE)
+        generated_pom = pomgen.generate_release_manifest()
 
         self.assertIn("v1 1.0.0", generated_pom)
         self.assertIn("v2 2.0.0", generated_pom)
@@ -421,7 +420,7 @@ v2 #{@maven2//:org_apache_maven_mult_versions.version}
                                     self.dependencymd)
 
         with self.assertRaises(Exception) as ctx:
-            pomgen.generate_manifest(generate.ManifestContentType.RELEASE)
+            pomgen.generate_release_manifest()
         self.assertIn("has unresolvable references", str(ctx.exception))
         self.assertIn("['org_apache_maven_mult_versions.version']", str(ctx.exception))
 
@@ -433,7 +432,7 @@ v2 #{@maven2//:org_apache_maven_mult_versions.version}
                                     self.dependencymd)
 
         with self.assertRaises(Exception) as ctx:
-            pomgen.generate_manifest(generate.ManifestContentType.RELEASE)
+            pomgen.generate_release_manifest()
         self.assertIn("has unresolvable references", str(ctx.exception))
         self.assertIn("['org.apache.maven:mult-versions:version']", str(ctx.exception))
 
@@ -455,7 +454,7 @@ v2 #{@maven2//:org_apache_maven_mult_versions.version}
         d = dependency.MonorepoDependency(art)
         pomgen.register_dependencies_transitive_closure__library(set([d]))
 
-        generated_pom = pomgen.generate_manifest(generate.ManifestContentType.RELEASE)
+        generated_pom = pomgen.generate_release_manifest()
 
         # the Bazel_package guava version should be picked
         self.assertIn("29.0", generated_pom)
@@ -470,7 +469,7 @@ v2 #{@maven2//:org_apache_maven_mult_versions.version}
         artifact_def.custom_pom_template_content = "srpc #{com.google.guava:guava:version}"
         pomgen = pom.TemplatePomGen(artifact_def, [self.guava_dep],
                                     self.dependencymd)
-        generated_pom = pomgen.generate_manifest(generate.ManifestContentType.RELEASE)
+        generated_pom = pomgen.generate_release_manifest()
 
         # the maven_install guava version should be picked
         self.assertIn("23.0", generated_pom)
@@ -496,7 +495,7 @@ srpc #{com.grail.srpc:srpc-api:version}
         pomgen = pom.TemplatePomGen(artifact_def, [self.logback_dep],
                                     self.dependencymd)
         pomgen.register_dependencies_transitive_closure__library(set([srpc_dep]))
-        generated_pom = pomgen.generate_manifest(pomcontenttype=generate.ManifestContentType.GOLDFILE)
+        generated_pom = pomgen.generate_goldfile_manifest()
 
         self.assertIn("this artifact version ***", generated_pom)
         self.assertIn("logback coord 1.2.3", generated_pom)
@@ -532,7 +531,7 @@ __pomgen.end_dependency_customization__
         artifact_def.custom_pom_template_content = pom_template
         pomgen = pom.TemplatePomGen(artifact_def, [], self.dependencymd)
 
-        generated_pom = pomgen.generate_manifest(generate.ManifestContentType.RELEASE)
+        generated_pom = pomgen.generate_release_manifest()
 
         self.assertEqual(expected_pom, generated_pom)
 
@@ -587,7 +586,7 @@ __pomgen.end_dependency_customization__
         artifact_def.custom_pom_template_content = pom_template
         pomgen = pom.TemplatePomGen(artifact_def, [], self.dependencymd)
 
-        generated_pom = pomgen.generate_manifest(generate.ManifestContentType.RELEASE)
+        generated_pom = pomgen.generate_release_manifest()
 
         self.assertEqual(expected_pom, generated_pom)
 
@@ -634,7 +633,7 @@ __pomgen.end_dependency_customization__
         external_dep = dependency.ThirdPartyDependency("name", "cg", "ca", "0.0.1")
         pomgen.register_dependencies_transitive_closure__library(set([external_dep, internal_dep]))
 
-        generated_pom = pomgen.generate_manifest(generate.ManifestContentType.RELEASE)
+        generated_pom = pomgen.generate_release_manifest()
 
         self.assertEqual(expected_pom, generated_pom)
 
@@ -701,7 +700,7 @@ __pomgen.end_dependency_customization__
         crawled_dep = dependency.ThirdPartyDependency("name", "cg", "ca", "0.0.1")
         pomgen.register_dependencies_transitive_closure__library(set([crawled_dep]))
 
-        generated_pom = pomgen.generate_manifest(generate.ManifestContentType.RELEASE)
+        generated_pom = pomgen.generate_release_manifest()
 
         self.assertEqual(expected_pom, generated_pom)
 
@@ -750,7 +749,7 @@ __pomgen.end_dependency_customization__
         crawled_dep = dependency.ThirdPartyDependency("name", "cg", "ca", "0.0.1")
         pomgen.register_dependencies_transitive_closure__library(set([crawled_dep]))
 
-        generated_pom = pomgen.generate_manifest(generate.ManifestContentType.RELEASE)
+        generated_pom = pomgen.generate_release_manifest()
 
         self.assertEqual(expected_pom, generated_pom)
 
@@ -765,7 +764,7 @@ __pomgen.end_dependency_customization__
         pomgen = pom.TemplatePomGen(artifact_def, [], self.dependencymd)
 
         with self.assertRaises(Exception) as ctx:
-            pomgen.generate_manifest(generate.ManifestContentType.RELEASE)
+            pomgen.generate_release_manifest()
 
         self.assertIn("bad1", str(ctx.exception))
         self.assertIn("bad2", str(ctx.exception))
@@ -782,7 +781,7 @@ __pomgen.end_dependency_customization__
         force = dependency.new_dep_from_maven_art_str("force:commons:1", "forc")
 
         pomgen.register_dependencies_transitive_closure__artifact((guava, force,))
-        generated_pom = pomgen.generate_manifest(generate.ManifestContentType.RELEASE)
+        generated_pom = pomgen.generate_release_manifest()
         
         self.assertIn("<packaging>pom</packaging>", generated_pom)
         self.assertIn("<dependencyManagement>", generated_pom)
