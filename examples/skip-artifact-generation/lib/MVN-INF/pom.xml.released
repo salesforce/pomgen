@@ -7,18 +7,27 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.pomgen.example.skip-art-gen</groupId>
-    <artifactId>lib2</artifactId>
+    <artifactId>lib</artifactId>
     <version>***</version>
-    <packaging>pom</packaging>
+    <packaging>jar</packaging>
 
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>com.google.guava</groupId>
-                <artifactId>guava</artifactId>
-                <version>22.0</version>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
+    <properties>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-math3</artifactId>
+            <version>3.6.1</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+    </dependencies>
 
 </project>

@@ -1,11 +1,11 @@
-maven_artifact(
+artifact(
     group_id = "com.pomgen.example",
     artifact_id = "wintervegetables",
     version = "20200416.1-SNAPSHOT",
-    pom_generation_mode = "dynamic",
+    generation_mode = "dynamic",
     target_name = "wintervegetables_lib2",
 )
 
-maven_artifact_update(
+artifact_update(
     version_increment_strategy = "calver",
 )

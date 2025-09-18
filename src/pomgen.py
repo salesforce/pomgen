@@ -77,8 +77,10 @@ def main(args):
             # into the proper location within the specified bazel package
             if args.pom_goldfile:
                 pom_content = pomgen.generate_goldfile_manifest()
-                pom_goldfile_path = mdfiles.write_file(pom_content, output_dir, pomgen.bazel_package, mdfiles.POM_XML_RELEASED_FILE_NAME)
-                logger.info("Wrote goldfile manifest to [%s]" % pom_goldfile_path)
+                pom_path = os.path.join(
+                    pom_dest_dir, gen_strategy.released_manifest_path)
+                _write_file(pom_path, pom_content)
+                logger.info("Wrote goldfile manifest to [%s]" % pom_path)
             else:
                 pom_content = pomgen.generate_release_manifest()
                 pom_path = os.path.join(
