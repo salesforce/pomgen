@@ -1,13 +1,13 @@
-maven_artifact(
+artifact(
     group_id = "com.pomgen.example",
     artifact_id = "fruit-api",
     version = "1.0.0-SNAPSHOT",
-    pom_generation_mode = "dynamic",
+    generation_mode = "dynamic",
     emitted_dependencies = ["extra:dependency:1.0.0",
                             "-com.google.guava:guava",
                             "-org.antlr:antlr-runtime",]
 )
 
-maven_artifact_update(
+artifact_update(
     version_increment_strategy = "minor",
 )
