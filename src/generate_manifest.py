@@ -18,7 +18,7 @@ import config.config as config
 import crawl.bazel as bazel
 import crawl.crawler as crawlerm
 import crawl.libaggregator as libaggregator
-import crawl.pomcontent as pomcontentm
+import common.manifestcontent as manifestcontentm
 import crawl.workspace as workspace
 import generate.generationstrategyfactory as generationstrategyfactory
 import os
@@ -29,14 +29,14 @@ def main(args):
     args = _parse_arguments(args)
     repo_root = common.get_repo_root(args.repo_root)
     cfg = config.load(repo_root, args.verbose)
-    pom_content = pomcontentm.PomContent()
+    manifest_content = manifestcontentm.ManifestContent()
     if args.manifest_description is not None:
-        pom_content.description = args.manifest_description
+        manifest_content.description = args.manifest_description
     if args.verbose:
-        logger.debug("Global pom content: %s" % pom_content)
+        logger.debug("Global manifest content: %s" % manifest_content)
 
     fac = generationstrategyfactory.GenerationStrategyFactory(
-        repo_root, cfg, pom_content, args.verbose)
+        repo_root, cfg, manifest_content, args.verbose)
     ws = workspace.Workspace(repo_root, cfg, fac)
     packages = argsupport.get_all_packages(repo_root, args.package, fac, args.verbose)
     packages = ws.filter_artifact_producing_packages(packages)

@@ -10,7 +10,7 @@ import config.exclusions as exclusions
 import crawl.artifactprocessor as artifactprocessor
 import crawl.buildpom as buildpom
 import crawl.git as git
-import crawl.pomcontent as pomcontent
+import common.manifestcontent as manifestcontent
 import crawl.releasereason as releasereason
 import generate.impl.pom.dependencymd as dependencymd
 import generate.impl.pom.maveninstallinfo as maveninstallinfo
@@ -414,7 +414,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         strategy = pomgenerationstrategy.PomGenerationStrategy(
             "root", config.Config(), maveninstallinfo.NOOP,
             dependencymd.DependencyMetadata(None),
-            pomcontent.NOOP, label_to_overridden_fq_label={}, verbose=True)
+            manifestcontent.NOOP, label_to_overridden_fq_label={}, verbose=True)
         strategy.initialize()
         return strategy
 

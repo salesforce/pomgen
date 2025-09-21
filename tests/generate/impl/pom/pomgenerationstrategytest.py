@@ -11,7 +11,7 @@ import common.os_util as os_util
 import config.config as config
 import config.exclusions as exclusions
 import crawl.git as git
-import crawl.pomcontent as pomcontent
+import common.manifestcontent as manifestcontent
 import crawl.workspace as workspace
 import generate.generationstrategyfactory as generationstrategyfactory
 import generate.impl.pom.dependency as dependency
@@ -36,7 +36,7 @@ class PomGenerationStrategyTest(unittest.TestCase):
 
         self.repo_root = tempfile.mkdtemp("root")
         self.fac = generationstrategyfactory.GenerationStrategyFactory(
-            self.repo_root, _get_config(), pomcontent.NOOP, verbose=True)
+            self.repo_root, _get_config(), manifestcontent.NOOP, verbose=True)
         self.ws = workspace.Workspace(self.repo_root, _get_config(), self.fac)
     
     def tearDown(self):

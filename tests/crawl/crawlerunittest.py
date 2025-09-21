@@ -10,7 +10,7 @@ import config.config as config
 import crawl.artifactgenctx as artifactgenctx
 import crawl.buildpom as buildpom
 import crawl.crawler as crawlerm
-import crawl.pomcontent as pomcontent
+import common.manifestcontent as manifestcontent
 import crawl.workspace as workspace
 import generate.generationstrategyfactory as generationstrategyfactory
 import generate.impl.pom.dependency as dependency
@@ -643,14 +643,14 @@ class CrawlerUnitTest(unittest.TestCase):
 
     def _get_workspace(self):
         fac = generationstrategyfactory.GenerationStrategyFactory(
-            "root", config.Config(), pomcontent.NOOP, verbose=True)
+            "root", config.Config(), manifestcontent.NOOP, verbose=True)
         return workspace.Workspace("a/b/c", config.Config(), fac)
 
     def _get_strategy(self):
         strategy = pomgenerationstrategy.PomGenerationStrategy(
             "root", config.Config(), maveninstallinfo.NOOP,
             dependencymdm.DependencyMetadata(None),
-            pomcontent.NOOP, label_to_overridden_fq_label={}, verbose=True)
+            manifestcontent.NOOP, label_to_overridden_fq_label={}, verbose=True)
         strategy.initialize()
         return strategy
 

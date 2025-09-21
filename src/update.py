@@ -12,7 +12,7 @@ from common import argsupport
 from common import common
 from common import version_increment_strategy as vis
 from config import config
-from crawl import pomcontent
+from common import manifestcontent as manifestcontent
 from generate import generationstrategyfactory
 from common import buildpomupdate
 import argparse
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     repo_root = common.get_repo_root(args.repo_root)
     cfg = config.load(repo_root)
     fac = generationstrategyfactory.GenerationStrategyFactory(
-        repo_root, cfg, pomcontent.NOOP, verbose=False)
+        repo_root, cfg, manifestcontent.NOOP, verbose=False)
     packages = argsupport.get_all_packages(repo_root, args.package, fac)
     assert len(packages) > 0, "Did not find any packages at [%s]" % args.package
 
