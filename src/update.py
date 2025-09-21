@@ -5,8 +5,7 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 
 
-Command line utility that updates attributes in BUILD.pom and 
-BUILD.pom.released files.
+Command line utility that updates attributes in metadata files.
 """
 
 from common import argsupport
@@ -21,36 +20,36 @@ import sys
 
 
 def _parse_arguments(args):
-    parser = argparse.ArgumentParser(description="Updates Maven artifact metadata")
+    parser = argparse.ArgumentParser(description="Updates artifact metadata")
     parser.add_argument("--package", type=str, required=True,
-        help="Updates BUILD.pom files under the specified package(s). " + argsupport.get_package_doc())
+        help="Updates metadata files under the specified package(s). " + argsupport.get_package_doc())
 
     parser.add_argument("--new_version", type=str, required=False,
-        help="The value of the version to write into BUILD.pom files")
+        help="The value of the current version")
     parser.add_argument("--new_version_increment_strategy", type=str,
         required=False, choices = vis.VERSION_INCREMENT_STRATEGIES,
-        help="The value of the version_increment_strategy to write into BUILD.pom files")
+        help="The value of the version_increment_strategy")
     parser.add_argument("--new_released_version", type=str, required=False,
-        help="The value of the version to write into BUILD.pom.released files")
+        help="The value of the released version")
     parser.add_argument("--new_released_artifact_hash", type=str, required=False,
-        help="The value of the artifact_hash to write into BUILD.pom.released files")
+        help="The value of the released artifact hash")
     parser.add_argument("--update_released_artifact_hash_to_current", required=False,
                         action='store_true',
-        help="Writes the value of the current artifact hash under the specified package into the BUILD.pom.released file")
+        help="Computes the artifact hash based on the current state")
     parser.add_argument("--update_version_using_version_increment_strategy", required=False,
                         action='store_true',
-        help="Updates the version in BUILD.pom files, by incrementing it using the version_increment_strategy specified in the same file")
+        help="Updates the version using the increment strategy set in the manifest file")
     parser.add_argument("--set_version_to_last_released", required=False,
                         action='store_true',
-        help="Updates the version in BUILD.pom files, by setting it to the last released version specified in the corresponding BUILD.pom.released files")
+        help="Sets the version in manifest file to the last released version specified in the released metadata file")
     parser.add_argument("--add_version_qualifier", required=False, type=str,
         help="Adds the specified string to the end of the version, using '-' as a separator. If the version ends with \"-SNAPSHOT\", the specified qualifier is added before the snapshot suffix")
     parser.add_argument("--remove_version_qualifier", required=False, type=str,
         help="Removes the specified version qualifier from the version")
     parser.add_argument("--new_generation_mode", required=False, type=str,
-        help="Adds or updates the value of 'generation_mode' in BUILD.pom files")
+        help="Adds or updates the value of 'generation_mode' manifest files")
     parser.add_argument("--add_missing_generation_mode", required=False, action='store_true',
-        help="Adds missing 'generation_mode' to BUILD.pom files")
+        help="Adds 'generation_mode' to manifest files")
 
     parser.add_argument("--repo_root", type=str, required=False,
         help="the root of the repository")    

@@ -22,6 +22,20 @@ class AbstractManifestGenerator(ABC):
         """
         return self.generate_release_manifest()
 
+    def format_for_comparison(self, manifest_content):
+        """
+        Formats the given golfile manifest for comparison.
+
+        Hook to optionally modify manifest content before comaprison.
+
+        Args:
+            manifest_content: The manifest content as a string
+
+        Returns:
+            The formatted manifest content as a string
+        """
+        return manifest_content
+
 
 class AbstractGenerationStrategy(ABC):
 

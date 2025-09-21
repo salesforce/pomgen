@@ -130,6 +130,14 @@ class AbstractPomGen(generate.AbstractManifestGenerator):
         """
         return self.generate_manifest(PomContentType.GOLDFILE)
 
+    def format_for_comparison(self, manifest_content):
+        """
+        Formats the given POM manifest content for goldfile manifest comparison purposes.
+
+        Uses pomparser.format_for_comparison to normalize POM-specific formatting.
+        """
+        return pomparser.format_for_comparison(manifest_content)
+
     def get_companion_generators(self):
         """
         Returns an iterable of companion generators. These poms are not used
