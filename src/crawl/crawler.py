@@ -17,7 +17,6 @@ import crawl.bazel as bazel
 import crawl.buildpom as buildpom
 import crawl.releasereason as releasereason
 import difflib
-import generate.impl.pom.pomparser as pomparser
 import os
 
 
@@ -266,13 +265,11 @@ class Crawler:
             if not art_def.requires_release and art_def.released_pom_content is not None:
                 generator = art_def.generation_strategy.new_generator(ctx)
                 goldfile_manifest = generator.generate_goldfile_manifest()
-                # TODO - do not hardcode pom logic
-                current_manifest = pomparser.format_for_comparison(goldfile_manifest)
-                previous_manifest = pomparser.format_for_comparison(art_def.released_pom_content)
+                current_manifest = generator.format_for_comparison(goldfile_manifest)
+                previous_manifest = generator.format_for_comparison(art_def.released_pom_content)
                 manifest_changed = current_manifest != previous_manifest
                 if manifest_changed:
                     art_def.requires_release = True
-                    # TODO release reason
                     art_def.release_reason = releasereason.MANIFEST
 
                     if self.verbose:

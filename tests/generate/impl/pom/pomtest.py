@@ -8,7 +8,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 
 import common.genmode as genmode
 import crawl.buildpom as buildpom
-import crawl.pomcontent as pomcontent
+import common.manifestcontent as manifestcontent
 import generate.impl.pom.dependency as dependency
 import generate.impl.pom.dependencymd as dependencymdm
 import generate.impl.pom.pom as pom
@@ -50,7 +50,7 @@ class PomTest(unittest.TestCase):
             artifact_def, None, "pack1", "MVN-INF", None, None,
             genmode.DYNAMIC)
         pomgen = pom.DynamicPomGen(artifact_def, TEST_POM_TEMPLATE,
-                                   pomcontent.NOOP,
+                                   manifestcontent.NOOP,
                                    self.dependencymd)
         deps = [self.guava_dep,
                 self.logback_dep,
@@ -175,7 +175,7 @@ class PomTest(unittest.TestCase):
 
 </project>
 """
-        pc = pomcontent.PomContent()
+        pc = manifestcontent.ManifestContent()
         pc.description = "this is a cool description"
         pom_template = """<project>
 #{description}
@@ -196,7 +196,7 @@ class PomTest(unittest.TestCase):
         exepcted_pom = """<project>
 </project>
 """
-        pc = pomcontent.PomContent()
+        pc = manifestcontent.ManifestContent()
         # pc.description IS NOT set here - that's the point of this test
         pom_template = """<project>
 #{description}
@@ -223,7 +223,7 @@ class PomTest(unittest.TestCase):
             artifact_def, None, "pack1", "WEB-INF", None, None,
             genmode.DYNAMIC)
         pomgen = pom.DynamicPomGen(artifact_def, TEST_POM_TEMPLATE,
-                                   pomcontent.NOOP,
+                                   manifestcontent.NOOP,
                                    self.dependencymd)
         pomgen.register_dependencies([self.guava_dep])
 
@@ -247,7 +247,7 @@ class PomTest(unittest.TestCase):
             root_artifact_def, None, "pack1", "WEB-INF", None, None,
             genmode.DYNAMIC)
         pomgen = pom.DynamicPomGen(root_artifact_def, TEST_POM_TEMPLATE,
-                                   pomcontent.NOOP, depmd)
+                                   manifestcontent.NOOP, depmd)
         dep_art_def = buildpom.MavenArtifactDef("class-group", "class-art", "1", bazel_target="g1")
         dep = dependency.new_dep_from_maven_artifact_def(dep_art_def)
 
@@ -268,7 +268,7 @@ class PomTest(unittest.TestCase):
         artifact_def = buildpom.MavenArtifactDef(
             "g1", "a2", "1.2.3", bazel_target="t1", include_deps=False)
         pomgen = pom.DynamicPomGen(artifact_def, TEST_POM_TEMPLATE,
-                                   pomcontent.NOOP,
+                                   manifestcontent.NOOP,
                                    self.dependencymd)
 
         generated_pom = pomgen.generate_release_manifest()
@@ -284,7 +284,7 @@ class PomTest(unittest.TestCase):
             artifact_def, None, "pack1", "WEB-INF", None, None,
             genmode.DYNAMIC)
         pomgen = pom.DynamicPomGen(artifact_def, TEST_POM_TEMPLATE,
-                                   pomcontent.NOOP,
+                                   manifestcontent.NOOP,
                                    self.dependencymd)
 
         deps = [self.guava_dep, self.aop_dep]
@@ -776,7 +776,7 @@ __pomgen.end_dependency_customization__
         artifact_def = buildpom.MavenArtifactDef(
             "g1", "a2", "1.2.3", bazel_target="t1",
             gen_dependency_management_pom=True)
-        pomgen = pom.DependencyManagementPomGen(artifact_def, TEST_POM_TEMPLATE, pomcontent.NOOP, self.dependencymd)
+        pomgen = pom.DependencyManagementPomGen(artifact_def, TEST_POM_TEMPLATE, manifestcontent.NOOP, self.dependencymd)
         guava = dependency.new_dep_from_maven_art_str("google:guava:1", "guav")
         force = dependency.new_dep_from_maven_art_str("force:commons:1", "forc")
 

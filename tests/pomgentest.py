@@ -7,7 +7,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 
 
 import os
-import pomgen
+import generate_manifest
 import unittest
 import tempfile
 
@@ -32,7 +32,7 @@ class PomGenTest(unittest.TestCase):
                 "--destdir", destdir,
                 "--repo_root", self.repo_root_path,]
 
-        pomgen.main(args)
+        generate_manifest.main(args)
 
         pom_xml_path = os.path.join(destdir, package_rel_path, "pom.xml")
         content = self._read_file(pom_xml_path)

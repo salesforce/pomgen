@@ -336,7 +336,7 @@ do
         bazel run @poppy//:gen -- \
                --package $library_path \
                --destdir $repo_root_path/bazel-bin \
-               --pom.description "${POM_DESCRIPTION:-""}" $extra_args
+               --manifest_description "${POM_DESCRIPTION:-""}" $extra_args
 
 
     elif [ "$action" == "install" ]; then

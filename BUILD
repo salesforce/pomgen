@@ -11,9 +11,9 @@ load("@rules_python//python:pip.bzl", "compile_pip_requirements")
 
 
 py_library(
-    name = "pomgen_lib",
-    srcs = glob(["src/pomgen.py",
-                 "src/pomupdate/*.py",
+    name = "poppy_lib",
+    srcs = glob(["src/generate_manifest.py",
+                 "src/update/*.py",
                  "src/common/*.py",
                  "src/config/*.py",
                  "src/common/*.py",
@@ -28,30 +28,24 @@ py_library(
     visibility = ["@poppy//:__subpackages__",],
 )
 
-# we will rename pomgen to gen
-alias(
-    name = "gen",
-    actual = ":pomgen"
-)
-
 py_binary(
-    name = "pomgen",
-    srcs = ["src/pomgen.py"],
-    deps = [":pomgen_lib"],
+    name = "gen",
+    srcs = ["src/generate_manifest.py"],
+    deps = [":poppy_lib"],
     imports = ["src"],
 )
 
 py_binary(
     name = "query",
     srcs = ["src/query.py"],
-    deps = [":pomgen_lib"],
+    deps = [":poppy_lib"],
     imports = ["src"],
 )
 
 py_binary(
     name = "update",
     srcs = ["src/update.py"],
-    deps = [":pomgen_lib"],
+    deps = [":poppy_lib"],
     imports = ["src"],
 )
 

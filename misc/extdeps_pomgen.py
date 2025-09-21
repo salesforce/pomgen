@@ -13,7 +13,7 @@ import common.common as common
 import common.label as labelm
 import config.config as config
 import crawl.buildpom as buildpom
-import crawl.pomcontent as pomcontent
+import common.manifestcontent as manifestcontent
 import generate.impl.pom.dependencymd as dependencymdm
 import generate.impl.pom.maveninstallinfo as maveninstallinfo
 import generate.impl.pom.pom as pom
@@ -50,7 +50,7 @@ class ThirdPartyDepsPomGen(pom.DynamicPomGen):
 
     def __init__(self, artifact_def, dependencies, pom_template, dependency_md):
         super(ThirdPartyDepsPomGen, self).__init__(
-            artifact_def, pom_template, pomcontent.NOOP, dependency_md)
+            artifact_def, pom_template, manifestcontent.NOOP, dependency_md)
         self.dependencies = dependencies
 
 
@@ -79,7 +79,7 @@ def main(args):
     dependencymd = dependencymdm.DependencyMetadata(cfg.jar_artifact_classifier)
     gen_strategy = pomgenerationstrategy.PomGenerationStrategy(
         repo_root, cfg, mvn_install_info, dependencymd,
-        pomcontent.NOOP, label_to_overridden_fq_label={},
+        manifestcontent.NOOP, label_to_overridden_fq_label={},
         verbose=args.verbose)
     gen_strategy.initialize()
 

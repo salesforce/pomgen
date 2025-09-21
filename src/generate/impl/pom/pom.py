@@ -9,7 +9,7 @@ This module contains pom.xml generation logic.
 
 import common.genmode as genmode
 import copy
-import crawl.pomcontent as pomcontentm
+import common.manifestcontent as manifestcontentm
 import generate
 import generate.impl.pom.pomparser as pomparser
 import os
@@ -52,7 +52,7 @@ def get_pom_generator(pom_template, artifact_def, external_dependencies,
         dependency_md: additional metadata about dependencies (jars)
     """
     assert artifact_def is not None
-    assert isinstance(pom_content_md, pomcontentm.PomContent)
+    assert isinstance(pom_content_md, manifestcontentm.ManifestContent)
     mode = artifact_def.generation_mode
     if mode is genmode.DYNAMIC:
         also_generate_dep_man_pom = artifact_def.gen_dependency_management_pom
@@ -129,6 +129,14 @@ class AbstractPomGen(generate.AbstractManifestGenerator):
         previously generated goldfile pom.
         """
         return self.generate_manifest(PomContentType.GOLDFILE)
+
+    def format_for_comparison(self, manifest_content):
+        """
+        Formats the given POM manifest content for goldfile manifest comparison purposes.
+
+        Uses pomparser.format_for_comparison to normalize POM-specific formatting.
+        """
+        return pomparser.format_for_comparison(manifest_content)
 
     def get_companion_generators(self):
         """
@@ -494,7 +502,7 @@ class DynamicPomGen(AbstractPomGen):
     """
     def __init__(self, artifact_def, pom_template, pom_content_md, dependency_md):
         super(DynamicPomGen, self).__init__(artifact_def, dependency_md)
-        assert isinstance(pom_content_md, pomcontentm.PomContent)
+        assert isinstance(pom_content_md, manifestcontentm.ManifestContent)
         self.pom_template = pom_template
         self.pom_content_md = pom_content_md
 

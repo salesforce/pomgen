@@ -8,7 +8,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 import common.argsupport as argsupport
 import config.config as config
 import generate.generationstrategyfactory as generationstrategyfactory
-import crawl.pomcontent as pomcontent
+import common.manifestcontent as manifestcontent
 import os
 import unittest
 import tempfile
@@ -30,7 +30,7 @@ class ArgSupportTest(unittest.TestCase):
     def setUp(self):
         self.repo_root = _setup_repo()
         self.fac = generationstrategyfactory.GenerationStrategyFactory(
-            self.repo_root, config.Config(), pomcontent.NOOP, verbose=True)
+            self.repo_root, config.Config(), manifestcontent.NOOP, verbose=True)
 
     def test_get_all_packages__single_package(self):
         packages = argsupport.get_all_packages(

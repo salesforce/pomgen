@@ -8,7 +8,7 @@ import common.label as labelm
 import config.config as config
 import crawl.buildpom as buildpom
 import crawl.crawler as crawlerm
-import crawl.pomcontent as pomcontent
+import common.manifestcontent as manifestcontent
 import crawl.workspace as workspace
 import generate.generationstrategyfactory as generationstrategyfactory
 import os
@@ -32,7 +32,7 @@ class CrawlerTest(unittest.TestCase):
             cfg = self._get_config()
         self.repo_root_path = tempfile.mkdtemp("root")
         self.fac = generationstrategyfactory.GenerationStrategyFactory(
-            self.repo_root_path, cfg, pomcontent.NOOP, verbose=True)
+            self.repo_root_path, cfg, manifestcontent.NOOP, verbose=True)
         self.ws = workspace.Workspace(self.repo_root_path, cfg, self.fac)
 
     def test_default_package_ref(self):

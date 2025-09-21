@@ -11,7 +11,7 @@ import common.os_util as os_util
 import config.config as config
 import config.exclusions as exclusions
 import crawl.git as git
-import crawl.pomcontent as pomcontent
+import common.manifestcontent as manifestcontent
 import generate.generationstrategyfactory as generationstrategyfactory
 import os
 import tempfile
@@ -23,7 +23,7 @@ class BuildPomUpdateTest(unittest.TestCase):
     def setUp(self):
         self.repo_root = tempfile.mkdtemp("repo")
         self.fac = generationstrategyfactory.GenerationStrategyFactory(
-            self.repo_root, config.Config(), pomcontent.NOOP, verbose=True)
+            self.repo_root, config.Config(), manifestcontent.NOOP, verbose=True)
 
     def test_update_BUILD_pom_released__set_artifact_hash_to_current(self):
         pack1 = "somedir/p1"

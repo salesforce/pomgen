@@ -6,17 +6,19 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 """
 
 
-class PomContent:
+class ManifestContent:
     """
-    A container for static pom content that is passed through to the pom
-    generators.
+    A container for static manifest content that is passed through to the
+    manifest generators.
 
-    IMPORTANT: none of this content can contribute to a pom difference when
-    comparing the current pom against the previously released pom.
+    IMPORTANT: none of this content can contribute to a manifest difference when
+    comparing the current manifest against the previously released manifest.
     See how description is removed in pomparser.format_for_comparison
+    
+    # TODO lets remove this class
+
     """
     def __init__(self):
-        # content for the pom <description> element.
         self._description = None
 
     @property
@@ -35,5 +37,5 @@ class PomContent:
 
 
 # only the pomgen invocation needs a real instance because this content
-# cannot affect pom diffing
-NOOP = PomContent()
+# cannot affect manifest diffing
+NOOP = ManifestContent()

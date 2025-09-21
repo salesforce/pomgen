@@ -5,7 +5,7 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 
 
-The pomgen cmdline entry-point.
+The poppy manifest generation cmdline entry-point.
 """
 
 
@@ -18,7 +18,7 @@ import config.config as config
 import crawl.bazel as bazel
 import crawl.crawler as crawlerm
 import crawl.libaggregator as libaggregator
-import crawl.pomcontent as pomcontentm
+import common.manifestcontent as manifestcontentm
 import crawl.workspace as workspace
 import generate.generationstrategyfactory as generationstrategyfactory
 import os
@@ -29,14 +29,14 @@ def main(args):
     args = _parse_arguments(args)
     repo_root = common.get_repo_root(args.repo_root)
     cfg = config.load(repo_root, args.verbose)
-    pom_content = pomcontentm.PomContent()
-    if args.pom_description is not None:
-        pom_content.description = args.pom_description
+    manifest_content = manifestcontentm.ManifestContent()
+    if args.manifest_description is not None:
+        manifest_content.description = args.manifest_description
     if args.verbose:
-        logger.debug("Global pom content: %s" % pom_content)
+        logger.debug("Global manifest content: %s" % manifest_content)
 
     fac = generationstrategyfactory.GenerationStrategyFactory(
-        repo_root, cfg, pom_content, args.verbose)
+        repo_root, cfg, manifest_content, args.verbose)
     ws = workspace.Workspace(repo_root, cfg, fac)
     packages = argsupport.get_all_packages(repo_root, args.package, fac, args.verbose)
     packages = ws.filter_artifact_producing_packages(packages)
@@ -75,7 +75,7 @@ def main(args):
             # the goldfile pom is actually a pomgen metadata file, so we 
             # write it using the mdfiles module, which ensures it goes 
             # into the proper location within the specified bazel package
-            if args.pom_goldfile:
+            if args.manifest_goldfile:
                 pom_content = pomgen.generate_goldfile_manifest()
                 pom_path = os.path.join(
                     pom_dest_dir, gen_strategy.released_manifest_path)
@@ -110,25 +110,25 @@ def main(args):
 
 
 def _parse_arguments(args):
-    parser = argparse.ArgumentParser(description="Monorepo Pom Generator")
+    parser = argparse.ArgumentParser(description="Artifact Manifest Generator")
     parser.add_argument("--package", type=str, required=True,
-        help="Narrows pomgen to the specified package(s). " + argsupport.get_package_doc())
+        help="Specifies which directory the generator starts crawling at. " + argsupport.get_package_doc())
     parser.add_argument("--destdir", type=str, required=True,
-        help="The root directory generated poms are written to")
+        help="The root directory generated manifests are written to")
     parser.add_argument("--repo_root", type=str, required=False,
         help="The root of the repository")
     parser.add_argument("--force", required=False, action="store_true",
-        help="If set, always generated poms, regardless of whether an artifact has changed since it was last released")
+        help="If set, always generated manifests, regardless of whether an artifact has changed since it was last released")
     parser.add_argument("--ignore_references", required=False, action="store_true",
-        help="If set, pomgen does not follow references in BUILD files and only processes the packages packages specified by --package (instead of using them as a starting point and then crawling BUILD files)")
-    parser.add_argument("--pom_goldfile", required=False, action="store_true",
-        help="Generates a goldfile pom")
+        help="If set, poppy does not follow references in build files and only processes the packages specified by --package (instead of using them as a starting point and then crawling BUILD files)")
+    parser.add_argument("--manifest_goldfile", required=False, action="store_true",
+        help="Generates a goldfile manifest")
     parser.add_argument("--verbose", required=False, action="store_true",
         help="Verbose output")
-    parser.add_argument("--pom.description", type=str, required=False,
-        dest="pom_description", help="Written as the pom's <description/>")
+    parser.add_argument("--manifest_description", type=str, required=False,
+        help="Writes the specified string into the manifest as information")
     parser.add_argument("--write_libraries_hint_file", required=False, action="store_true",
-        help="The libraries hint file is used by the wrapper script in //maven, it is not needed when running pomgen directly")
+        help="The libraries hint file is used by the wrapper script in //package")
 
     return parser.parse_args(args)
 
