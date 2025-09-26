@@ -10,11 +10,11 @@ Command line utility that updates attributes in metadata files.
 
 from common import argsupport
 from common import common
+from common import manifestcontent as manifestcontent
+from common import metadataupdate
 from common import version_increment_strategy as vis
 from config import config
-from common import manifestcontent as manifestcontent
 from generate import generationstrategyfactory
-from common import buildpomupdate
 import argparse
 import sys
 
@@ -50,6 +50,8 @@ def _parse_arguments(args):
         help="Adds or updates the value of 'generation_mode' manifest files")
     parser.add_argument("--add_missing_generation_mode", required=False, action='store_true',
         help="Adds 'generation_mode' to manifest files")
+    parser.add_argument("--verbose", required=False, action="store_true",
+        help="Verbose output")
 
     parser.add_argument("--repo_root", type=str, required=False,
         help="the root of the repository")    
@@ -61,8 +63,8 @@ if __name__ == "__main__":
     repo_root = common.get_repo_root(args.repo_root)
     cfg = config.load(repo_root)
     fac = generationstrategyfactory.GenerationStrategyFactory(
-        repo_root, cfg, manifestcontent.NOOP, verbose=False)
-    packages = argsupport.get_all_packages(repo_root, args.package, fac)
+        repo_root, cfg, manifestcontent.NOOP, verbose=args.verbose)
+    packages = argsupport.get_all_packages(repo_root, args.package, fac, verbose=args.verbose)
     assert len(packages) > 0, "Did not find any packages at [%s]" % args.package
 
     if (args.new_version is not None or
@@ -74,7 +76,7 @@ if __name__ == "__main__":
         args.new_generation_mode is not None or
         args.add_missing_generation_mode):
 
-        buildpomupdate.update_build_pom_file(
+        metadataupdate.update_build_pom_file(
             repo_root, packages, fac,
             args.new_version,
             args.update_version_using_version_increment_strategy,
@@ -88,7 +90,7 @@ if __name__ == "__main__":
     if (args.new_released_version is not None or
         args.new_released_artifact_hash is not None or
         args.update_released_artifact_hash_to_current):
-        buildpomupdate.update_released_artifact(
+        metadataupdate.update_released_artifact(
             repo_root, packages, fac,
             cfg.all_src_exclusions,
             args.new_released_version,

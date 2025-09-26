@@ -51,13 +51,8 @@ def get_all_packages(repository_root_path, packages_str,
             repository_root_path, p, generation_stategy_factory, verbose)
         for package in packages:
             for exclusion_path in exclusion_paths:
-                prefix_match = True
-                if exclusion_path.endswith("/"):
-                    exclusion_path = exclusion_path[:-1]
-                    prefix_match = False
                 if package.startswith(exclusion_path):
-                    if prefix_match or package.endswith(exclusion_path):
-                        break
+                    break
             else:
                 if package not in all_packages:
                     all_packages.add(package)
@@ -69,7 +64,7 @@ def get_all_packages(repository_root_path, packages_str,
 def _find_packages_with_md(repository_root_path, target_pattern, fac, verbose):
     """
     Returns all packages in the specified target pattern, as a list of strings,
-    that are "maven aware" packages.
+    that are "manifest aware" packages.
     """
     path = os.path.join(repository_root_path, _target_pattern_to_path(target_pattern))
 
