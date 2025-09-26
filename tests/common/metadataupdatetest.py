@@ -6,7 +6,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 """
 
 
-import common.buildpomupdate as buildpomupdate
+import common.metadataupdate as buildpomupdate
 import common.os_util as os_util
 import config.config as config
 import config.exclusions as exclusions
