@@ -1,0 +1,10 @@
+artifact(
+    artifact_id = "caller",
+    version = "2.0.1",
+    generation_mode = "dynamic",
+    excluded_dependency_paths = ["tests"],
+)
+
+artifact_update(
+    version_increment_strategy = "minor",
+)

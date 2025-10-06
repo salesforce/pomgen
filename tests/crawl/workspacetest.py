@@ -16,7 +16,7 @@ import unittest
 
 class WorkspaceTest(unittest.TestCase):
 
-    def setUpRepository(self, cfg=None):
+    def setup_repository(self, cfg=None):
         """
         The state that all tests need.
         """
@@ -28,7 +28,7 @@ class WorkspaceTest(unittest.TestCase):
         self.ws = workspace.Workspace(self.repo_root_path, cfg, self.fac)
 
     def test_parse_maven_artifact_def(self):
-        self.setUpRepository()
+        self.setup_repository()
         self._write_library_root(self.repo_root_path, "lib")
         self._add_artifact(self.repo_root_path, "lib/a1")
 
@@ -37,33 +37,40 @@ class WorkspaceTest(unittest.TestCase):
         self.assertEqual(art_def.bazel_package, "lib/a1")
         self.assertEqual(art_def.version, "1.0.0-SNAPSHOT")
         self.assertIs(art_def.generation_mode, genmode.DYNAMIC)
-        self.assertFalse(art_def.oneoneone_mode)
 
     def test_parse_child_package_without_art_def(self):
-        self.setUpRepository()
+        self.setup_repository()
         self._write_library_root(self.repo_root_path, "lib")
         self._add_artifact(self.repo_root_path, "lib/src")
 
         parent_art_def = self.ws.parse_maven_artifact_def("lib/src")
-        self.assertFalse(parent_art_def.oneoneone_mode)
         self.assertIs(parent_art_def.generation_mode, genmode.DYNAMIC)
 
-        art_def = self.ws.parse_maven_artifact_def("lib/src/a1", parent_art_def)
-        self.assertIsNone(art_def)
+        with self.assertRaises(Exception) as ctx:
+            self.ws.parse_maven_artifact_def("lib/src/nothing", parent_art_def)
+        self.assertIn("did not find any metadata at [lib/src/nothing], found parent metadata at [lib/src], however parent does not have required 1:1:1 mode enabled", str(ctx.exception))
+
+    def test_parse_child_package_without_art_def_no_parent_either(self):
+        self.setup_repository()
+        self._write_library_root(self.repo_root_path, "lib")
+        self._add_artifact(self.repo_root_path, "lib/src")
+        art_def = self.ws.parse_maven_artifact_def("lib/src")
+
+        art_dep = self.ws.parse_maven_artifact_def("lib/nothing", art_def)
+
+        self.assertIsNone(art_dep)
 
     def test_parse_child_package_without_art_def__111(self):
-        self.setUpRepository()
+        self.setup_repository()
         self._write_library_root(self.repo_root_path, "lib")
         self._add_artifact(self.repo_root_path, "lib/src",
-                           is_oneoneone=True)
+                           generation_mode="dynamic_111")
 
         parent_art_def = self.ws.parse_maven_artifact_def("lib/src")
-        self.assertTrue(parent_art_def.oneoneone_mode)
-        self.assertIs(parent_art_def.generation_mode, genmode.DYNAMIC)
+        self.assertIs(parent_art_def.generation_mode, genmode.DYNAMIC_ONEONEONE)
 
         art_def = self.ws.parse_maven_artifact_def("lib/src/a1", parent_art_def)
-        self.assertFalse(art_def.oneoneone_mode)
-        self.assertIs(art_def.generation_mode, genmode.SKIP)
+        self.assertIs(art_def.generation_mode, genmode.ONEONEONE_CHILD)
 
     def _get_config(self, **kwargs):
         return config.Config(**kwargs)
@@ -76,24 +83,23 @@ class WorkspaceTest(unittest.TestCase):
            f.write("foo")
 
     def _add_artifact(self, repo_root_path, package_rel_path,
-                      is_oneoneone=None):
+                      generation_mode="dynamic"):
         self._write_build_pom(repo_root_path, package_rel_path, 
                               artifact_id=os.path.basename(package_rel_path),
                               group_id="g1",
                               version="1.0.0-SNAPSHOT",
-                              is_oneoneone=is_oneoneone)
+                              generation_mode=generation_mode)
 
         self._write_build_file(repo_root_path, package_rel_path)
 
     def _write_build_pom(self, repo_root_path, package_rel_path,
-                         artifact_id, group_id, version, is_oneoneone):
+                         artifact_id, group_id, version, generation_mode):
         build_pom = """
 maven_artifact(
     artifact_id = "%s",
     group_id = "%s",
     version = "%s",
-    generation_mode = "dynamic",
-    $oneoneone$    
+    generation_mode = "%s",
 )
 
 maven_artifact_update(
@@ -102,13 +108,8 @@ maven_artifact_update(
 """
         path = os.path.join(repo_root_path, package_rel_path, "MVN-INF")
         os.makedirs(path)
-        content = build_pom % (artifact_id, group_id, version)
+        content = build_pom % (artifact_id, group_id, version, generation_mode)
                                
-        if is_oneoneone is None:
-            content = content.replace("$oneoneone$", "")
-        else:
-            content = content.replace("$oneoneone$", "111_mode=%s," % is_oneoneone)
-
         with open(os.path.join(path, "BUILD.pom"), "w") as f:
             f.write(content)
 

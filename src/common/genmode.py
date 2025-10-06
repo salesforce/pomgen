@@ -13,7 +13,7 @@ def from_string(generation_mode_string):
     """
     assert generation_mode_string is not None
 
-    for mode in ALL_MODES:
+    for mode in ALL_USER_MODES:
         if generation_mode_string == mode.name:
             return mode
     raise Exception("Unknown generation_mode: %s" % generation_mode_string)
@@ -21,7 +21,7 @@ def from_string(generation_mode_string):
 
 class GenerationMode:
     """
-    The generation mode of a given artifact.
+    The generation mode associated with artifact metadata.
 
 
     The following attributes are available:
@@ -77,7 +77,7 @@ TEMPLATE = GenerationMode("template", produces_artifact=True,
                           # False here because pom templates may or may not
                           # have a BUILD file - if there is one, it
                           # is generally not related to the template
-                      query_dependency_attributes=False)
+                          query_dependency_attributes=False)
 # this is a hack for custom pom templates - their packaging tends to be
 # "pom" - that's the whole point. but we have a couple of cases with different
 # values (such as maven-plugin), in which case bazel is expected to build
@@ -96,6 +96,21 @@ SKIP.bazel_produced_artifact = types.MethodType(
     lambda self, pom_template_content: False, SKIP)
 
 
-DEFAULT = DYNAMIC
+# this generation mode is like "dynamic" but for a module that uses bazel's
+# 1:1:1 structure (many bazel child packages)
+DYNAMIC_ONEONEONE = GenerationMode("dynamic_111", produces_artifact=True,
+                                   query_dependency_attributes=True)
+DYNAMIC_ONEONEONE.bazel_produced_artifact = types.MethodType(
+    lambda self, pom_template_content: True, DYNAMIC_ONEONEONE)
 
-ALL_MODES = (DYNAMIC, TEMPLATE, SKIP,)
+
+# this generation mode marks a bazel child bazel package in a 1:1:1 enabled
+# module
+ONEONEONE_CHILD = GenerationMode("111_child", produces_artifact=False,
+                                 query_dependency_attributes=True)
+ONEONEONE_CHILD.bazel_produced_artifact = types.MethodType(
+    lambda self, pom_template_content: False, ONEONEONE_CHILD)
+
+
+# these can be set explicitly in module metadata files
+ALL_USER_MODES = (DYNAMIC, TEMPLATE, SKIP, DYNAMIC_ONEONEONE)

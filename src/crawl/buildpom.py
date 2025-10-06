@@ -15,7 +15,7 @@ import common.genmode as genmode
 import os
 
 
-class MavenArtifactDef(object):
+class MavenArtifactDef:
     """
     Represents an instance of a maven_artifact rule defined in a BUILD.pom file.
     Information from the BUILD.pom.released file is added, if that file exists.
@@ -113,6 +113,9 @@ class MavenArtifactDef(object):
         BUILD.pom file, the content of the pom.xml.released file.
 
     generation_strategy: the generation strategy for this artfifact.
+
+    parent_artifact_def: for 111 child packages only, the parent package
+        the has the module manifest
     =====
 
 
@@ -126,7 +129,7 @@ class MavenArtifactDef(object):
                  group_id,
                  artifact_id,
                  version,
-                 generation_mode=genmode.DEFAULT,
+                 generation_mode=genmode.DYNAMIC,
                  custom_pom_template_content=None,
                  include_deps=True,
                  change_detection=True,
@@ -143,7 +146,7 @@ class MavenArtifactDef(object):
                  requires_release=None,
                  released_pom_content=None,
                  generation_strategy=None,
-                 oneoneone_mode=False,
+                 parent_artifact_def=None,
                  excluded_dependency_paths=[],
                  emitted_dependencies=[]):
         self._group_id = group_id
@@ -167,7 +170,7 @@ class MavenArtifactDef(object):
         self._release_reason = None
         self._released_pom_content = released_pom_content
         self._generation_strategy = generation_strategy
-        self._oneoneone_mode = oneoneone_mode
+        self._parent_artifact_def = parent_artifact_def
         self._excluded_dependency_paths = excluded_dependency_paths
         self._emitted_dependencies = emitted_dependencies
 
@@ -253,9 +256,6 @@ class MavenArtifactDef(object):
 
     @property
     def requires_release(self):
-        if not self._generation_mode.produces_artifact:
-            # nothing ever to release
-            return False
         return self._requires_release
 
     @requires_release.setter
@@ -287,15 +287,30 @@ class MavenArtifactDef(object):
         return self._generation_strategy
 
     @property
-    def oneoneone_mode(self):
-        return self._oneoneone_mode
+    def parent_artifact_def(self):
+        return self._parent_artifact_def
 
     @property
     def excluded_dependency_paths(self):
         return self._excluded_dependency_paths
 
+    def is_or_has_same_111_parent(self, other):
+        """
+        For a child 111 package artifact def, returns True if either:
+        - the given artifact def is this artifact def's 111 parent or
+        - the given artifact def has the same 111 parent as this artifact def
+        """
+        assert self.generation_mode is genmode.ONEONEONE_CHILD
+        assert self.parent_artifact_def is not None
+        assert isinstance(other, MavenArtifactDef)
+        if other.generation_mode is genmode.DYNAMIC_ONEONEONE:
+            return self.parent_artifact_def is other
+        elif other.generation_mode is genmode.ONEONEONE_CHILD:
+            return self.parent_artifact_def is other.parent_artifact_def
+        return False
+
     def __str__(self):
-        return "%s:%s" % (self._group_id, self._artifact_id)
+        return "Metadata@%s" % self.bazel_package
 
     def __repr__(self):
         return str(self)
@@ -332,7 +347,7 @@ def parse_maven_artifact_def(root_path, package, generation_strategy):
         group_id=ma_attrs.get("group_id", None),
         artifact_id=ma_attrs.get("artifact_id", None),
         version=ma_attrs.get("version", None),
-        # pom_generation_mode will be removed but we still look for it for now
+        # pom_generation_mode can be removed, we still look for it for now
         # to make the transition to the new name (generation_mode) easier
         generation_mode=ma_attrs.get(
             "generation_mode", ma_attrs.get("pom_generation_mode")),
@@ -344,7 +359,6 @@ def parse_maven_artifact_def(root_path, package, generation_strategy):
         bazel_target=ma_attrs.get("target_name", None),
         deps=ma_attrs.get("deps", []),
         generation_strategy=generation_strategy,
-        oneoneone_mode=ma_attrs.get("111_mode", False),
         excluded_dependency_paths=ma_attrs.get("excluded_dependency_paths", []),
         emitted_dependencies=ma_attrs.get("emitted_dependencies", []),
     )
@@ -434,7 +448,6 @@ def _augment_art_def_values(user_art_def, rel_art_def, bazel_package,
         released_pom_content=released_pom_content,
         version_increment_strategy_name=version_increment_strategy_name,
         generation_strategy=user_art_def.generation_strategy,
-        oneoneone_mode=user_art_def.oneoneone_mode,
         excluded_dependency_paths=user_art_def.excluded_dependency_paths,
         emitted_dependencies=user_art_def.emitted_dependencies,
     )

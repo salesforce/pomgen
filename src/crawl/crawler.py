@@ -10,6 +10,7 @@ Crawls Bazel BUILD file dependencies and builds a DAG.
 
 
 import collections
+import common.genmode as genmode
 import common.label as labelm
 import common.logger as logger
 import crawl.artifactgenctx as artifactgenctx
@@ -105,7 +106,6 @@ class Crawler:
         if self.verbose:
             self._print_debug_output(nodes, "After initial crawl")
 
-
         # a library (LIBRARY.root) may have more than one artifact (Bazel
         # package with a BUILD.pom file). since we always release all artifacts
         # belonging to a library together, we need to make sure to gather all
@@ -132,10 +132,11 @@ class Crawler:
         
         # for bazel targets that do not generate a pom 
         # (generation_mode=skip), we still need to handle dependencies;
-        # this is the "import bundle" use case.
-        # push the dependencies up to the closest parent node that does
-        # generate a pom
-        self._push_transitives_to_parent()
+        # push the dependencies up to the closest parent (downstream) node that
+        # does generate a pom
+        self._push_dependencies_to_downstream()
+
+        self._push_dependencies_to_parent()
 
 
         # computing the set of dependencies for each Node is done
@@ -156,12 +157,15 @@ class Crawler:
 
         # figure out whether artifacts need to be released because a transitive
         # dependency needs to be released
+        # this method also sets requires_release to True on artifact_def
+        # instances if at least one artifact_def of the same library will
+        # be released
         self._calculate_artifact_release_flag(force_release)
 
 
-        # include only contexts for artifacts that need to be released
-        # included in the result
-        ctxs = [ctx for ctx in self.genctxs if ctx.artifact_def.requires_release]
+        # include only contexts for artifacts that need to be released and that
+        # produces an artifact
+        ctxs = [ctx for ctx in self.genctxs if ctx.artifact_def.requires_release and ctx.artifact_def.generation_mode.produces_artifact]
 
         return CrawlerResult(ctxs, nodes)
 
@@ -235,6 +239,7 @@ class Crawler:
         missing_packages = []
         for artifact_def in all_artifacts:
             library_path = artifact_def.library_path
+            assert library_path is not None, "the artifact definition [%s] has None as library_path - this is a bug" % artifact_def
             if library_path not in processed_libraries:
                 processed_libraries.add(library_path)
                 all_library_packages = set(
@@ -356,10 +361,9 @@ class Crawler:
             self._accumulate_deps_and_walk(parent, accumulated_deps,
                                            target_to_all_dependencies)
 
-    def _push_transitives_to_parent(self):
+    def _push_dependencies_to_downstream(self):
         """
-        For special pom generation modes that do not actually produce
-        maven artifacts (generation_mode="skip"):
+        For special "skip" pom generation mode:
         Given artifacts A->B->C->D, if B and C have "skip" generation mode,
         their deps need to be pushed up to A, so that they are included in
         A's pom.xml. So the final poms generated will be: A->D
@@ -370,20 +374,20 @@ class Crawler:
             self._push_transitives_and_walk(node, collected_dep_lists, 
                                             processed_nodes)
 
-    def _push_transitives_and_walk(self, node, collected_dep_lists, 
+    def _push_transitives_and_walk(self, node, collected_dep_lists,
                                    processed_nodes):
         deps = self.target_to_dependencies[node.label]
-        if node.artifact_def.generation_mode.produces_artifact:
+        if node.artifact_def.generation_mode is genmode.SKIP:
+            if node not in processed_nodes:
+                processed_nodes.add(node)
+                collected_dep_lists.append(deps)
+        elif node.artifact_def.generation_mode.produces_artifact:
             if len(collected_dep_lists) > 0:
                 deps = self.target_to_dependencies[node.label]
                 collected_dep_lists.append(deps)
                 deps = self._process_collected_dep_lists(collected_dep_lists)
                 self.target_to_dependencies[node.label] = deps
                 collected_dep_lists = []
-        else:
-            if node not in processed_nodes:
-                processed_nodes.add(node)
-                collected_dep_lists.append(deps)
         for parent in node.parents:
             # important: for each recursive call, we create a copy of
             # collected_dep_lists, because otherwise updates to this list
@@ -391,22 +395,67 @@ class Crawler:
             self._push_transitives_and_walk(parent, list(collected_dep_lists),
                                             processed_nodes)
 
+    def _push_dependencies_to_parent(self):
+        """
+        For 111 child packages, dependencies need to be pushed to the parent
+        module for which the manifest is generated.
+        parent -> parent directory
+        """
+        parent_nodes = set()
+        for _, nodes in self.library_to_nodes.items():
+            for node in nodes:
+                art_def = node.artifact_def
+                parent_art_def = art_def.parent_artifact_def
+                if parent_art_def is not None:
+                    assert art_def.generation_mode is genmode.ONEONEONE_CHILD
+                    parent_node = Crawler._find_node_for_artifact_def(parent_art_def, nodes)
+                    assert parent_node is not None
+                    parent_nodes.add(parent_node)
+                    parent_deps = self.target_to_dependencies[parent_node.label]
+                    deps = self.target_to_dependencies[node.label]
+                    parent_deps.extend(deps)
+
+        # dedupe
+        for node in parent_nodes:
+            deps = self.target_to_dependencies[node.label]
+            deps = Crawler._dedupe(deps)
+            self.target_to_dependencies[node.label] = deps
+
+    @classmethod
+    def _find_node_for_artifact_def(clazz, artifact_def, nodes):
+        # we don't have a mapping for this but based on usage above, the
+        # cardinality of nodes is small
+        for node in nodes:
+            if node.artifact_def is artifact_def:
+                return node
+        assert False, "didn't find node for artifact %s" % artifact_def
+
     def _process_collected_dep_lists(self, collected_dep_lists):
         deps = reversed(collected_dep_lists)
-        deps = self._flatten_and_dedupe(deps)
-        deps = self._filter_non_artifact_referencing_deps(deps)
+        deps = Crawler._flatten(deps)
+        deps = Crawler._dedupe(deps)        
+        deps = Crawler._filter_non_artifact_referencing_deps(deps)
         return deps
 
-    def _flatten_and_dedupe(self, list_of_lists):
+    @classmethod
+    def _flatten(self, list_of_lists):
         flattened = []
-        processed = set()
         for li in list_of_lists:
             for item in li:
-                if item not in processed:
-                    flattened.append(item)
-                    processed.add(item)
+                flattened.append(item)
         return flattened
 
+    @classmethod
+    def _dedupe(self, items):
+        seen = set()
+        updated = []
+        for it in items:
+            if it not in seen:
+                updated.append(it)
+                seen.add(it)
+        return updated
+
+    @classmethod
     def _filter_non_artifact_referencing_deps(self, deps):
         return [d for d in deps if d.references_artifact]
 
@@ -555,8 +604,7 @@ class Crawler:
             artifactctx = artifactgenctx.ArtifactGenerationContext(artifact_def, label)
             self.genctxs.append(artifactctx)
             labels = self._discover_dependencies(artifact_def, label)
-            source_labels, deps = self._partition_and_filter_labels(
-                labels, artifact_def)
+            source_labels, deps = self._partition_and_filter_labels(labels, artifact_def)
             if self.verbose:
                 logger.debug("Determined labels for artifact: [%s] with target key [%s]" % (artifact_def, label))
                 logger.debug("Labels: %s" % "\n".join([lbl.canonical_form for lbl in labels]))
@@ -607,8 +655,7 @@ class Crawler:
                 labels = [labelm.Label(lbl) for lbl in labels]
                 return Crawler._remove_package_private_labels(labels, artifact_def)
             except Exception as e:
-                msg = e.message if hasattr(e, "message") else type(e)
-                raise Exception("Error while processing dependencies: %s %s caused by %s\nOne possible cause for this error is that the java_libary rule that builds the jar artifact is not the default bazel package target (same name as dir it lives in)" % (msg, artifact_def, repr(e)))
+                raise Exception("Error while querying dependencies of %s. Maybe the label [%s] does not exist?\n%s" % (artifact_def, label.canonical_form, repr(e)))
 
     @classmethod
     def _remove_package_private_labels(clazz, labels, owning_artifact_def):
@@ -658,18 +705,31 @@ class Crawler:
         For the given lables, filters and partitions by source labels.
         Returns a tuple of source labels and dependencies.
         """
+        assert downstream_artifact_def is not None
         source_labels = []
         deps = []
         for lbl in labels:
             lbl = self._filter_label(lbl, downstream_artifact_def)
             if lbl is None:
                 continue
+            add_dependency = True
             artifact_def = None
             if lbl.is_source_ref:
                 source_labels.append(lbl)
                 artifact_def = self.workspace.parse_maven_artifact_def(lbl.package_path, downstream_artifact_def)
-            dep = downstream_artifact_def.generation_strategy.load_dependency(lbl, artifact_def)
-            deps.append(dep)
+                if artifact_def.generation_mode is genmode.ONEONEONE_CHILD:
+                    if artifact_def.is_or_has_same_111_parent(downstream_artifact_def):
+                        # the referenced package (//label) belongs to the same
+                        # 111 module, so we don't add any dep
+                        add_dependency = False
+                    else:
+                        # we need to point to the main 111 parent when building
+                        # the dep, since it has the full metadata, including
+                        # the aggregation target
+                        artifact_def = artifact_def.parent_artifact_def
+            if add_dependency:
+                dep = downstream_artifact_def.generation_strategy.load_dependency(lbl, artifact_def)
+                deps.append(dep)
         return source_labels, deps
 
     def _filter_label(self, label, downstream_artifact_def):

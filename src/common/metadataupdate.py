@@ -207,7 +207,7 @@ def _update_generation_mode_in_build_pom_content(build_pom_content, new_generati
 def _add_generation_mode_if_missing_in_build_pom_content(build_pom_content):
     m = generation_mode_re.search(build_pom_content)
     if m is None:
-        return _update_generation_mode_in_build_pom_content(build_pom_content, genmode.DEFAULT.name)
+        return _update_generation_mode_in_build_pom_content(build_pom_content, genmode.DYNAMIC.name)
     else:
         return build_pom_content
 

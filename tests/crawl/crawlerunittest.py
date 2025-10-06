@@ -58,7 +58,7 @@ class CrawlerUnitTest(unittest.TestCase):
         self.assertNotIn(force, parent_node_deps)
 
         # run the logic that pushes deps owned by "skip" artifacts up
-        crawler._push_transitives_to_parent()
+        crawler._push_dependencies_to_downstream()
 
         parent_node_deps = self._get_associated_deps(crawler, parent_node)
         self.assertEqual(2, len(parent_node_deps))

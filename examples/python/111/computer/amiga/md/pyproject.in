@@ -1,0 +1,10 @@
+artifact(
+    artifact_id = "amiga",
+    version = "1.0.1",
+    generation_mode = "dynamic_111",
+    target_name = "venv",
+)
+
+artifact_update(
+    version_increment_strategy = "minor",
+)

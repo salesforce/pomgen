@@ -38,19 +38,15 @@ class PyGenerationStrategy(generate.AbstractGenerationStrategy):
         return "toml"
 
     def load_dependency(self, label, artifact_def):
-        """
-        Load a dependency for a Python package.
-        
-        Args:
-            label: The label for the dependency
-            artifact_def: The artifact definition for source dependencies
-            
-        Returns:
-            A dependency instance appropriate for Python packages
-        """
         if label.is_source_ref:
             assert artifact_def is not None
-            return dependency.Dependency(artifact_def.artifact_id, artifact_def.version, artifact_def)
+            name = artifact_def.artifact_id
+            version = artifact_def.version
+            if not artifact_def.generation_mode.produces_artifact:
+                assert name is None
+                name = "<not used>"
+                version = "<not used>"
+            return dependency.Dependency(name, version, artifact_def)
         else:
             assert label in self._label_to_ext_dep, "unknown third party dependency [%s]" % label
             return self._label_to_ext_dep[label]
