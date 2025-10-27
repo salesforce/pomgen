@@ -6,11 +6,12 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 """
 
 
-import common.metadataupdate as buildpomupdate
+import common.metadataupdate as metadataupdate
 import common.os_util as os_util
 import config.config as config
 import config.exclusions as exclusions
 import crawl.git as git
+import crawl.workspace as workspace
 import common.manifestcontent as manifestcontent
 import generate.generationstrategyfactory as generationstrategyfactory
 import os
@@ -18,12 +19,14 @@ import tempfile
 import unittest
 
 
-class BuildPomUpdateTest(unittest.TestCase):
+class MetadataUpdateTest(unittest.TestCase):
 
     def setUp(self):
         self.repo_root = tempfile.mkdtemp("repo")
+        cfg = config.Config()
         self.fac = generationstrategyfactory.GenerationStrategyFactory(
-            self.repo_root, config.Config(), manifestcontent.NOOP, verbose=True)
+            self.repo_root, cfg, manifestcontent.NOOP, verbose=True)
+        self.workspace = workspace.Workspace(self.repo_root, cfg, self.fac, cache_artifact_defs=False)        
 
     def test_update_BUILD_pom_released__set_artifact_hash_to_current(self):
         pack1 = "somedir/p1"
@@ -40,13 +43,15 @@ class BuildPomUpdateTest(unittest.TestCase):
         self._commit(self.repo_root)
         self._touch_file_at_path(self.repo_root, pack1, "blah1")
         self._commit(self.repo_root)
-        pack1_hash = git.get_dir_hash(self.repo_root, [pack1], exclusions.src_exclusions())
+        pack1_hash = git.get_dir_hash(self.repo_root, [pack1], exclusions.src_exclusions(),
+                                      git_repo_must_exist=True)
         self._touch_file_at_path(self.repo_root, pack2, "blah2")
         self._commit(self.repo_root)
-        pack2_hash = git.get_dir_hash(self.repo_root, [pack2], exclusions.src_exclusions())
+        pack2_hash = git.get_dir_hash(self.repo_root, [pack2], exclusions.src_exclusions(),
+                                      git_repo_must_exist=True)
         self.assertNotEqual(pack1_hash, pack2_hash)
 
-        buildpomupdate.update_released_artifact(
+        metadataupdate.update_released_artifact(
             self.repo_root, [pack1, pack2], self.fac,
             exclusions.src_exclusions(), use_current_artifact_hash=True)
 
@@ -75,13 +80,15 @@ class BuildPomUpdateTest(unittest.TestCase):
         self._commit(self.repo_root)
         self._touch_file_at_path(self.repo_root, pack1, "blah1")
         self._commit(self.repo_root)
-        pack1_hash = git.get_dir_hash(self.repo_root, [pack1], exclusions.src_exclusions())
+        pack1_hash = git.get_dir_hash(self.repo_root, [pack1], exclusions.src_exclusions(),
+                                      git_repo_must_exist=True)
         self._touch_file_at_path(self.repo_root, pack2, "blah2")
         self._commit(self.repo_root)
-        pack2_hash = git.get_dir_hash(self.repo_root, [pack2, pack1], exclusions.src_exclusions())
+        pack2_hash = git.get_dir_hash(self.repo_root, [pack2, pack1], exclusions.src_exclusions(),
+                                      git_repo_must_exist=True)
         self.assertNotEqual(pack1_hash, pack2_hash)
 
-        buildpomupdate.update_released_artifact(
+        metadataupdate.update_released_artifact(
             self.repo_root, [pack1, pack2], self.fac,
             exclusions.src_exclusions(), use_current_artifact_hash=True)
 
@@ -105,13 +112,13 @@ class BuildPomUpdateTest(unittest.TestCase):
             self.assertIn('version = "1.0.0"', content)
             self.assertIn('artifact_hash = "aaa"', content)
 
-        buildpomupdate.update_released_artifact(
+        metadataupdate.update_released_artifact(
             self.repo_root, [package_rel_path], self.fac,
             exclusions.src_exclusions(), "1.2.3", "abc")
 
         with open(os.path.join(repo_package, "MVN-INF", "BUILD.pom.released"), "r") as f:
             content = f.read()
-            self.assertIn('released_maven_artifact(', content)
+            self.assertIn('released_artifact(', content)
             self.assertIn('version = "1.2.3"', content)
             self.assertIn('artifact_hash = "abc"', content)
 
@@ -122,7 +129,7 @@ class BuildPomUpdateTest(unittest.TestCase):
         self._write_build_pom(repo_package, "p1", "g1", "0.0.0",
                               generation_mode="dynamic")
 
-        buildpomupdate.update_released_artifact(
+        metadataupdate.update_released_artifact(
             self.repo_root, [package_rel_path], self.fac,
             exclusions.src_exclusions(), "1.2.3", "abc")
 
@@ -138,207 +145,36 @@ class BuildPomUpdateTest(unittest.TestCase):
     artifact_hash = "abcdefghi",
 )
 """
-        self.assertEqual(expected_content, buildpomupdate._get_build_pom_released_content("1.0.0", "abcdefghi"))
+        self.assertEqual(expected_content, metadataupdate._get_released_metadata("1.0.0", "abcdefghi"))
 
     def test_update_released_artifact_hash(self):
         content = """
-released_maven_artifact(
+released_artifact(
     artifact_hash = "123456789",
     version = "1.0.0",
 )
 """
         expected_content = """
-released_maven_artifact(
+released_artifact(
     artifact_hash = "abcdefghi",
     version = "1.0.0",
 )
 """
-        self.assertEqual(expected_content, buildpomupdate._update_artifact_hash_in_build_pom_released_content(content, "abcdefghi"))
-
+        self.assertEqual(expected_content, metadataupdate._update_artifact_hash_in_released_metadata(content, "abcdefghi"))
     def test_update_released_version(self):
         content = """
-released_maven_artifact(
+released_artifact(
     artifact_hash = "123456789",
     version = "1.0.0",
 )
 """
         expected_content = """
-released_maven_artifact(
+released_artifact(
     artifact_hash = "123456789",
     version = "2.0.0",
 )
 """
-        self.assertEqual(expected_content, buildpomupdate._update_version_in_build_pom_released_content(content, "2.0.0"))
-
-    def test_update_version__double_quotes(self):
-        content = """
-maven_artifact(
-    artifact_id = "a1",
-    group_id = "g1",
-    version = "1.0.0",
-)
-"""
-        expected_content = """
-maven_artifact(
-    artifact_id = "a1",
-    group_id = "g1",
-    version = "2.0.0",
-)
-"""
-        self.assertEqual(expected_content, buildpomupdate._update_version_in_build_pom_content(content, "2.0.0"))
-
-    def test_update_version__single_quotes(self):
-        content = """
-maven_artifact(
-    artifact_id = "a1",
-    group_id = "g1",
-    version = '1.0.0',
-)
-"""
-        expected_content = """
-maven_artifact(
-    artifact_id = "a1",
-    group_id = "g1",
-    version = '2.0.0',
-)
-"""
-        self.assertEqual(expected_content, buildpomupdate._update_version_in_build_pom_content(content, "2.0.0"))
-
-    def test_update_version__spaces(self):
-        content = """
-maven_artifact(
-    artifact_id = "a1",
-    group_id = "g1",
-    version=   "1.0.0   ",
-)
-"""
-        expected_content = """
-maven_artifact(
-    artifact_id = "a1",
-    group_id = "g1",
-    version=   "2.0.0",
-)
-"""
-        self.assertEqual(expected_content, buildpomupdate._update_version_in_build_pom_content(content, "2.0.0"))
-
-    def test_update_version__no_trailing_comma(self):
-        content = """
-maven_artifact(
-    artifact_id = "a1",
-    group_id = "g1",
-    version="1.0.0"
-)
-"""
-        expected_content = """
-maven_artifact(
-    artifact_id = "a1",
-    group_id = "g1",
-    version="2.0.0"
-)
-"""
-        self.assertEqual(expected_content, buildpomupdate._update_version_in_build_pom_content(content, "2.0.0"))
-
-    def test_update_version_increment_strategy__double_quotes(self):
-        content = """
-maven_artifact(
-    artifact_id = "a1",
-    group_id = "g1",
-    version = "1.0.0",
-)
-
-maven_artifact_update(
-    version_increment_strategy = "patch",
-)
-
-"""
-        expected_content = """
-maven_artifact(
-    artifact_id = "a1",
-    group_id = "g1",
-    version = "1.0.0",
-)
-
-maven_artifact_update(
-    version_increment_strategy = "minor",
-)
-
-"""
-        self.assertEqual(expected_content, buildpomupdate._update_version_incr_strategy_in_build_pom_content(content, "minor"))
-
-    def test_update_version_increment_strategy__single_quotes(self):
-        content = """
-maven_artifact(
-    artifact_id = "a1",
-    group_id = "g1",
-    version = "1.0.0",
-)
-
-maven_artifact_update(
-    version_increment_strategy = 'major',
-)
-
-"""
-        expected_content = """
-maven_artifact(
-    artifact_id = "a1",
-    group_id = "g1",
-    version = "1.0.0",
-)
-
-maven_artifact_update(
-    version_increment_strategy = 'patch',
-)
-
-"""
-        self.assertEqual(expected_content, buildpomupdate._update_version_incr_strategy_in_build_pom_content(content, "patch"))
-
-    def test_update_version_increment_strategy__no_trailing_comma(self):
-        content = """
-maven_artifact(
-    artifact_id = "a1",
-    group_id = "g1",
-    version = "1.0.0",
-)
-
-maven_artifact_update(
-    version_increment_strategy = 'patch'
-)
-
-"""
-        expected_content = """
-maven_artifact(
-    artifact_id = "a1",
-    group_id = "g1",
-    version = "1.0.0",
-)
-
-maven_artifact_update(
-    version_increment_strategy = 'minor'
-)
-
-"""
-        self.assertEqual(expected_content, buildpomupdate._update_version_incr_strategy_in_build_pom_content(content, "minor"))
-
-    def test_add_missing_version_increment_strategy(self):
-        content = """
-maven_artifact(
-    group_id = "g1",
-    artifact_id = "a1",
-    version = "1.2.3",
-)
-"""
-        expected_content = """
-maven_artifact(
-    group_id = "g1",
-    artifact_id = "a1",
-    version = "1.2.3",
-)
-
-artifact_update(
-    version_increment_strategy = "patch",
-)
-"""
-        self.assertEqual(expected_content, buildpomupdate._update_version_incr_strategy_in_build_pom_content(content, "patch"))
+        self.assertEqual(expected_content, metadataupdate._update_version_in_released_metadata(content, "2.0.0"))
 
     def test_update_version_in_BUILD_pom(self):
         package_rel_path = "package1/package2"
@@ -346,16 +182,24 @@ artifact_update(
         os.makedirs(repo_package)
         self._write_build_pom(repo_package, "a1", "g1", "1.2.3")
 
-        buildpomupdate.update_build_pom_file(
-            self.repo_root, [package_rel_path], self.fac, "4.5.6")
+        metadataupdate.update_artifact(
+            self.repo_root, [package_rel_path], self.workspace,
+            new_version="4.5.6")
 
         with open(os.path.join(repo_package, "MVN-INF", "BUILD.pom"), "r") as f:
-            content = f.read()
-            self.assertIn('maven_artifact(', content)
-            self.assertIn('group_id = "g1"', content)
-            self.assertIn('artifact_id = "a1"', content)
-            self.assertIn('version = "4.5.6"', content)
-            self.assertIn(')', content)
+            self.assertEqual(f.read(), """
+artifact(
+    artifact_id = "a1",
+    group_id = "g1",
+    version = "4.5.6",
+    generation_mode = "dynamic",
+
+)
+
+artifact_update(
+    version_increment_strategy = "minor",
+)
+""")
 
     def test_update_version_in_BUILD_pom__use_version_increment_strategy(self):
         package_rel_path = "package1/package2"
@@ -364,13 +208,13 @@ artifact_update(
         self._write_build_pom(repo_package, "a1", "g1", "1.2.3",
                               version_increment_strategy="major")
 
-        buildpomupdate.update_build_pom_file(
-            self.repo_root, [package_rel_path], self.fac, new_version=None,
-            update_version_using_version_incr_strat=True)
+        metadataupdate.update_artifact(
+            self.repo_root, [package_rel_path], self.workspace,
+            update_version_using_incr_strat=True)
 
         with open(os.path.join(repo_package, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
-            self.assertIn('maven_artifact(', content)
+            self.assertIn('artifact(', content)
             self.assertIn('group_id = "g1"', content)
             self.assertIn('artifact_id = "a1"', content)
             self.assertIn('version = "2.0.0"', content)
@@ -383,13 +227,13 @@ artifact_update(
         self._write_build_pom(repo_package, "a1", "g1", "1.2.3-SNAPSHOT",
                               version_increment_strategy="patch")
 
-        buildpomupdate.update_build_pom_file(
-            self.repo_root, [package_rel_path], self.fac, new_version=None,
-            update_version_using_version_incr_strat=True)
+        metadataupdate.update_artifact(
+            self.repo_root, [package_rel_path], self.workspace,
+            update_version_using_incr_strat=True)
 
         with open(os.path.join(repo_package, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
-            self.assertIn('maven_artifact(', content)
+            self.assertIn('artifact(', content)
             self.assertIn('group_id = "g1"', content)
             self.assertIn('artifact_id = "a1"', content)
             self.assertIn('version = "1.2.4-SNAPSHOT"', content)
@@ -403,13 +247,13 @@ artifact_update(
                               version_increment_strategy="major")
         self._write_build_pom_released(repo_package, "10.9.8", "abcdef")
 
-        buildpomupdate.update_build_pom_file(
-            self.repo_root, [package_rel_path], self.fac, new_version=None,
+        metadataupdate.update_artifact(
+            self.repo_root, [package_rel_path], self.workspace,
             set_version_to_last_released_version=True)
 
         with open(os.path.join(repo_package, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
-            self.assertIn('maven_artifact(', content)
+            self.assertIn('artifact(', content)
             self.assertIn('group_id = "g1"', content)
             self.assertIn('artifact_id = "a1"', content)
             self.assertIn('version = "10.9.8"', content)
@@ -430,13 +274,13 @@ artifact_update(
                               version_increment_strategy="major")
         self._write_build_pom_released(pack2_path, "10.10.10", "abcdef")
 
-        buildpomupdate.update_build_pom_file(
-            self.repo_root, [pack1, pack2], self.fac, new_version=None,
+        metadataupdate.update_artifact(
+            self.repo_root, [pack1, pack2], self.workspace,
             set_version_to_last_released_version=True)
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
-            self.assertIn('maven_artifact(', content)
+            self.assertIn('artifact(', content)
             self.assertIn('group_id = "p1g"', content)
             self.assertIn('artifact_id = "p1a"', content)
             self.assertIn('version = "9.9.9"', content)
@@ -444,7 +288,7 @@ artifact_update(
 
         with open(os.path.join(pack2_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
-            self.assertIn('maven_artifact(', content)
+            self.assertIn('artifact(', content)
             self.assertIn('group_id = "p2g"', content)
             self.assertIn('artifact_id = "p2a"', content)
             self.assertIn('version = "10.10.10"', content)
@@ -457,13 +301,13 @@ artifact_update(
         self._write_build_pom(repo_package, "a1", "g1", "1.2.3",
                               version_increment_strategy="major")
 
-        buildpomupdate.update_build_pom_file(
-            self.repo_root, [package_rel_path], self.fac, new_version=None,
+        metadataupdate.update_artifact(
+            self.repo_root, [package_rel_path], self.workspace,
             set_version_to_last_released_version=True)
 
         with open(os.path.join(repo_package, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
-            self.assertIn('maven_artifact(', content)
+            self.assertIn('artifact(', content)
             self.assertIn('group_id = "g1"', content)
             self.assertIn('artifact_id = "a1"', content)
             self.assertIn('version = "1.2.3"', content)
@@ -482,13 +326,13 @@ artifact_update(
         self._write_build_pom(pack2_path, "p2a", "p2g", "2.2.2",
                               version_increment_strategy="major")
 
-        buildpomupdate.update_build_pom_file(
-            self.repo_root, [pack1, pack2], self.fac,
+        metadataupdate.update_artifact(
+            self.repo_root, [pack1, pack2], self.workspace,
             version_qualifier_to_add="the_qual")
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
-            self.assertIn('maven_artifact(', content)
+            self.assertIn('artifact(', content)
             self.assertIn('group_id = "p1g"', content)
             self.assertIn('artifact_id = "p1a"', content)
             self.assertIn('version = "1.1.1-the_qual-SNAPSHOT"', content)
@@ -496,7 +340,7 @@ artifact_update(
 
         with open(os.path.join(pack2_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
-            self.assertIn('maven_artifact(', content)
+            self.assertIn('artifact(', content)
             self.assertIn('group_id = "p2g"', content)
             self.assertIn('artifact_id = "p2a"', content)
             self.assertIn('version = "2.2.2-the_qual"', content)
@@ -509,13 +353,13 @@ artifact_update(
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-foo-blah",
                               version_increment_strategy="major")
 
-        buildpomupdate.update_build_pom_file(
-            self.repo_root, [pack1], self.fac,
+        metadataupdate.update_artifact(
+            self.repo_root, [pack1], self.workspace,
             version_qualifier_to_remove="-foo")
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
-            self.assertIn('maven_artifact(', content)
+            self.assertIn('artifact(', content)
             self.assertIn('group_id = "p1g"', content)
             self.assertIn('artifact_id = "p1a"', content)
             self.assertIn('version = "3.2.1-blah"', content)
@@ -528,13 +372,13 @@ artifact_update(
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-SNAPSHOT",
                               version_increment_strategy="major")
 
-        buildpomupdate.update_build_pom_file(
-            self.repo_root, [pack1], self.fac,
+        metadataupdate.update_artifact(
+            self.repo_root, [pack1], self.workspace,
             version_qualifier_to_remove="SNAPSHOT")
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
-            self.assertIn('maven_artifact(', content)
+            self.assertIn('artifact(', content)
             self.assertIn('group_id = "p1g"', content)
             self.assertIn('artifact_id = "p1a"', content)
             self.assertIn('version = "3.2.1"', content)
@@ -547,13 +391,13 @@ artifact_update(
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-SNAPSHOT",
                               version_increment_strategy="major")
 
-        buildpomupdate.update_build_pom_file(
-            self.repo_root, [pack1], self.fac,
+        metadataupdate.update_artifact(
+            self.repo_root, [pack1], self.workspace,
             version_qualifier_to_remove="SNAP")
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
-            self.assertIn('maven_artifact(', content)
+            self.assertIn('artifact(', content)
             self.assertIn('group_id = "p1g"', content)
             self.assertIn('artifact_id = "p1a"', content)
             self.assertIn('version = "3.2.1"', content)
@@ -566,12 +410,12 @@ artifact_update(
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-foo-blah",
                               version_increment_strategy="major")
 
-        buildpomupdate.update_build_pom_file(
-            self.repo_root, [pack1], self.fac, version_qualifier_to_remove="fo")
+        metadataupdate.update_artifact(
+            self.repo_root, [pack1], self.workspace, version_qualifier_to_remove="fo")
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
-            self.assertIn('maven_artifact(', content)
+            self.assertIn('artifact(', content)
             self.assertIn('group_id = "p1g"', content)
             self.assertIn('artifact_id = "p1a"', content)
             self.assertIn('version = "3.2.1-blah"', content)
@@ -584,13 +428,13 @@ artifact_update(
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-foo-rel9",
                               version_increment_strategy="major")
 
-        buildpomupdate.update_build_pom_file(
-            self.repo_root, [pack1], self.fac,
+        metadataupdate.update_artifact(
+            self.repo_root, [pack1], self.workspace,
             version_qualifier_to_remove="rel")
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
-            self.assertIn('maven_artifact(', content)
+            self.assertIn('artifact(', content)
             self.assertIn('group_id = "p1g"', content)
             self.assertIn('artifact_id = "p1a"', content)
             self.assertIn('version = "3.2.1-foo"', content)
@@ -603,13 +447,13 @@ artifact_update(
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1",
                               version_increment_strategy="major")
 
-        buildpomupdate.update_build_pom_file(
-            self.repo_root, [pack1], self.fac,
+        metadataupdate.update_artifact(
+            self.repo_root, [pack1], self.workspace,
             version_qualifier_to_add="-the_qual-")
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
-            self.assertIn('maven_artifact(', content)
+            self.assertIn('artifact(', content)
             self.assertIn('group_id = "p1g"', content)
             self.assertIn('artifact_id = "p1a"', content)
             self.assertIn('version = "3.2.1-the_qual"', content)
@@ -622,14 +466,14 @@ artifact_update(
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1",
                               version_increment_strategy="major")
 
-        buildpomupdate.update_build_pom_file(
-            self.repo_root, [pack1], self.fac, version_qualifier_to_add="rel1")
-        buildpomupdate.update_build_pom_file(
-            self.repo_root, [pack1], self.fac, version_qualifier_to_add="rel2")
+        metadataupdate.update_artifact(
+            self.repo_root, [pack1], self.workspace, version_qualifier_to_add="rel1")
+        metadataupdate.update_artifact(
+            self.repo_root, [pack1], self.workspace, version_qualifier_to_add="rel2")
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
-            self.assertIn('maven_artifact(', content)
+            self.assertIn('artifact(', content)
             self.assertIn('group_id = "p1g"', content)
             self.assertIn('artifact_id = "p1a"', content)
             self.assertIn('version = "3.2.1-rel1-rel2"', content)
@@ -642,13 +486,13 @@ artifact_update(
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-casino",
                               version_increment_strategy="major")
 
-        buildpomupdate.update_build_pom_file(
-            self.repo_root, [pack1], self.fac,
+        metadataupdate.update_artifact(
+            self.repo_root, [pack1], self.workspace,
             version_qualifier_to_add="casino")
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
-            self.assertIn('maven_artifact(', content)
+            self.assertIn('artifact(', content)
             self.assertIn('group_id = "p1g"', content)
             self.assertIn('artifact_id = "p1a"', content)
             # -casino is not appended if the version ends with -casino already
@@ -662,69 +506,29 @@ artifact_update(
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-SNAPSHOT",
                               version_increment_strategy="major")
 
-        buildpomupdate.update_build_pom_file(
-            self.repo_root, [pack1], self.fac,
+        metadataupdate.update_artifact(
+            self.repo_root, [pack1], self.workspace,
             version_qualifier_to_add="SNAPSHOT")
 
         with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
             content = f.read()
-            self.assertIn('maven_artifact(', content)
+            self.assertIn('artifact(', content)
             self.assertIn('group_id = "p1g"', content)
             self.assertIn('artifact_id = "p1a"', content)
             # -SNAPSHOT is not added if the version ends with -SNAPSHOT already
             self.assertIn('version = "3.2.1-SNAPSHOT"', content)
             self.assertIn(')', content)
 
-    def test_update_generation_mode_in_BUILD_pom(self):
-        pack1 = "somedir/p1"
-        pack1_path = os.path.join(self.repo_root, pack1)
-        os.makedirs(pack1_path)
-        self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1",
-                              generation_mode="jar")
-
-        buildpomupdate.update_build_pom_file(
-            self.repo_root, [pack1], self.fac,
-            new_generation_mode="template")
-
-        with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
-            content = f.read()
-            self.assertIn('maven_artifact(', content)
-            self.assertIn('group_id = "p1g"', content)
-            self.assertIn('artifact_id = "p1a"', content)
-            self.assertIn('version = "3.2.1"', content)
-            self.assertIn('generation_mode = "template"', content)
-            self.assertIn(')', content)
-
-    def test_add_generation_mode_to_BUILD_pom(self):
-        pack1 = "somedir/p1"
-        pack1_path = os.path.join(self.repo_root, pack1)
-        os.makedirs(pack1_path)
-        self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1",
-                              generation_mode=None)
-
-        buildpomupdate.update_build_pom_file(
-            self.repo_root, [pack1], self.fac,
-            new_generation_mode="mypomgenmode")
-
-        with open(os.path.join(pack1_path, "MVN-INF", "BUILD.pom"), "r") as f:
-            content = f.read()
-            print(content)
-            self.assertIn('maven_artifact(', content)
-            self.assertIn('    group_id = "p1g"', content)
-            self.assertIn('    artifact_id = "p1a"', content)
-            self.assertIn('    version = "3.2.1"', content)
-            self.assertIn('    generation_mode = "mypomgenmode"', content)
-            self.assertIn(')', content)
-
     def _write_build_pom(self, package_path, artifact_id, group_id, version,
-                         generation_mode=None,
+                         generation_mode="dynamic",
                          version_increment_strategy="minor",
                          additional_change_detected_packages=None):
         build_pom = """
-maven_artifact(
+artifact(
     artifact_id = "%s",
     group_id = "%s",
-    version = "%s","""
+    version = "%s",
+"""
 
         build_pom = build_pom % (artifact_id, group_id, version)
 
@@ -737,7 +541,7 @@ maven_artifact(
         build_pom += """
 )
 
-maven_artifact_update(
+artifact_update(
     version_increment_strategy = "%s",
 )
 """
@@ -749,9 +553,13 @@ maven_artifact_update(
         with open(os.path.join(path, "BUILD.pom"), "w") as f:
            f.write(build_pom)
 
+        # parsing requires a LIBRARY.root file so we are adding it here
+        with open(os.path.join(path, "LIBRARY.root"), "w") as f:
+           f.write("")
+
     def _write_build_pom_released(self, package_path, released_version, released_artifact_hash):
         build_pom_released = """
-released_maven_artifact(
+released_artifact(
     version = "%s",
     artifact_hash = "%s",
 )

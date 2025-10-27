@@ -1,7 +1,5 @@
 artifact(
-    group_id = "com.pomgen.example",
     artifact_id = "parentpom",
-    version = "1.0.0-SNAPSHOT",
     generation_mode = "template",
     pom_template_file = "pom.template",
 )

@@ -10,9 +10,9 @@ BUILD.pom.released
 """
 
 
+import common.code as code
+import common.common as common
 import common.mdfiles as mdfiles
-import common.genmode as genmode
-import common.version as version
 import common.version_increment_strategy as vis
 import crawl.buildpom as buildpom
 import crawl.git as git
@@ -21,95 +21,26 @@ import re
 import sys
 
 
-def update_build_pom_file(root_path,
-                          packages,
-                          generation_strategy_factory,
-                          new_version=None,
-                          update_version_using_version_incr_strat=False,
-                          new_version_incr_strat=None,
-                          set_version_to_last_released_version=False,
-                          version_qualifier_to_add=None,
-                          version_qualifier_to_remove=None,
-                          new_generation_mode=None,
-                          add_generation_mode_if_missing=False):
-    """
-    If a non-None value is provided, updates the following values in BUILD.pom 
-    files in the specified packages:
-        - version (also version qualifier)
-        - version_increment_strategy
-        - generation_mode
-    """
+version_re = re.compile("(^.*version *= *[\"'])(.*?)([\"'].*)$", re.S)
+artifact_hash_re = re.compile("(^.*artifact_hash.*?=.*?[\"'])(.*?)([\"'].*)$", re.S)
+
+
+def update_artifact(root_path, packages, workspace,
+                    new_version=None,
+                    update_version_using_incr_strat=False,
+                    new_version_incr_strat=None,
+                    set_version_to_last_released_version=False,
+                    version_qualifier_to_add=None,
+                    version_qualifier_to_remove=None):
     for package in packages:
-        strategy = generation_strategy_factory.get_strategy_for_package(package)
-        assert strategy is not None, "Invalid package [%s]" % package
-        build_pom_content, build_pom_path = mdfiles.read_file(root_path, package, strategy.metadata_path)
-        try:
-            current_version = version.parse_build_pom_version(build_pom_content)
-
-            if current_version is None:
-                # only possible if generation_mode=skip. this isn't quite
-                # right, but we'll just ignore these type of packages
-                # for simplicitly, because there isn't much metadata to
-                # update anyway (only generation_mode is specified)
-                continue
-
-            updated_version = new_version
-
-
-            # increment current version using version increment strategy
-            if updated_version is None and update_version_using_version_incr_strat:
-                is_snapshot_version = current_version.upper().endswith(vis.SNAPSHOT_QUAL)
-                incr_strat_name = version.parse_version_increment_strategy_name(
-                    build_pom_content)
-                incr_strat = vis.get_version_increment_strategy(incr_strat_name)
-                updated_version = incr_strat.get_next_development_version(current_version)
-                if not is_snapshot_version:
-                    # get_next_development_version re-adds -SNAPSHOT, but this
-                    # wasn't a SNAPSHOT version to begin with, so remove that
-                    # qualifier for consistency
-                    updated_version = _remove_version_qualifier(updated_version, vis.SNAPSHOT_QUAL)
-
-
-            # set version back to previously released version
-            if updated_version is None and set_version_to_last_released_version:
-                build_pom_released_content, _ = mdfiles.read_file(root_path, package, strategy.released_metadata_path)
-                if build_pom_released_content is None:
-                    # if the BUILD.pom.released file cannot be read (because it
-                    # doesn't exist (yet), this is a noop - we don't want to 
-                    # fail here because typical usage is to update many 
-                    # artifacts at once
-                    pass
-                else:
-                    updated_version = version.parse_build_pom_released_version(build_pom_released_content)
-
-            # add version qualifier to current version
-            if updated_version is None and version_qualifier_to_add is not None:
-                vq = _sanitize_version_qualifier(version_qualifier_to_add)
-                if current_version.upper().endswith(vis.SNAPSHOT_QUAL):
-                    # special case - we insert the new qualifer BEFORE -SNAPSHOT
-                    updated_version = _insert_version_qualifier(current_version, vq)
-                else:
-                    updated_version = _append_version_qualifier(current_version, vq)
-
-            # remove version qualifier from current version
-            if updated_version is None and version_qualifier_to_remove is not None:
-                updated_version = _remove_version_qualifier(current_version, version_qualifier_to_remove)
-
-
-            if updated_version is not None:
-                build_pom_content = _update_version_in_build_pom_content(build_pom_content, updated_version)
-            if new_version_incr_strat is not None:
-                build_pom_content = _update_version_incr_strategy_in_build_pom_content(build_pom_content, new_version_incr_strat)
-            if new_generation_mode is not None:
-                build_pom_content = _update_generation_mode_in_build_pom_content(build_pom_content, new_generation_mode)
-            if add_generation_mode_if_missing:
-                build_pom_content = _add_generation_mode_if_missing_in_build_pom_content(build_pom_content)
-                    
-            mdfiles.write_file(build_pom_content, root_path, package, strategy.metadata_path)
-        except:
-            print("[ERROR] Cannot update BUILD.pom [%s]: %s" % (build_pom_path, sys.exc_info()))
-            raise
-
+        _maybe_update_version(root_path, package, workspace,
+                              new_version,
+                              update_version_using_incr_strat,
+                              set_version_to_last_released_version,
+                              version_qualifier_to_add,
+                              version_qualifier_to_remove)
+        _maybe_update_version_incr_strat(root_path, package, workspace, new_version_incr_strat)
+            
 
 def update_released_artifact(root_path, packages, generation_strategy_factory,
                              source_exclusions,
@@ -117,10 +48,10 @@ def update_released_artifact(root_path, packages, generation_strategy_factory,
                              new_artifact_hash=None,
                              use_current_artifact_hash=False):
     """
-    Updates the version and/or artifact hash attributes in the 
-    BUILD.pom.released files in the specified packages.
+    Updates the version and/or artifact hash attributes in the released
+    metadata files (ie BUILD.pom.released) in the specified packages.
 
-    Creates the BUILD.pom.released file if it does not exist.
+    Creates the released metadata file if it does not exist.
     """
     for package in packages:
         strategy = generation_strategy_factory.get_strategy_for_package(package)
@@ -151,77 +82,90 @@ def update_released_artifact(root_path, packages, generation_strategy_factory,
 
         try:
             if content is None:
-                content = _get_build_pom_released_content(new_version, artifact_hash)
+                content = _get_released_metadata(new_version, artifact_hash)
             else:
                 if new_version is not None:
-                    content = _update_version_in_build_pom_released_content(content, new_version)
+                    content = _update_version_in_released_metadata(content, new_version)
                 if artifact_hash is not None:
-                    content = _update_artifact_hash_in_build_pom_released_content(content, artifact_hash)
+                    content = _update_artifact_hash_in_released_metadata(content, artifact_hash)
             mdfiles.write_file(content, root_path, package, released_file_path)
         except:            
             print("[ERROR] Cannot update released manifest [%s]: %s" % (released_file_path, sys.exc_info()))
             raise
 
 
-def _update_version_in_build_pom_content(build_pom_content, new_version):
-    m = version.version_re.search(build_pom_content)
-    assert m is not None
-    return "%s%s%s" % (m.group(1), new_version.strip(), m.group(3))
+def _maybe_update_version(root_path, package, workspace,
+                          updated_version,
+                          update_version_using_incr_strat,
+                          set_version_to_last_released_version,
+                          version_qualifier_to_add,
+                          version_qualifier_to_remove):
+    if (updated_version is None and
+        not update_version_using_incr_strat and
+        not set_version_to_last_released_version and
+        version_qualifier_to_add is None and
+        version_qualifier_to_remove is None):
+        return
+        
+    art_def = workspace.parse_maven_artifact_def(package)
+    assert art_def is not None
+    current_version = art_def.version
+    if update_version_using_incr_strat:
+        is_snapshot_version = current_version.upper().endswith(vis.SNAPSHOT_QUAL)
+        incr_strat = vis.get_version_increment_strategy(art_def.version_increment_strategy_name)
+        updated_version = incr_strat.get_next_development_version(current_version)
+        if not is_snapshot_version:
+            # get_next_development_version re-adds -SNAPSHOT, but this
+            # wasn't a SNAPSHOT version to begin with, so remove that
+            # qualifier for consistency
+            updated_version = _remove_version_qualifier(updated_version, vis.SNAPSHOT_QUAL)
+    if set_version_to_last_released_version and art_def.released_version is not None:
+        updated_version = art_def.released_version
+    if version_qualifier_to_add is not None:
+        vq = _sanitize_version_qualifier(version_qualifier_to_add)
+        if current_version.upper().endswith(vis.SNAPSHOT_QUAL):
+            # special case - we insert the new qualifer BEFORE -SNAPSHOT
+            updated_version = _insert_version_qualifier(current_version, vq)
+        else:
+            updated_version = _append_version_qualifier(current_version, vq)
+    if version_qualifier_to_remove is not None:
+        updated_version = _remove_version_qualifier(current_version, version_qualifier_to_remove)
 
-version_incr_strat_re = re.compile("(^.*version_increment_strategy *= *[\"'])(.*?)([\"'].*)$", re.S)
-
-def _update_version_incr_strategy_in_build_pom_content(build_pom_content, new_version_increment_strategy):
-    m = version_incr_strat_re.search(build_pom_content)
-    if m is None:
-        build_pom_content += """
-artifact_update(
-    version_increment_strategy = "%s",
-)
-"""
-        return build_pom_content % new_version_increment_strategy.strip()
-    else:
-        return "%s%s%s" % (m.group(1), new_version_increment_strategy.strip(), m.group(3))
-
-generation_mode_re = re.compile("(^.*generation_mode *= *[\"'])(.*?)([\"'].*)$", re.S)
+    if updated_version is not None and current_version != updated_version:
+        _update_attr_value(root_path, art_def, "version", updated_version)
 
 
-def _update_generation_mode_in_build_pom_content(build_pom_content, new_generation_mode):
-    value = new_generation_mode.strip()
-    m = generation_mode_re.search(build_pom_content)
-    if m is None:
-        # add it to the end of maven_artifact
-        artifact_rule_name = "maven_artifact("
-        i = build_pom_content.find(artifact_rule_name)
-        if i == -1:
-            artifact_rule_name = "artifact("
-            i = build_pom_content.index(artifact_rule_name)
-        j = build_pom_content.index(")", i + len(artifact_rule_name))
-        insert_at = j
-        return build_pom_content[:insert_at] + \
-            '    generation_mode = "%s",%s' % (value, os.linesep) + \
-                build_pom_content[insert_at:]
-    else:
-        return "%s%s%s" % (m.group(1), value, m.group(3))
+def _maybe_update_version_incr_strat(root_path, package, workspace, updated_version_incr_strat):
+    if updated_version_incr_strat is not None:
+        art_def = workspace.parse_maven_artifact_def(package)        
+        assert art_def is not None
+        if art_def.version_increment_strategy_name != updated_version_incr_strat:
+            _update_attr_value(root_path, art_def, "version_increment_strategy", updated_version_incr_strat)
 
 
-def _add_generation_mode_if_missing_in_build_pom_content(build_pom_content):
-    m = generation_mode_re.search(build_pom_content)
-    if m is None:
-        return _update_generation_mode_in_build_pom_content(build_pom_content, genmode.DYNAMIC.name)
-    else:
-        return build_pom_content
+def _update_attr_value(root_path, art_def, attr_name, updated_value):
+    assert art_def is not None
+    assert updated_value is not None
+    if isinstance(updated_value, str):
+        updated_value = '"' + updated_value + '"'
+    md_file_path = art_def.get_md_file_path_for_attr(attr_name)
+    path = os.path.join(root_path, md_file_path)
+    content = common.read_file(path)
+    _, value_indexes = code.parse_artifact_attributes(content)
+    start, end = value_indexes[attr_name]
+    updated_content = content[:start] + updated_value + content[end+1:]
+    common.write_file(path, updated_content)
 
-def _update_version_in_build_pom_released_content(build_pom_released_content, new_released_version):
-    m = version.version_re.search(build_pom_released_content)
+
+def _update_version_in_released_metadata(build_pom_released_content, new_released_version):
+    m = version_re.search(build_pom_released_content)
     if m is None:
         raise Exception("Cannot find version in BUILD.pom.released")
     else:
         return "%s%s%s" % (m.group(1), new_released_version.strip(), m.group(3))
 
-artifact_hash_re = re.compile("(^.*artifact_hash.*?=.*?[\"'])(.*?)([\"'].*)$", re.S)
 
-
-def _update_artifact_hash_in_build_pom_released_content(build_pom_released_content, new_artifact_hash):
+def _update_artifact_hash_in_released_metadata(build_pom_released_content, new_artifact_hash):
     m = artifact_hash_re.search(build_pom_released_content)
     if m is None:
         raise Exception("Cannot find artifact_hash in BUILD.pom.released")
@@ -229,7 +173,7 @@ def _update_artifact_hash_in_build_pom_released_content(build_pom_released_conte
         return "%s%s%s" % (m.group(1), new_artifact_hash.strip(), m.group(3))
 
 
-def _get_build_pom_released_content(version, artifact_hash):
+def _get_released_metadata(version, artifact_hash):
     assert version is not None, "a released version must be specified, use --new_released_version"
     assert artifact_hash is not None, "artifact_hash cannot be None"
     content = """released_artifact(

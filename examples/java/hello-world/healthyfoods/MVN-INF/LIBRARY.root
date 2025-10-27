@@ -1,0 +1,4 @@
+artifact(
+    group_id = "com.pomgen.example",
+    version = "1.0.0-SNAPSHOT",
+)

@@ -15,6 +15,7 @@ from common import metadataupdate
 from common import version_increment_strategy as vis
 from config import config
 from generate import generationstrategyfactory
+import crawl.workspace as workspace
 import argparse
 import sys
 
@@ -46,10 +47,6 @@ def _parse_arguments(args):
         help="Adds the specified string to the end of the version, using '-' as a separator. If the version ends with \"-SNAPSHOT\", the specified qualifier is added before the snapshot suffix")
     parser.add_argument("--remove_version_qualifier", required=False, type=str,
         help="Removes the specified version qualifier from the version")
-    parser.add_argument("--new_generation_mode", required=False, type=str,
-        help="Adds or updates the value of 'generation_mode' manifest files")
-    parser.add_argument("--add_missing_generation_mode", required=False, action='store_true',
-        help="Adds 'generation_mode' to manifest files")
     parser.add_argument("--verbose", required=False, action="store_true",
         help="Verbose output")
 
@@ -64,6 +61,7 @@ if __name__ == "__main__":
     cfg = config.load(repo_root)
     fac = generationstrategyfactory.GenerationStrategyFactory(
         repo_root, cfg, manifestcontent.NOOP, verbose=args.verbose)
+    ws = workspace.Workspace(repo_root, cfg, fac, cache_artifact_defs=False)
     packages = argsupport.get_all_packages(repo_root, args.package, fac, verbose=args.verbose)
     assert len(packages) > 0, "Did not find any packages at [%s]" % args.package
 
@@ -72,20 +70,16 @@ if __name__ == "__main__":
         args.set_version_to_last_released or
         args.add_version_qualifier is not None or
         args.remove_version_qualifier is not None or
-        args.new_version_increment_strategy is not None or
-        args.new_generation_mode is not None or
-        args.add_missing_generation_mode):
+        args.new_version_increment_strategy is not None):
 
-        metadataupdate.update_build_pom_file(
-            repo_root, packages, fac,
+        metadataupdate.update_artifact(
+            repo_root, packages, ws,
             args.new_version,
             args.update_version_using_version_increment_strategy,
             args.new_version_increment_strategy,
             args.set_version_to_last_released,
             args.add_version_qualifier,
-            args.remove_version_qualifier,
-            args.new_generation_mode,
-            args.add_missing_generation_mode)
+            args.remove_version_qualifier)
 
     if (args.new_released_version is not None or
         args.new_released_artifact_hash is not None or

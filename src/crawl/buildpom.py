@@ -10,6 +10,7 @@ This module is responsible for parsing BUILD.pom and BUILD.pom.released files.
 
 import collections
 import common.code as code
+import common.common as common
 import common.mdfiles as mdfiles
 import common.genmode as genmode
 import os
@@ -148,7 +149,8 @@ class MavenArtifactDef:
                  generation_strategy=None,
                  parent_artifact_def=None,
                  excluded_dependency_paths=[],
-                 emitted_dependencies=[]):
+                 emitted_dependencies=[],
+                 attr_name_to_md_file_path=None):
         self._group_id = group_id
         self._artifact_id = artifact_id
         self._version = version
@@ -173,14 +175,20 @@ class MavenArtifactDef:
         self._parent_artifact_def = parent_artifact_def
         self._excluded_dependency_paths = excluded_dependency_paths
         self._emitted_dependencies = emitted_dependencies
+        self._attr_name_to_md_file_path = {} if attr_name_to_md_file_path is None else attr_name_to_md_file_path
 
         # data cleanup/verification/sanitization
         # these are separate methods for better readability
         self._sanitize_additional_change_detected_packages()
 
+
     @property
     def group_id(self):
         return self._group_id
+
+    @group_id.setter
+    def group_id(self, value):
+        self._group_id = value
 
     @property
     def artifact_id(self):
@@ -189,6 +197,10 @@ class MavenArtifactDef:
     @property
     def version(self):
         return self._version
+
+    @version.setter
+    def version(self, value):
+        self._version = value
 
     @property
     def generation_mode(self):
@@ -294,6 +306,23 @@ class MavenArtifactDef:
     def excluded_dependency_paths(self):
         return self._excluded_dependency_paths
 
+    def get_md_file_path_for_attr(self, attr_name):
+        """
+        Returns the relative path, from the repository root, of
+        the metadata file the given attribute was read from.
+        Raises if the given attribute name is not known.
+        """
+        return self._attr_name_to_md_file_path[attr_name]
+
+    def register_md_file_path_for_attr(self, attr_name, md_rel_path):
+        """
+        Args:
+            md_rel_path: the relative path to the md file, starting at the repository root.
+        """
+        assert attr_name not in self._attr_name_to_md_file_path
+        assert md_rel_path is not None
+        self._attr_name_to_md_file_path[attr_name] = md_rel_path
+
     def is_or_has_same_111_parent(self, other):
         """
         For a child 111 package artifact def, returns True if either:
@@ -328,22 +357,18 @@ ReleasedMavenArtifactDef = collections.namedtuple("ReleasedMavenArtifactDef", "v
 def parse_maven_artifact_def(root_path, package, generation_strategy):
     """
     Parses the metadata (for ex BUILD.pom) file *and* the released metadata
-    file (for ex BUILD.pom.released) file at the specified path and returns a
+    file (for ex BUILD.pom.released) file at the specified package and returns a
     MavenArtifactDef instance.
 
     Returns None if there is no metadata (for ex BUILD.pom) file at the
     specified path.
     """
-    content, path = mdfiles.read_file(root_path, package, generation_strategy.metadata_path)
+    package_md_path = os.path.join(package, generation_strategy.metadata_path)
+    content = common.read_file(os.path.join(root_path, package_md_path), must_exist=False)
     if content is None:
         return None
-    ma = code.get_function_block(content, "artifact")
-    if ma is None:
-        # maven_artifact is deprecated
-        ma = code.get_function_block(content, "maven_artifact")
-    assert ma is not None, "bad md content %s" % content
-    ma_attrs = code.parse_attributes(ma)
-    art_def =  MavenArtifactDef(
+    ma_attrs, _ = code.parse_artifact_attributes(content)
+    art_def = MavenArtifactDef(
         group_id=ma_attrs.get("group_id", None),
         artifact_id=ma_attrs.get("artifact_id", None),
         version=ma_attrs.get("version", None),
@@ -363,6 +388,10 @@ def parse_maven_artifact_def(root_path, package, generation_strategy):
         emitted_dependencies=ma_attrs.get("emitted_dependencies", []),
     )
 
+    for attr_name in ma_attrs.keys():
+        art_def.register_md_file_path_for_attr(attr_name, package_md_path)
+    
+
     md_dir_name = os.path.dirname(generation_strategy.metadata_path)        
     template_path = ma_attrs.get("pom_template_file", None)
     if template_path is not None:
@@ -373,20 +402,20 @@ def parse_maven_artifact_def(root_path, package, generation_strategy):
     generation_mode = genmode.from_string(art_def.generation_mode)
 
     if generation_mode.produces_artifact:
-        rel_art_def = _parse_released_maven_artifact_def(root_path, package, generation_strategy)
+        rel_art_def, md_file_path = _parse_released_artifact_def(root_path, package, generation_strategy)
         released_pom_content = _read_released_manifest(root_path, package, generation_strategy)
 
-        aup = code.get_function_block(content, "artifact_update")
-        if aup is None:
-            # maven_artifact_update is deprecated
-            aup = code.get_function_block(content, "maven_artifact_update")
-        aup_attrs = code.parse_attributes(aup)
-        vers_inc_strat_name = aup_attrs.get("version_increment_strategy", None)
-        return _augment_art_def_values(art_def, rel_art_def, package,
+        vers_inc_strat_name = ma_attrs.get("version_increment_strategy", None)
+        art_def = _augment_art_def_values(art_def, rel_art_def, package,
                                        md_dir_name,
                                        released_pom_content,
                                        vers_inc_strat_name,
                                        generation_mode)
+        if art_def.released_version is not None:
+            art_def.register_md_file_path_for_attr("released_version", md_file_path)
+        if art_def.released_artifact_hash is not None:
+            art_def.register_md_file_path_for_attr("released_artifact_hash", md_file_path)
+        return art_def
     else:
         return _augment_art_def_values(art_def, 
                                        rel_art_def=None,
@@ -405,20 +434,20 @@ def _read_released_manifest(root_path, package, generation_strategy):
     return content
 
 
-def _parse_released_maven_artifact_def(root_path, package, generation_strategy):
+def _parse_released_artifact_def(root_path, package, generation_strategy):
     """
-    Parses the released metadata file at the specified path and returns a 
-    ReleasedMavenArtifactDef instance.
+    Parses the released metadata file at the specified path and returns a tuple of
+    (ReleasedMavenArtifactDef instance, rel path from root to md file)
 
-    Returns None if there is no BUILD.pom.released file at the specified path.
+    Returns (None, None) if there is no released metadata file at the specified path.
     """
-    content, _ = mdfiles.read_file(root_path, package, generation_strategy.released_metadata_path)
+    content, abs_path = mdfiles.read_file(root_path, package, generation_strategy.released_metadata_path)
     if content is None:
-        return None
-    attrs = code.parse_attributes(content)
+        return None, None
+    attrs, _ = code.parse_attributes(content)
     return ReleasedMavenArtifactDef(
         version=attrs.get("version", None),
-        artifact_hash=attrs.get("artifact_hash", None))
+        artifact_hash=attrs.get("artifact_hash", None)), os.path.relpath(abs_path, root_path)
     
 
 def _augment_art_def_values(user_art_def, rel_art_def, bazel_package,
@@ -427,7 +456,7 @@ def _augment_art_def_values(user_art_def, rel_art_def, bazel_package,
                             version_increment_strategy_name,
                             generation_mode):
     """
-    Defaults values that have not been provided in the BUILD.pom file.
+    Defaults values that have not been provided explicitly.
     """
     return MavenArtifactDef(
         group_id=user_art_def.group_id,
@@ -450,4 +479,5 @@ def _augment_art_def_values(user_art_def, rel_art_def, bazel_package,
         generation_strategy=user_art_def.generation_strategy,
         excluded_dependency_paths=user_art_def.excluded_dependency_paths,
         emitted_dependencies=user_art_def.emitted_dependencies,
+        attr_name_to_md_file_path=user_art_def._attr_name_to_md_file_path,
     )

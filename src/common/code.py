@@ -5,10 +5,46 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 
 
-Helper functions used for parsing BUILD.pom[.released] files.
+Helper functions used for parsing metadata files.
 """
 
 import ast
+
+
+def parse_artifact_attributes(content):
+    """
+    Given metadata content having the rules:
+    
+    artifact(
+        ...
+    )
+
+    and 
+
+    artifact_update(
+       ...
+    )
+    
+    returns a tuple of (attributes dict, attribute values indexes).
+
+    See parse_attributes below for more details.
+    """
+    artifact, offset = _get_function_block(content, "artifact")
+    if artifact is None:
+        # maven_artifact is deprecated
+        artifact, offset = _get_function_block(content, "maven_artifact")
+    assert artifact is not None, "bad md content %s" % content
+    attributes, indexes = parse_attributes(artifact, offset)
+
+    artifact_update, offset = _get_function_block(content, "artifact_update")
+    if artifact_update is None:
+        # maven_artifact_update is deprecated
+        artifact_update, offset = _get_function_block(content, "maven_artifact_update")
+    if artifact_update is not None:
+        attrs_indexes = parse_attributes(artifact_update, offset)
+        attributes.update(attrs_indexes[0])
+        indexes.update(attrs_indexes[1])
+    return attributes, indexes
 
 
 def get_function_block(code, function_name):
@@ -25,20 +61,25 @@ def get_function_block(code, function_name):
     The logic below assumes the character ')' doesn't appear anywhere in the 
     function name or arguments.
     """
+    block, _ = _get_function_block(code, function_name)
+    return block
+
+
+def _get_function_block(code, function_name):
     start = code.find(function_name)
     if start == -1:
-        return None
+        return None, None
     if not _has_only_space_in_front(code, start):
-        return None
+        return None, None
     if not _has_space_until_open_paren(code, start + len(function_name)):
-        return None
+        return None, None
     end = code.index(")", start + len(function_name))
-    return code[start:end+1]
+    return code[start:end+1], start
 
 
-def parse_attributes(content):
+def parse_attributes(content, offset=0):
     """
-    Given a str of content like this:
+    Given a str of a rule invocation, for example:
 
     some_rule_name(
         a = True,
@@ -47,13 +88,17 @@ def parse_attributes(content):
         d = "value"
     )
 
-    Returns a dict of attr_name -> value, so for the example above:
-    {"a": True,
-     "b": ["my_things"],
-     "c": 1,
-     "d": "value"}
+    Returns a tuple of containing 2 elements:
+        -  dict of attr_name -> value, so for the example above:
+           {"a": True,
+            "b": ["my_things"],
+            "c": 1,
+            "d": "value"}
+        - a dict of attr_name -> tuple of (start_index, end_index) of the value
+          in the given content str
     """
     attributes = {}
+    indexes = {}
     equals_index = content.find("=")
     while equals_index != -1:
         name_start_index = _find_name_start_index(content, equals_index)
@@ -62,10 +107,12 @@ def parse_attributes(content):
             _find_value_start_and_end_index(content[equals_index:])
         value_start_index += equals_index
         value_end_index += equals_index
-        value = ast.literal_eval(content[value_start_index:value_end_index])
+        value_literal = content[value_start_index:value_end_index+1]
+        value = ast.literal_eval(value_literal)
         attributes[name] = value
+        indexes[name] = (value_start_index + offset, value_end_index + offset,)
         equals_index = content.find("=", value_end_index)
-    return attributes
+    return attributes, indexes
 
 
 def _find_value_start_and_end_index(content):
@@ -110,19 +157,17 @@ def _find_value_start_and_end_index(content):
                 else:
                     is_target_end = True # the paren that closes the target
         if content[i] == "," or is_target_end:
-            if (not within_string and 
-                list_level == 0 + function_level == 0 + dict_level == 0):
-                # check for closing char
-                for j in range(i-1, 0, -1):
-                    if content[j] in ("'", '"',):
-                        # include ending quote
-                        return value_start_index, j+1
-                    if content[j] in ("]", ")", "}",):
-                        # include function/list closing char
-                        return value_start_index, j+1
-                # the value is an identifer, for example: deps = deps
-                return value_start_index, i
+            if (not within_string and list_level == 0 + function_level == 0 + dict_level == 0):
+                value_end_index = _backtrack_to_end_of_last_value(content, i-1)
+                return value_start_index, value_end_index
     return value_start_index, i
+
+
+def _backtrack_to_end_of_last_value(content, index):
+    for i in range(index, 0, -1):
+        if not content[i].isspace():
+            break
+    return i
 
 
 def _find_name_start_index(content, equals_index):
