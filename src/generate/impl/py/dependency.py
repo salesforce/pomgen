@@ -11,9 +11,11 @@ class Dependency(generate.AbstractDependency):
     """
 
     def __init__(self, name, version, artifact_def=None, extras=None):
+        assert name is not None
+        assert version is not None
         self.name = name
         self.version = version
-        self.artifact_def = artifact_def # TODO we don't want to store this
+        self.artifact_def = artifact_def
         self.extras = tuple(extras) if extras else ()
 
         self.child_dependencies = []

@@ -1,0 +1,9 @@
+artifact(
+    artifact_id = "computer",
+    version = "0.0.3",
+    generation_mode = "dynamic",
+)
+
+artifact_update(
+    version_increment_strategy = "patch",
+)

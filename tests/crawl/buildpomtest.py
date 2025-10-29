@@ -317,6 +317,25 @@ class BuildPomTest(unittest.TestCase):
         # strip because loading the template strips trailing whitespace
         self.assertEqual(template_content.strip(), art_def.custom_pom_template_content)
 
+    def test_is_or_has_same_111_parent(self):
+        parent_art_def = buildpom.MavenArtifactDef(
+            "pg", "pa", "1", generation_mode=genmode.DYNAMIC_ONEONEONE)
+        other_parent_art_def = buildpom.MavenArtifactDef(
+            "pg2", "pa2", "1", generation_mode=genmode.DYNAMIC_ONEONEONE)
+        art_def = buildpom.MavenArtifactDef(
+            "g", "a", "1", generation_mode=genmode.ONEONEONE_CHILD,
+            parent_artifact_def=parent_art_def)
+        art_def_with_same_parent = buildpom.MavenArtifactDef(
+            "g2", "a2", "1", generation_mode=genmode.ONEONEONE_CHILD,
+            parent_artifact_def=parent_art_def)
+        art_def_with_other_parent = buildpom.MavenArtifactDef(
+            "g2", "a2", "1", generation_mode=genmode.ONEONEONE_CHILD,
+            parent_artifact_def=other_parent_art_def)
+
+        self.assertTrue(art_def.is_or_has_same_111_parent(parent_art_def))
+        self.assertTrue(art_def.is_or_has_same_111_parent(art_def_with_same_parent))
+        self.assertFalse(art_def.is_or_has_same_111_parent(art_def_with_other_parent))
+
     def _write_build_pom(self,
                          package_path,
                          artifact_id,

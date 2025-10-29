@@ -120,7 +120,8 @@ if __name__ == "__main__":
         for maven_artifact in sorted(maven_artifacts, key=lambda a: a.bazel_package):
             attrs = collections.OrderedDict()
             attrs["artifact_id"] = maven_artifact.artifact_id
-            attrs["group_id"] = maven_artifact.group_id
+            if maven_artifact.group_id is not None:
+                attrs["group_id"] = maven_artifact.group_id
             attrs["version"] = maven_artifact.version
             attrs["path"] = maven_artifact.bazel_package
             all_artifacts.append(attrs)

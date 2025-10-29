@@ -1,0 +1,11 @@
+artifact(
+    artifact_id = "phone",
+    version = "2.0.1",
+    generation_mode = "dynamic_111",
+    target_name = "venv",
+    excluded_dependency_paths = ["tests"],
+)
+
+artifact_update(
+    version_increment_strategy = "minor",
+)

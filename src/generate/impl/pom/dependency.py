@@ -43,6 +43,9 @@ class AbstractJarDependency(generate.AbstractDependency):
     
     bazel_package: The bazel package this dependency lives in, None for 
         artifacts that are not built out of the repository (for example Guava).
+
+
+    TODO - abstract common shape with py dep into ABC.
     """
     def __init__(self, group_id, artifact_id,
                  classifier=None, packaging=None, scope=None):

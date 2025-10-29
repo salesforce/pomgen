@@ -77,11 +77,11 @@ class AbstractGenerationStrategy(ABC):
         return os.path.join(md_dir_name, "%s.%s.released" % (self.base_manifest_filename, self.manifest_file_extension))
 
     @abstractmethod
-    def load_dependency(self, label, artifact_def):
+    def load_dependency(self, label, artifact_def=None):
         """
         For the given label and artifact_def, returns a dependency instance.
 
-        artifact_def is provided if the label is a source ref, for example,
+        artifact_def is only provided if the label is a source ref, for example,
         if the label is //projects/libs/cool_lib1 then the artifact_def
         is the parsed artifact file for projects/libs/cool_lib1.
 

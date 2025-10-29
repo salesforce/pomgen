@@ -1,9 +1,0 @@
-artifact(
-    artifact_id = "hello-python-lib",
-    version = "0.0.1",
-    generation_mode = "dynamic",
-)
-
-artifact_update(
-    version_increment_strategy = "patch",
-)

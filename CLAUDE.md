@@ -13,9 +13,9 @@ For verification of all code changes made, always run:
 The command above should complete without errors.
 Note that it isn't necessary to run bazel test on individual targets targets since the codebase is small - for simplicity just always use `bazel test //...`.
 
-`bazel run //:gen -- --package examples --destdir tests/examples_goldfiles`
+`rm -rf tests/examples_goldfiles/examples && bazel run //:gen -- --package examples --destdir tests/examples_goldfiles`
 The command above should complete without errors
-There should be no diffs un the tests/examples_goldfiles directory
+There should be no diffs under the tests/examples_goldfiles/examples directory
 
 `ruff check src tests misc`
 The command above should complete without errors

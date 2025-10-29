@@ -20,11 +20,11 @@ GROUP_ID = "group"
 POM_TEMPLATE_FILE = "foo.template"
 
 
-class CrawlerTest(unittest.TestCase):
+class CrawlerTestMisc(unittest.TestCase):
     """
     Various one-off crawler related test cases that require file-system setup.
     """
-    def setUpCollaborators(self, cfg=None):
+    def setup_collaborators(self, cfg=None):
         """
         The state that all tests need.
         """
@@ -39,7 +39,7 @@ class CrawlerTest(unittest.TestCase):
         """
         lib/a2 can reference lib/a1.
         """
-        self.setUpCollaborators()
+        self.setup_collaborators()
         self._write_library_root(self.repo_root_path, "lib")
         self._add_artifact(self.repo_root_path, "lib/a1", "template", deps=[])
         self._add_artifact(self.repo_root_path, "lib/a2", "template", deps=["//lib/a1"])
@@ -57,7 +57,7 @@ class CrawlerTest(unittest.TestCase):
         """
         lib/a2 can reference lib/a1:a1.
         """
-        self.setUpCollaborators()
+        self.setup_collaborators()
         self._write_library_root(self.repo_root_path, "lib")
         self._add_artifact(self.repo_root_path, "lib/a1", "template", deps=[])
         self._add_artifact(self.repo_root_path, "lib/a2", "template", deps=["//lib/a1:a1"])
@@ -76,7 +76,7 @@ class CrawlerTest(unittest.TestCase):
         """
         lib/a2 can reference lib/a1:foo.
         """
-        self.setUpCollaborators()
+        self.setup_collaborators()
         self._write_library_root(self.repo_root_path, "lib")
         self._add_artifact(self.repo_root_path, "lib/a1", "template", deps=[],
                            target_name="foo")
@@ -95,7 +95,7 @@ class CrawlerTest(unittest.TestCase):
         """
         Happy path.
         """
-        self.setUpCollaborators()
+        self.setup_collaborators()
         self._write_library_root(self.repo_root_path, "lib")
         self._add_artifact(self.repo_root_path, "lib/a1", "dynamic", deps=[],
                            target_name="foo")
@@ -112,7 +112,7 @@ class CrawlerTest(unittest.TestCase):
         Verifies that globally defined excluded dependency paths are filtered
         out.
         """
-        self.setUpCollaborators(self._get_config(excluded_dependency_paths=["projects/protos/",]))
+        self.setup_collaborators(self._get_config(excluded_dependency_paths=["projects/protos/",]))
         crawler = crawlerm.Crawler(self.ws, verbose=True)
         label = labelm.Label("@maven//:ch_qos_logback_logback_classic")
 
@@ -128,7 +128,7 @@ class CrawlerTest(unittest.TestCase):
         Verifies that locally defined excluded dependency paths are filtered
         out.
         """
-        self.setUpCollaborators(self._get_config())
+        self.setup_collaborators(self._get_config())
         crawler = crawlerm.Crawler(self.ws, verbose=True)
         downstream_artifact_def = buildpom.MavenArtifactDef(
             "g", "a", "v",
@@ -147,7 +147,7 @@ class CrawlerTest(unittest.TestCase):
         """
         Verifies that excluded dependency labels are filtered out.
         """
-        self.setUpCollaborators(self._get_config(excluded_dependency_labels=["@maven//:ch_qos_logback_logback_classic",]))
+        self.setup_collaborators(self._get_config(excluded_dependency_labels=["@maven//:ch_qos_logback_logback_classic",]))
         self._write_library_root(self.repo_root_path, "lib")
         self._add_artifact(self.repo_root_path, "lib/a1", "dynamic", deps=[],
                            target_name="foo")
@@ -171,7 +171,7 @@ class CrawlerTest(unittest.TestCase):
         Verifies that no error is triggered when a dep has neverlink enabled
         and it has no BUILD.pom file.
         """
-        self.setUpCollaborators()
+        self.setup_collaborators()
         self._write_basic_workspace_file(self.repo_root_path)
         self._write_library_root(self.repo_root_path, "lib")
         # no BUILD.pom file
