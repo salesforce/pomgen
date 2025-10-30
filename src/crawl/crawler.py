@@ -753,7 +753,7 @@ class Crawler:
                 if bazel.is_never_link_dep(self.workspace.repo_root_path, label.canonical_form):
                     return None
                 else:
-                    raise Exception("cannot process this package because there is no metadata directory: [%s]" % label.package_path)
+                    raise Exception("cannot process this package because there is no manifest metadata at: [%s]" % label.package_path)
         return label
 
     def _store_if_leafnode(self, node):
