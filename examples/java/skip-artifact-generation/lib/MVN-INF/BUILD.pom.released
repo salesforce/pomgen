@@ -1,0 +1,4 @@
+released_maven_artifact(
+    version = "0.0.1",
+    artifact_hash = "ec2c3b6c895c18ee0331954c85920859de9765bd",
+)
