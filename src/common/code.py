@@ -84,7 +84,7 @@ def _find_value_start_and_end_index(content):
                 value_start_index = i
 
         if content[i] in ("'", '"',):
-            if list_level + function_level == 0 + dict_level == 0:
+            if list_level + function_level + dict_level == 0:
                 within_string = not within_string
         if content[i] == "[":
             if not within_string and function_level + dict_level  == 0:
@@ -123,18 +123,6 @@ def _find_value_start_and_end_index(content):
                 # the value is an identifer, for example: deps = deps
                 return value_start_index, i
     return value_start_index, i
-
-
-def _find_target_end(content, start_target_index):
-    paren_nesting_level = 1
-    i = start_target_index
-    while paren_nesting_level != 0:
-        if content[i] == "(":
-            paren_nesting_level += 1
-        elif content[i] == ")":
-            paren_nesting_level -=1
-        i += 1
-    return i
 
 
 def _find_name_start_index(content, equals_index):
