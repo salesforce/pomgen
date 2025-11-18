@@ -65,6 +65,7 @@ foo(
     a_tuple = (1, 2, "sn")
 )
 """
+        attributes, _ = code.parse_attributes(content)
         self.assertEqual({"a_string": "my = string",
                           "bool_True": True,
                           "bool_False": False,
@@ -72,7 +73,73 @@ foo(
                           "a_list": ["a", "b", "c"],
                           "a_dict": {"one": 2},
                           "a_tuple": (1, 2, "sn")},
-                         code.parse_attributes(content))
+                          attributes)
+
+    def test_indexes__with_comma(self):
+        content = """
+# foo
+
+java_binary(
+    name   =   "test",
+    flaky  = True,
+    place = "Atlanta"
+)
+"""
+        _, value_indexes = code.parse_attributes(content)
+        start, end = value_indexes["flaky"]
+
+        updated_content = content[:start] + "False" + content[end+1:]
+
+        self.assertEqual("""
+# foo
+
+java_binary(
+    name   =   "test",
+    flaky  = False,
+    place = "Atlanta"
+)
+""", updated_content)
+
+    def test_indexes__with_space_after(self):
+        content = """
+java_binary(
+    name   =   "test",
+    flaky  = True  ,
+    place = "Atlanta"
+)
+"""
+        _, value_indexes = code.parse_attributes(content)
+        start, end = value_indexes["flaky"]
+
+        updated_content = content[:start] + "False" + content[end+1:]
+
+        self.assertEqual("""
+java_binary(
+    name   =   "test",
+    flaky  = False  ,
+    place = "Atlanta"
+)
+""", updated_content)
+
+
+    def test_indexes__without_comma(self):
+        content = """
+java_binary(
+    name   =   "test",
+    flaky=  True
+)
+"""
+        _, value_indexes = code.parse_attributes(content)
+        start, end = value_indexes["flaky"]
+
+        updated_content = content[:start] + "False" + content[end+1:]
+
+        self.assertEqual("""
+java_binary(
+    name   =   "test",
+    flaky=  False
+)
+""", updated_content)
 
     def test_parse_attributes__linebreaks(self):
         content = """
@@ -85,10 +152,65 @@ foo(
    a_string = "forever",
 )
 """
+        attributes, _ = code.parse_attributes(content)
         self.assertEqual({"a_string": "forever",
                           "a_list": ["something", "here", "is", "[GOING ON]"]},
-                         code.parse_attributes(content))
+                         attributes)
         
+    def test_parse_artifact_attributes__artifact(self):
+        content = """
+# def:
+artifact(
+    name = "LAX",
+)
+# update:
+artifact_update(
+    strat = "guitar",
+)
+"""
+        _, value_indexes = code.parse_artifact_attributes(content)
+        start, end = value_indexes["name"]
+
+        updated_content = content[:start] + '"NRT"' + content[end+1:]
+
+        self.assertEqual("""
+# def:
+artifact(
+    name = "NRT",
+)
+# update:
+artifact_update(
+    strat = "guitar",
+)
+""", updated_content)
+
+    def test_parse_artifact_attributes__artifact_update(self):
+        content = """
+# def:
+artifact(
+    name = "LAX",
+)
+# update:
+artifact_update(
+    strat = "guitar",
+)
+"""
+        _, value_indexes = code.parse_artifact_attributes(content)
+        start, end = value_indexes["strat"]
+
+        updated_content = content[:start] + '"tocaster"' + content[end+1:]
+
+        self.assertEqual("""
+# def:
+artifact(
+    name = "LAX",
+)
+# update:
+artifact_update(
+    strat = "tocaster",
+)
+""", updated_content)
+
 
 if __name__ == '__main__':
     unittest.main()

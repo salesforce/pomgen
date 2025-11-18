@@ -51,6 +51,7 @@ class BuildPomTest(unittest.TestCase):
         self.assertEqual("major", art_def.version_increment_strategy_name)
         self.assertEqual(None, art_def.jar_path)
         self.assertFalse(art_def.gen_dependency_management_pom)
+        self.assertEqual("package1/package2/MVN-INF/BUILD.pom", art_def.get_md_file_path_for_attr("version"))
 
     def test_parse_without_BUILD_pom(self):
         package_rel_path = "package1/package2"
@@ -61,7 +62,6 @@ class BuildPomTest(unittest.TestCase):
         artifact_def = buildpom.parse_maven_artifact_def(
             repo_root, package_rel_path, self._get_strategy())
 
-        # TODO - can this throw an exception with a useful message?
         self.assertIsNone(artifact_def)
 
     def test_parse_BUILD__pom__empty_deps(self):
@@ -153,7 +153,9 @@ class BuildPomTest(unittest.TestCase):
         self.assertTrue(art_def.change_detection)
         self.assertEqual(package_rel_path, art_def.bazel_package)
         self.assertEqual(released_version, art_def.released_version)
+        self.assertEqual("package1/package2/MVN-INF/BUILD.pom.released", art_def.get_md_file_path_for_attr("released_version"))
         self.assertEqual(released_artifact_hash, art_def.released_artifact_hash)
+        self.assertEqual("package1/package2/MVN-INF/BUILD.pom.released", art_def.get_md_file_path_for_attr("released_artifact_hash"))        
 
     def test_parse_BUILD_pom__default_pomgen_mode(self):
         package_rel_path = "package1/package2"

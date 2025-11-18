@@ -22,13 +22,14 @@ class Workspace:
     Manages workspace-level entities and translates between Bazel and 
     Maven concepts.
     """
-    def __init__(self, repo_root_path, config, generation_strategy_factory):
+    def __init__(self, repo_root_path, config, generation_strategy_factory, cache_artifact_defs=True):
         self.repo_root_path = repo_root_path
         self.source_exclusions = config.all_src_exclusions
         self.change_detection_enabled = config.change_detection_enabled
         self.excluded_dependency_paths = config.excluded_dependency_paths
         self.excluded_dependency_labels = config.excluded_dependency_labels
         self.generation_strategy_factory = generation_strategy_factory
+        self.cache_artifact_defs = cache_artifact_defs
         self._package_to_artifact_def = {} # cache for artifact_def instances
 
     def parse_maven_artifact_def(self, package, downstream_artifact_def=None):
@@ -60,15 +61,16 @@ class Workspace:
             else:
                 assert strat is not None, "strategy cannot be None - this is a bug"
                 parent_art_def = self._parse_artifact_def(parent_package, strat)
-                self._package_to_artifact_def[parent_package] = parent_art_def
+                if self.cache_artifact_defs:
+                    self._package_to_artifact_def[parent_package] = parent_art_def
             assert parent_art_def is not None
             assert parent_art_def.generation_mode is genmode.DYNAMIC_ONEONEONE, "did not find any metadata at [%s], found parent metadata at [%s], however parent does not have required 1:1:1 mode enabled" % (package, parent_package)
             art_def = _build_oneoneone_child_artifact_def(package, parent_art_def)
         else:
             art_def = self._parse_artifact_def(package, strategy)
 
-        # cache result, next time it is returned from cache
-        self._package_to_artifact_def[package] = art_def
+        if self.cache_artifact_defs:
+            self._package_to_artifact_def[package] = art_def
         return art_def
 
     def filter_artifact_producing_packages(self, packages):

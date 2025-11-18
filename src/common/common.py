@@ -26,9 +26,16 @@ def get_repo_root(repo_root=None):
     return repo_root
 
 
-def read_file(path):
-    with open(path) as f:
+def read_file(path, must_exist=True):
+    if not must_exist and not os.path.exists(path):
+        return None
+    with open(path, "r") as f:
         return f.read()
+
+
+def write_file(path, content):
+    with open(path, "w") as f:
+        f.write(content)
 
 
 def _has_workspace_file(repo_root):

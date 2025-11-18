@@ -1,7 +1,5 @@
 artifact(
-    group_id = "com.pomgen.example",
     artifact_id = "vegetable-api",
-    version = "1.0.0-SNAPSHOT",
     generation_mode = "dynamic",
 )
 

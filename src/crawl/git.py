@@ -8,10 +8,11 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 from common import mdfiles
 from common.os_util import run_cmd
 import os
+import subprocess
 import tempfile
 
 
-def get_dir_hash(repo_root_path, rel_paths, source_exclusions):
+def get_dir_hash(repo_root_path, rel_paths, source_exclusions, git_repo_must_exist=False):
     """
     Returns a checksum for the content of the specified rel_paths (list of
     strings, relative to repo_root_path).
@@ -23,7 +24,8 @@ def get_dir_hash(repo_root_path, rel_paths, source_exclusions):
         dir_path = os.path.join(repo_root_path, rel_path)
         if not os.path.exists(dir_path):
             raise Exception("Directory must exist for hash computation: [%s]" % dir_path)
-        files_output += _ls_files(repo_root_path, rel_path, source_exclusions)
+        files_output += _ls_files(repo_root_path, rel_path, source_exclusions,
+                                  git_repo_must_exist)
     with tempfile.NamedTemporaryFile("w") as f:
         f.write(files_output)
         f.flush()
@@ -46,9 +48,16 @@ def has_uncommitted_changes(repo_root_path, rel_path, source_exclusions):
     return len(uncommitted_changes) > 0
 
 
-def _ls_files(repo_root_path, rel_path, source_exclusions):
+def _ls_files(repo_root_path, rel_path, source_exclusions, git_repo_must_exist):
     file_path_filter = _get_file_path_filter(rel_path, source_exclusions)
-    output = run_cmd("git ls-files -s %s" % rel_path, cwd=repo_root_path).splitlines()
+    output = []
+    try:
+        output = run_cmd("git ls-files -s %s" % rel_path, cwd=repo_root_path).splitlines()
+    except subprocess.CalledProcessError:
+        # this will happen if no files are in git (or if git isn't used at all)
+        # probably we should remove the git dependency here
+        if git_repo_must_exist:
+            raise
     filtered_output = []
     for line in output:
         # each line looks like this:

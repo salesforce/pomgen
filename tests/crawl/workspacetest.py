@@ -38,6 +38,18 @@ class WorkspaceTest(unittest.TestCase):
         self.assertEqual(art_def.version, "1.0.0-SNAPSHOT")
         self.assertIs(art_def.generation_mode, genmode.DYNAMIC)
 
+    def test_parse_maven_artifact_def__version_in_lib_root(self):
+        self.setup_repository()
+        self._write_library_root(self.repo_root_path, "lib", version="96.0.0")
+        self._add_artifact(self.repo_root_path, "lib/a1", version=None)
+
+        art_def = self.ws.parse_maven_artifact_def("lib/a1")
+
+        self.assertEqual("a1", art_def.artifact_id)
+        self.assertEqual("lib/a1/MVN-INF/BUILD.pom", art_def.get_md_file_path_for_attr("artifact_id"))
+        self.assertEqual(art_def.version, "96.0.0")        
+        self.assertEqual("lib/MVN-INF/LIBRARY.root", art_def.get_md_file_path_for_attr("version"))
+
     def test_parse_child_package_without_art_def(self):
         self.setup_repository()
         self._write_library_root(self.repo_root_path, "lib")
@@ -75,30 +87,42 @@ class WorkspaceTest(unittest.TestCase):
     def _get_config(self, **kwargs):
         return config.Config(**kwargs)
 
-    def _write_library_root(self, repo_root_path, package_rel_path):
+    def _write_library_root(self, repo_root_path, package_rel_path, version=None):
         path = os.path.join(repo_root_path, package_rel_path, "MVN-INF")
         if not os.path.exists(path):
             os.makedirs(path)
         with open(os.path.join(path, "LIBRARY.root"), "w") as f:
-           f.write("foo")
+            if version is None:
+                f.write("")
+            else:
+                content = """
+artifact(
+    version = "%s",
+)
+""" % version
+                f.write(content)
 
     def _add_artifact(self, repo_root_path, package_rel_path,
+                      version="1.0.0-SNAPSHOT",
                       generation_mode="dynamic"):
         self._write_build_pom(repo_root_path, package_rel_path, 
                               artifact_id=os.path.basename(package_rel_path),
                               group_id="g1",
-                              version="1.0.0-SNAPSHOT",
+                              version=version,
                               generation_mode=generation_mode)
 
         self._write_build_file(repo_root_path, package_rel_path)
 
     def _write_build_pom(self, repo_root_path, package_rel_path,
                          artifact_id, group_id, version, generation_mode):
+
+        version_content = "" if version is None else 'version = "%s",a' % version
+        
         build_pom = """
 maven_artifact(
     artifact_id = "%s",
     group_id = "%s",
-    version = "%s",
+    %s
     generation_mode = "%s",
 )
 
@@ -108,7 +132,7 @@ maven_artifact_update(
 """
         path = os.path.join(repo_root_path, package_rel_path, "MVN-INF")
         os.makedirs(path)
-        content = build_pom % (artifact_id, group_id, version, generation_mode)
+        content = build_pom % (artifact_id, group_id, version_content, generation_mode)
                                
         with open(os.path.join(path, "BUILD.pom"), "w") as f:
             f.write(content)
