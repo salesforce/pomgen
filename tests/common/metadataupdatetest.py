@@ -69,11 +69,9 @@ class MetadataUpdateTest(unittest.TestCase):
         os.makedirs(os.path.join(pack1_path))
         pack2_path = os.path.join(self.repo_root, pack2)
         os.makedirs(os.path.join(pack2_path))
-        self._write_build_pom(pack1_path, "p1", "g1", "0.0.0",
-                              generation_mode="dynamic")
+        self._write_build_pom(pack1_path, "p1", "g1", "0.0.0")
         self._write_build_pom_released(pack1_path, "1.0.0", "aaa")
         self._write_build_pom(pack2_path, "p2", "g2", "0.0.0",
-                              generation_mode="dynamic",
                               additional_change_detected_packages=[pack1])
         self._write_build_pom_released(pack2_path, "1.0.0", "bbb")
         self._setup_repo(self.repo_root)
@@ -103,8 +101,7 @@ class MetadataUpdateTest(unittest.TestCase):
         package_rel_path = "package1/package2"
         repo_package = os.path.join(self.repo_root, package_rel_path)
         os.makedirs(repo_package)
-        self._write_build_pom(repo_package, "p1", "g1", "0.0.0",
-                              generation_mode="dynamic")
+        self._write_build_pom(repo_package, "p1", "g1", "0.0.0")
         self._write_build_pom_released(repo_package, "1.0.0", "aaa")
         # sanity:
         with open(os.path.join(repo_package, "MVN-INF", "BUILD.pom.released"), "r") as f:
@@ -126,8 +123,7 @@ class MetadataUpdateTest(unittest.TestCase):
         package_rel_path = "package1/package2"
         repo_package = os.path.join(self.repo_root, package_rel_path)
         os.makedirs(repo_package)
-        self._write_build_pom(repo_package, "p1", "g1", "0.0.0",
-                              generation_mode="dynamic")
+        self._write_build_pom(repo_package, "p1", "g1", "0.0.0")
 
         metadataupdate.update_released_artifact(
             self.repo_root, [package_rel_path], self.fac,
@@ -180,11 +176,12 @@ released_artifact(
         package_rel_path = "package1/package2"
         repo_package = os.path.join(self.repo_root, package_rel_path)
         os.makedirs(repo_package)
+        self._write_library_root(package_rel_path)
         self._write_build_pom(repo_package, "a1", "g1", "1.2.3")
 
         metadataupdate.update_artifact(
             self.repo_root, [package_rel_path], self.workspace,
-            new_version="4.5.6")
+            updated_version="4.5.6")
 
         with open(os.path.join(repo_package, "MVN-INF", "BUILD.pom"), "r") as f:
             self.assertEqual(f.read(), """
@@ -193,7 +190,6 @@ artifact(
     group_id = "g1",
     version = "4.5.6",
     generation_mode = "dynamic",
-
 )
 
 artifact_update(
@@ -204,7 +200,7 @@ artifact_update(
     def test_update_version_in_BUILD_pom__use_version_increment_strategy(self):
         package_rel_path = "package1/package2"
         repo_package = os.path.join(self.repo_root, package_rel_path)
-        os.makedirs(repo_package)
+        self._write_library_root(package_rel_path)
         self._write_build_pom(repo_package, "a1", "g1", "1.2.3",
                               version_increment_strategy="major")
 
@@ -220,10 +216,93 @@ artifact_update(
             self.assertIn('version = "2.0.0"', content)
             self.assertIn(')', content)
 
+    def test_update_version_in_BUILD_pom__use_version_increment_strategy__skip_is_noop(self):
+        package_rel_path = "package1/package2"
+        repo_package = os.path.join(self.repo_root, package_rel_path)
+        self._write_library_root(package_rel_path)
+        self._write_build_pom(repo_package, generation_mode="skip")
+
+        metadataupdate.update_artifact(
+            self.repo_root, [package_rel_path], self.workspace,
+            update_version_using_incr_strat=True)
+
+        with open(os.path.join(self.repo_root, package_rel_path, "MVN-INF", "BUILD.pom")) as f:
+            self.assertEqual("""
+artifact(
+    generation_mode = "skip"            
+)
+""".strip(), f.read().strip())
+
+    def test_update_version_in_LIBRARY_root__use_version_increment_strategy__multiple_packages(self):
+        lib1_rel_path = "lib1"
+        self._write_library_root(lib1_rel_path, version="1.2.3",
+                                 version_increment_strategy="major")        
+        lib1_packages = self._add_modules_to_library(lib1_rel_path)
+
+        lib2_rel_path = "lib2"
+        self._write_library_root(lib2_rel_path, version="4.5.6",
+                                 version_increment_strategy="major")
+        lib2_packages = self._add_modules_to_library(lib2_rel_path)
+
+
+        # set version increment startegy to minor for lib1 and patch for lib2
+        metadataupdate.update_artifact(self.repo_root, lib1_packages, self.workspace,
+            updated_version_incr_strat="minor")
+        metadataupdate.update_artifact(self.repo_root, lib2_packages, self.workspace,
+            updated_version_incr_strat="patch")
+
+        # update all versions using the version increment strategy        
+        metadataupdate.update_artifact(
+            self.repo_root, lib1_packages + lib2_packages, self.workspace,
+            update_version_using_incr_strat=True)
+
+
+        with open(os.path.join(self.repo_root, lib1_rel_path, "MVN-INF", "LIBRARY.root")) as f:
+            self.assertEqual("""
+artifact(
+    version = "1.3.0",
+)
+
+artifact_update(
+    version_increment_strategy = "minor",
+)
+""".strip(), f.read().strip())
+
+        with open(os.path.join(self.repo_root, lib2_rel_path, "MVN-INF", "LIBRARY.root")) as f:
+            self.assertEqual("""
+artifact(
+    version = "4.5.7",
+)
+
+artifact_update(
+    version_increment_strategy = "patch",
+)
+""".strip(), f.read().strip())
+
+    def _add_modules_to_library(self, lib_rel_path):
+        pack1_rel_path = os.path.join(lib_rel_path, "pack1")
+        pack1_path = os.path.join(self.repo_root, pack1_rel_path)
+        self._write_build_pom(pack1_path, "a1", "g1", version=None,
+                              version_increment_strategy=None)
+
+        pack2_rel_path = os.path.join(lib_rel_path, "pack2")
+        pack2_path = os.path.join(self.repo_root, pack2_rel_path)
+        self._write_build_pom(pack2_path, "a2", "g1", version=None,
+                              version_increment_strategy=None)
+
+        pack3_rel_path = os.path.join(lib_rel_path, "pack3")
+        pack3_path = os.path.join(self.repo_root, pack3_rel_path)
+        self._write_build_pom(pack3_path, "a3", "g1", version=None,
+                              version_increment_strategy=None)
+
+        assert pack1_rel_path != pack2_rel_path != pack3_rel_path
+        
+        return (pack1_rel_path, pack2_rel_path, pack3_rel_path)
+
     def test_update_version_in_BUILD_pom__use_version_increment_strategy__snap(self):
         package_rel_path = "package1/package2"
         repo_package = os.path.join(self.repo_root, package_rel_path)
-        os.makedirs(repo_package)
+        self._write_library_root(package_rel_path)
         self._write_build_pom(repo_package, "a1", "g1", "1.2.3-SNAPSHOT",
                               version_increment_strategy="patch")
 
@@ -242,7 +321,7 @@ artifact_update(
     def test_update_version_in_BUILD_pom__set_to_last_released_version(self):
         package_rel_path = "package1/package2"
         repo_package = os.path.join(self.repo_root, package_rel_path)
-        os.makedirs(repo_package)
+        self._write_library_root(package_rel_path)
         self._write_build_pom(repo_package, "a1", "g1", "1.2.3",
                               version_increment_strategy="major")
         self._write_build_pom_released(repo_package, "10.9.8", "abcdef")
@@ -262,14 +341,13 @@ artifact_update(
     def test_update_version_in_BUILD_pom__set_to_last_released_version__multiple_files(self):
         pack1 = "somedir/p1"
         pack2 = "somedir/p2"
+        self._write_library_root("somedir")
         pack1_path = os.path.join(self.repo_root, pack1)
-        os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "1.1.1-SNAPSHOT",
                               version_increment_strategy="major")
         self._write_build_pom_released(pack1_path, "9.9.9", "abcdef")
 
         pack2_path = os.path.join(self.repo_root, pack2)
-        os.makedirs(pack2_path)
         self._write_build_pom(pack2_path, "p2a", "p2g", "2.2.2",
                               version_increment_strategy="major")
         self._write_build_pom_released(pack2_path, "10.10.10", "abcdef")
@@ -297,7 +375,7 @@ artifact_update(
     def test_update_version_in_BUILD_pom__set_to_last_released_version__no_build_pom_released_file(self):
         package_rel_path = "package1/package2"
         repo_package = os.path.join(self.repo_root, package_rel_path)
-        os.makedirs(repo_package)
+        self._write_library_root(package_rel_path)
         self._write_build_pom(repo_package, "a1", "g1", "1.2.3",
                               version_increment_strategy="major")
 
@@ -316,13 +394,12 @@ artifact_update(
     def test_update_version_in_BUILD_pom__add_version_qualifier(self):
         pack1 = "somedir/p1"
         pack2 = "somedir/p2"
+        self._write_library_root("somedir")
         pack1_path = os.path.join(self.repo_root, pack1)
-        os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "1.1.1-SNAPSHOT",
                               version_increment_strategy="major")
 
         pack2_path = os.path.join(self.repo_root, pack2)
-        os.makedirs(pack2_path)
         self._write_build_pom(pack2_path, "p2a", "p2g", "2.2.2",
                               version_increment_strategy="major")
 
@@ -348,8 +425,8 @@ artifact_update(
 
     def test_update_version_in_BUILD_pom__rm_version_qualifier__with_dash(self):
         pack1 = "somedir/p1"
+        self._write_library_root(pack1)
         pack1_path = os.path.join(self.repo_root, pack1)
-        os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-foo-blah",
                               version_increment_strategy="major")
 
@@ -367,8 +444,8 @@ artifact_update(
 
     def test_update_version_in_BUILD_pom__rm_version_qualifier__without_dash(self):
         pack1 = "somedir/p1"
+        self._write_library_root(pack1)
         pack1_path = os.path.join(self.repo_root, pack1)
-        os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-SNAPSHOT",
                               version_increment_strategy="major")
 
@@ -386,8 +463,8 @@ artifact_update(
 
     def test_update_version_in_BUILD_pom__rm_version_qualifier__substr1(self):
         pack1 = "somedir/p1"
+        self._write_library_root(pack1)
         pack1_path = os.path.join(self.repo_root, pack1)
-        os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-SNAPSHOT",
                               version_increment_strategy="major")
 
@@ -405,8 +482,8 @@ artifact_update(
 
     def test_update_version_in_BUILD_pom__rm_version_qualifier__substr2(self):
         pack1 = "somedir/p1"
+        self._write_library_root(pack1)
         pack1_path = os.path.join(self.repo_root, pack1)
-        os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-foo-blah",
                               version_increment_strategy="major")
 
@@ -423,8 +500,8 @@ artifact_update(
 
     def test_update_version_in_BUILD_pom__rm_version_qualifier__substr3(self):
         pack1 = "somedir/p1"
+        self._write_library_root(pack1)
         pack1_path = os.path.join(self.repo_root, pack1)
-        os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-foo-rel9",
                               version_increment_strategy="major")
 
@@ -442,8 +519,8 @@ artifact_update(
 
     def test_update_version_in_BUILD_pom__add_version_qualifier__slashes_are_removed(self):
         pack1 = "somedir/p1"
+        self._write_library_root(pack1)
         pack1_path = os.path.join(self.repo_root, pack1)
-        os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1",
                               version_increment_strategy="major")
 
@@ -461,8 +538,8 @@ artifact_update(
 
     def test_update_version_in_BUILD_pom__add_version_qualifier__non_snapshot_qualifiers_are_appended(self):
         pack1 = "somedir/p1"
+        self._write_library_root(pack1)
         pack1_path = os.path.join(self.repo_root, pack1)
-        os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1",
                               version_increment_strategy="major")
 
@@ -481,8 +558,8 @@ artifact_update(
 
     def test_update_version_in_BUILD_pom__add_version_qualifier__duplicate_is_not_repeated(self):
         pack1 = "somedir/p1"
+        self._write_library_root(pack1)
         pack1_path = os.path.join(self.repo_root, pack1)
-        os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-casino",
                               version_increment_strategy="major")
 
@@ -501,8 +578,8 @@ artifact_update(
 
     def test_update_version_in_BUILD_pom__add_version_qualifier__no_duplicate_SNAPSHOT(self):
         pack1 = "somedir/p1"
+        self._write_library_root(pack1)
         pack1_path = os.path.join(self.repo_root, pack1)
-        os.makedirs(pack1_path)
         self._write_build_pom(pack1_path, "p1a", "p1g", "3.2.1-SNAPSHOT",
                               version_increment_strategy="major")
 
@@ -519,33 +596,46 @@ artifact_update(
             self.assertIn('version = "3.2.1-SNAPSHOT"', content)
             self.assertIn(')', content)
 
-    def _write_build_pom(self, package_path, artifact_id, group_id, version,
-                         generation_mode="dynamic",
+    def _write_build_pom(self, package_path, artifact_id=None, group_id=None,
+                         version=None,
                          version_increment_strategy="minor",
+                         generation_mode="dynamic",
                          additional_change_detected_packages=None):
-        build_pom = """
+
+        if generation_mode == "skip":
+            build_pom = """
+artifact(
+    generation_mode = "skip"
+)
+"""
+        else:
+            build_pom = """
 artifact(
     artifact_id = "%s",
     group_id = "%s",
-    version = "%s",
 """
 
-        build_pom = build_pom % (artifact_id, group_id, version)
+            build_pom = build_pom % (artifact_id, group_id)
+        
+            if version is not None:
+                build_pom += "    version = \"%s\",\n" % version
 
-        if generation_mode is not None:
             build_pom += "    generation_mode = \"%s\",\n" % generation_mode
 
-        if additional_change_detected_packages is not None:
-              build_pom += "    additional_change_detected_packages = [%s]," % ",".join(["'%s'" % p for p in additional_change_detected_packages])
+            if additional_change_detected_packages is not None:
+                build_pom += "    additional_change_detected_packages = [%s]," % ",".join(["'%s'" % p for p in additional_change_detected_packages])
 
-        build_pom += """
-)
+            build_pom += ")"
+
+            if version_increment_strategy is not None:
+                build_pom += """
 
 artifact_update(
     version_increment_strategy = "%s",
 )
 """
-        build_pom = build_pom % version_increment_strategy
+                build_pom = build_pom % version_increment_strategy
+
 
         path = os.path.join(package_path, "MVN-INF")
         if not os.path.exists(path):
@@ -553,9 +643,24 @@ artifact_update(
         with open(os.path.join(path, "BUILD.pom"), "w") as f:
            f.write(build_pom)
 
-        # parsing requires a LIBRARY.root file so we are adding it here
+    def _write_library_root(self, library_package_path, version=None, version_increment_strategy=None):
+        content = ""
+        if version is not None:
+            assert version_increment_strategy is not None
+            content = """
+artifact(
+    version = "%s",
+)
+
+artifact_update(
+    version_increment_strategy = "%s",
+)
+""" % (version, version_increment_strategy)
+        path = os.path.join(self.repo_root, library_package_path, "MVN-INF")
+        if not os.path.exists(path):
+            os.makedirs(path)
         with open(os.path.join(path, "LIBRARY.root"), "w") as f:
-           f.write("")
+           f.write(content)
 
     def _write_build_pom_released(self, package_path, released_version, released_artifact_hash):
         build_pom_released = """

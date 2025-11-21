@@ -2,7 +2,3 @@ artifact(
     artifact_id = "vegetable-api",
     generation_mode = "dynamic",
 )
-
-artifact_update(
-    version_increment_strategy = "minor",
-)

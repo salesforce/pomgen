@@ -3,7 +3,3 @@ artifact(
     generation_mode = "template",
     pom_template_file = "pom.template",
 )
-
-artifact_update(
-    version_increment_strategy = "minor",
-)

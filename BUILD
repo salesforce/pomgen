@@ -18,10 +18,7 @@ py_library(
                  "src/config/*.py",
                  "src/common/*.py",
                  "src/crawl/*.py",
-                 "src/generate/*.py",
-                 "src/generate/impl/*.py",
-                 "src/generate/impl/pom/*.py",
-                 "src/generate/impl/py/*.py"]),
+                 "src/generate/**/*.py"]),
     data = ["examples/java/pom_template.xml"],
     deps = ["@pip//lxml"],
     imports = ["src"],
@@ -45,6 +42,13 @@ py_binary(
 py_binary(
     name = "update",
     srcs = ["src/update.py"],
+    deps = [":poppy_lib"],
+    imports = ["src"],
+)
+
+py_binary(
+    name = "refactor",
+    srcs = ["src/refactor/refactor.py"],
     deps = [":poppy_lib"],
     imports = ["src"],
 )
