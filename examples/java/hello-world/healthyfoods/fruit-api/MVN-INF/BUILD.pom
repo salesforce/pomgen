@@ -5,7 +5,3 @@ artifact(
                             "-com.google.guava:guava",
                             "-org.antlr:antlr-runtime",]
 )
-
-artifact_update(
-    version_increment_strategy = "minor",
-)

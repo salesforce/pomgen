@@ -11,7 +11,7 @@ Helper functions used for parsing metadata files.
 import ast
 
 
-def parse_artifact_attributes(content):
+def parse_artifact_attributes(content, artifact_must_exist=True):
     """
     Given metadata content having the rules:
     
@@ -29,12 +29,17 @@ def parse_artifact_attributes(content):
 
     See parse_attributes below for more details.
     """
+    attributes = {}
+    indexes = {}
     artifact, offset = _get_function_block(content, "artifact")
     if artifact is None:
         # maven_artifact is deprecated
         artifact, offset = _get_function_block(content, "maven_artifact")
-    assert artifact is not None, "bad md content %s" % content
-    attributes, indexes = parse_attributes(artifact, offset)
+    if artifact is None:
+        if artifact_must_exist:
+            assert False, "bad md content, cannot load artifact: [%s]" % content
+    else:            
+        attributes, indexes = parse_attributes(artifact, offset)
 
     artifact_update, offset = _get_function_block(content, "artifact_update")
     if artifact_update is None:

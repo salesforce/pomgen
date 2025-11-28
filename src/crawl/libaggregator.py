@@ -129,7 +129,7 @@ def _walk(artifact_node, library_path_to_library_node):
         library_node = LibraryNode(library_path, artifact_def.requires_release,
                                    artifact_def.release_reason, version,
                                    artifact_def.released_version,
-                                   artifact_def.version_increment_strategy_name)
+                                   artifact_def.version_increment_strategy)
         library_path_to_library_node[library_path] = library_node
         
     for artifact_child_node in artifact_node.children:

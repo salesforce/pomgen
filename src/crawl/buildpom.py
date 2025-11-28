@@ -62,8 +62,8 @@ class MavenArtifactDef:
         the jar artifact to use. this can be used if bazel doesn't actually
         build the jar (-> java_import).
 
-    version_increment_strategy_name: specifies how this artifacts version should
-        be incremented.
+    version_increment_strategy: the name of a known version increment strategy
+        for example "major" or "patch".
 
     1_1_1_mode: whether this artifact is in 1:1:1 mode: all bazel subpackages
                 of this bazel package use genmode.SKIP
@@ -138,7 +138,7 @@ class MavenArtifactDef:
                  gen_dependency_management_pom=False,
                  jar_path=None,
                  deps=[],
-                 version_increment_strategy_name=None,
+                 version_increment_strategy=None,
                  released_version=None,
                  released_artifact_hash=None,
                  bazel_package=None,
@@ -162,7 +162,7 @@ class MavenArtifactDef:
         self._gen_dependency_management_pom = gen_dependency_management_pom
         self._jar_path = jar_path
         self._deps = deps
-        self._version_increment_strategy_name = version_increment_strategy_name
+        self._version_increment_strategy = version_increment_strategy
         self._released_version = released_version
         self._released_artifact_hash = released_artifact_hash
         self._bazel_package = bazel_package
@@ -291,8 +291,12 @@ class MavenArtifactDef:
         return self._emitted_dependencies
 
     @property
-    def version_increment_strategy_name(self):
-        return self._version_increment_strategy_name
+    def version_increment_strategy(self):
+        return self._version_increment_strategy
+
+    @version_increment_strategy.setter
+    def version_increment_strategy(self, value):
+        self._version_increment_strategy = value
 
     @property
     def generation_strategy(self):
@@ -312,6 +316,9 @@ class MavenArtifactDef:
         the metadata file the given attribute was read from.
         Raises if the given attribute name is not known.
         """
+        assert attr_name in self._attr_name_to_md_file_path,\
+            "unknown attribute [%s], known attributes are:\n%s" % (
+                attr_name, "\n".join(self._attr_name_to_md_file_path.keys()))
         return self._attr_name_to_md_file_path[attr_name]
 
     def register_md_file_path_for_attr(self, attr_name, md_rel_path):
@@ -475,7 +482,7 @@ def _augment_art_def_values(user_art_def, rel_art_def, bazel_package,
         released_artifact_hash=rel_art_def.artifact_hash if rel_art_def is not None else None,
         bazel_package=bazel_package,
         released_pom_content=released_pom_content,
-        version_increment_strategy_name=version_increment_strategy_name,
+        version_increment_strategy=version_increment_strategy_name,
         generation_strategy=user_art_def.generation_strategy,
         excluded_dependency_paths=user_art_def.excluded_dependency_paths,
         emitted_dependencies=user_art_def.emitted_dependencies,

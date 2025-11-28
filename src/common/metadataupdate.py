@@ -26,20 +26,52 @@ artifact_hash_re = re.compile("(^.*artifact_hash.*?=.*?[\"'])(.*?)([\"'].*)$", r
 
 
 def update_artifact(root_path, packages, workspace,
-                    new_version=None,
+                    updated_version=None,
                     update_version_using_incr_strat=False,
-                    new_version_incr_strat=None,
+                    updated_version_incr_strat=None,
                     set_version_to_last_released_version=False,
                     version_qualifier_to_add=None,
                     version_qualifier_to_remove=None):
+    # we want to avoid updating attributes more than once, specifically
+    # those set in the library.root file (updating more than once with
+    # a static value is ok but more than once doesn't work for
+    # "relative updates", for ex based on version increment strategy)
+    # we use a generic mechanism: we keep track of each updated attr
+    # using the syntax: ${attr-name}@${md-file-path}
+    updated_attributes = set()
     for package in packages:
-        _maybe_update_version(root_path, package, workspace,
-                              new_version,
-                              update_version_using_incr_strat,
-                              set_version_to_last_released_version,
-                              version_qualifier_to_add,
-                              version_qualifier_to_remove)
-        _maybe_update_version_incr_strat(root_path, package, workspace, new_version_incr_strat)
+        art_def = workspace.parse_maven_artifact_def(package)        
+        assert art_def is not None
+
+        if not art_def.generation_mode.produces_artifact:
+            # -> skip mode, for ex
+            continue
+
+        if (updated_version is not None or
+            update_version_using_incr_strat or
+            set_version_to_last_released_version or
+            version_qualifier_to_add is not None or
+            version_qualifier_to_remove is not None):
+            attr_name = "version"
+            attr_path = "%s@%s" % (attr_name, art_def.get_md_file_path_for_attr(attr_name))
+            if attr_path not in updated_attributes:
+                updated = _maybe_update_version(root_path, art_def,
+                                                updated_version,
+                                                update_version_using_incr_strat,
+                                                set_version_to_last_released_version,
+                                                version_qualifier_to_add,
+                                                version_qualifier_to_remove)
+                if updated:
+                    updated_attributes.add(attr_path)
+
+        if updated_version_incr_strat is not None:
+            attr_name = "version_increment_strategy"
+            attr_path = "%s@%s" % (attr_name, art_def.get_md_file_path_for_attr(attr_name))
+            if attr_path not in updated_attributes:
+                updated = _maybe_update_version_incr_strat(root_path, art_def,
+                                                           updated_version_incr_strat)
+                if updated:
+                    updated_attributes.add(attr_path)
             
 
 def update_released_artifact(root_path, packages, generation_strategy_factory,
@@ -94,53 +126,49 @@ def update_released_artifact(root_path, packages, generation_strategy_factory,
             raise
 
 
-def _maybe_update_version(root_path, package, workspace,
+def _maybe_update_version(root_path, art_def,
                           updated_version,
                           update_version_using_incr_strat,
                           set_version_to_last_released_version,
                           version_qualifier_to_add,
                           version_qualifier_to_remove):
-    if (updated_version is None and
-        not update_version_using_incr_strat and
-        not set_version_to_last_released_version and
-        version_qualifier_to_add is None and
-        version_qualifier_to_remove is None):
-        return
-        
-    art_def = workspace.parse_maven_artifact_def(package)
-    assert art_def is not None
     current_version = art_def.version
-    if update_version_using_incr_strat:
-        is_snapshot_version = current_version.upper().endswith(vis.SNAPSHOT_QUAL)
-        incr_strat = vis.get_version_increment_strategy(art_def.version_increment_strategy_name)
-        updated_version = incr_strat.get_next_development_version(current_version)
-        if not is_snapshot_version:
-            # get_next_development_version re-adds -SNAPSHOT, but this
-            # wasn't a SNAPSHOT version to begin with, so remove that
-            # qualifier for consistency
-            updated_version = _remove_version_qualifier(updated_version, vis.SNAPSHOT_QUAL)
+    if current_version is None:
+        assert not art_def.generation_mode.produces_artifact
+    else:
+        if update_version_using_incr_strat:
+            is_snapshot_version = current_version.upper().endswith(vis.SNAPSHOT_QUAL)
+            incr_strat = vis.get_version_increment_strategy(art_def.version_increment_strategy)
+            updated_version = incr_strat.get_next_development_version(current_version)
+            if not is_snapshot_version:
+                # get_next_development_version re-adds -SNAPSHOT, but this
+                # wasn't a SNAPSHOT version to begin with, so remove that
+                # qualifier for consistency
+                updated_version = _remove_version_qualifier(updated_version, vis.SNAPSHOT_QUAL)
+        if version_qualifier_to_add is not None:
+            vq = _sanitize_version_qualifier(version_qualifier_to_add)
+            if current_version.upper().endswith(vis.SNAPSHOT_QUAL):
+                # special case - we insert the new qualifer BEFORE -SNAPSHOT
+                updated_version = _insert_version_qualifier(current_version, vq)
+            else:
+                updated_version = _append_version_qualifier(current_version, vq)
+        if version_qualifier_to_remove is not None:
+            updated_version = _remove_version_qualifier(current_version, version_qualifier_to_remove)
+                
     if set_version_to_last_released_version and art_def.released_version is not None:
         updated_version = art_def.released_version
-    if version_qualifier_to_add is not None:
-        vq = _sanitize_version_qualifier(version_qualifier_to_add)
-        if current_version.upper().endswith(vis.SNAPSHOT_QUAL):
-            # special case - we insert the new qualifer BEFORE -SNAPSHOT
-            updated_version = _insert_version_qualifier(current_version, vq)
-        else:
-            updated_version = _append_version_qualifier(current_version, vq)
-    if version_qualifier_to_remove is not None:
-        updated_version = _remove_version_qualifier(current_version, version_qualifier_to_remove)
 
     if updated_version is not None and current_version != updated_version:
         _update_attr_value(root_path, art_def, "version", updated_version)
+        return True
+    return False
 
 
-def _maybe_update_version_incr_strat(root_path, package, workspace, updated_version_incr_strat):
-    if updated_version_incr_strat is not None:
-        art_def = workspace.parse_maven_artifact_def(package)        
-        assert art_def is not None
-        if art_def.version_increment_strategy_name != updated_version_incr_strat:
-            _update_attr_value(root_path, art_def, "version_increment_strategy", updated_version_incr_strat)
+def _maybe_update_version_incr_strat(root_path, art_def, updated_version_incr_strat):
+    if art_def.version_increment_strategy != updated_version_incr_strat:
+        _update_attr_value(root_path, art_def, "version_increment_strategy", updated_version_incr_strat)
+        return True
+    return False
 
 
 def _update_attr_value(root_path, art_def, attr_name, updated_value):

@@ -70,12 +70,11 @@ def _set_library_level_attribute_values(repo_root_path, art_def):
     assert art_def.library_path is not None
     md_dir_name = os.path.dirname(art_def.generation_strategy.metadata_path)
     lib_md_file_rel_path = os.path.join(art_def.library_path, md_dir_name, mdfiles.LIB_ROOT_FILE_NAME)
-    content, _ = mdfiles.read_file(repo_root_path, lib_md_file_rel_path, must_exist=True)
-    ma = code.get_function_block(content, "artifact")
-    if ma is not None:
-        ma_attrs, _ = code.parse_attributes(ma)
-        for attr_name in ("group_id", "version",):
-            lib_value = ma_attrs.get(attr_name, None)
+    content, _ = mdfiles.read_file(repo_root_path, lib_md_file_rel_path, must_exist=True)    
+    attrs, _ = code.parse_artifact_attributes(content, artifact_must_exist=False)
+    if len(attrs) > 0:
+        for attr_name in ("group_id", "version", "version_increment_strategy",):
+            lib_value = attrs.get(attr_name, None)
             if lib_value is not None:
                 # we don't allow the attr to be set at multiple levels
                 assert getattr(art_def, attr_name) is None, (
@@ -83,7 +82,6 @@ def _set_library_level_attribute_values(repo_root_path, art_def):
                     "metadata file at [%s]" % (attr_name, art_def.bazel_package))
                 setattr(art_def, attr_name, lib_value)
                 art_def.register_md_file_path_for_attr(attr_name, lib_md_file_rel_path)
-                
 
 
 def _has_changed_since_last_release(repo_root_path, art_def, source_exclusions):
