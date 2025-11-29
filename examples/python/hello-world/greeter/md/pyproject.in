@@ -1,9 +1,4 @@
 artifact(
     artifact_id = "greeter",
-    version = "0.0.2",
     generation_mode = "dynamic",
-)
-
-artifact_update(
-    version_increment_strategy = "patch",
 )

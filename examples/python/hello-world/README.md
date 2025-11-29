@@ -22,7 +22,7 @@ Hello World!
 
 The metadata for this project is defined under the `md` directories:
 
-- [md](md): this directory contains only a marker file to signal that this is the root of the library. A library may contain one or more modules (greeter and computer in this example). Poppy processes all modules that are part of the same library (under the same library root directory) together.
+- [md](md): this directory contains the library root file, which marks the root of the library. A library may contain one or more modules (greeter and computer in this example). Poppy processes (most importantly: uploads) all modules that are part of the same library (under the same library root directory) together. The library root file also contains common attributes shared by all modules.
 - [greeter/md](greeter/md): metadata for the greeter module
 - [computer/md](computer/md): metadata for the computer module
 

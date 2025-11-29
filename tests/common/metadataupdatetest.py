@@ -229,7 +229,7 @@ artifact_update(
         with open(os.path.join(self.repo_root, package_rel_path, "MVN-INF", "BUILD.pom")) as f:
             self.assertEqual("""
 artifact(
-    generation_mode = "skip"            
+    generation_mode = "skip"
 )
 """.strip(), f.read().strip())
 

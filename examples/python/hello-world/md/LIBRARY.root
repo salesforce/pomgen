@@ -1,0 +1,7 @@
+artifact(
+    version = "0.0.2",
+)
+
+artifact_update(
+    version_increment_strategy = "patch",
+)
