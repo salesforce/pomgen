@@ -24,7 +24,7 @@ Have a look at the generated pom.xml - note that the pom brings in the transitiv
 
 ## Override a transitive
 
-On order to override dependencies brought in transitively, pomgen needs to be pointed to one or more "overrides" file(s). Add to the `[general]` section of the [root .poppyrc](../../.poppyrc):
+On order to override dependencies brought in transitively, poppy needs to be pointed to one or more "overrides" file(s). Add to the `[general]` section of the [root .poppyrc](../../.poppyrc):
 
 ```
 override_file_paths=examples/java/dep-overrides/overrides.bzl

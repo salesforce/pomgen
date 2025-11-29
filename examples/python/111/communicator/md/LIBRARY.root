@@ -1,0 +1,7 @@
+artifact(
+    version = "2.0.1",
+)
+
+artifact_update(
+    version_increment_strategy = "minor",
+)

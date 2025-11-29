@@ -1,0 +1,8 @@
+artifact(
+    group_id = "com.pomgen.example.java",
+    version = "1.0.0-SNAPSHOT",
+)
+
+artifact_update(
+    version_increment_strategy = "minor",
+)

@@ -5,11 +5,11 @@
 
 In the Maven world, a typical project setup consists of a top level pom.xml file with multiple modules in subdirectories. Each module produces a Maven Artifact (typically a jar or a pom.xml).
 
-The pomgen terminology for a top level project with modules is a `library`. Subdirectories of the library (the modules) are Bazel Packages that each produce a Maven Artifact (jar or pom). pomgen processes all modules that are part of a library together.
+The poppy terminology for a top level project with modules is a `library`. Subdirectories of the library (the modules) are Bazel Packages that each produce a Maven Artifact (jar or pom). poppy processes all modules that are part of a library together.
 
-This example has 3 libraries. A library is defined by the presence of a [LIBRARY.root](healthyfoods/MVN-INF/LIBRARY.root) marker file.
+This example has 3 libraries. A library is defined by the presence of a [LIBRARY.root](healthyfoods/MVN-INF/LIBRARY.root) marker file. This file also has common Maven metadata that are shared across all modules (if the library has more than one module).
 
-A Bazel Package that produces a Maven Artifact must have a [BUILD.pom](healthyfoods/fruit-api/MVN-INF/BUILD.pom) file that defines Maven specific metadata.
+A Bazel Package that produces a Maven Artifact must have a [BUILD.pom](healthyfoods/fruit-api/MVN-INF/BUILD.pom) file that defines module specific Maven metadata.
 
 The `java_library` target that builds the jar Maven Artifact is typically  the default target, ie it the target that the same name as the directory its BUILD file lives in. If the target is not the default target, its name must be explicitly specified in the BUILD.pom file using the `maven_artifact.target_name` attribute.
 
@@ -19,9 +19,9 @@ The libraries in this example reference each other in this order:
 - [healthyfoods](healthyfoods)
 
 
-### Before running pomgen
+### Before running poppy
 
-Make sure you have installed the required [external dependencies](../../README.md#external-dependencies).
+Make sure you have installed the required [external dependencies](../../../README.md#external-dependencies).
 
 Make sure the pomgen tests pass.  From the root of the repository:
 
@@ -49,16 +49,16 @@ examples/java/hello-world/juicer ++ 3.0.0-SNAPSHOT
 ```
 
 The output shows:
-- juicer references wintervegetables, which references healthyfoods
-  - juicer also references healthyfoods directly
+- The juicer library references the wintervegetables library, which references the healthyfoods library
+   - The juicer library also references the healthyfoods library directly
 - The version of each library
-- Whether the library needs to be released or not
-  - In this case they all need to be released because pomgen is not aware of any previous release
+- Whether each library needs to be released or not
+   - In this case all libraries need to be released because poppy is not aware of any previous release
 
 
 ### Generating poms
 
-pomgen can be run directly (`bazel run @poppy//:pomgen -- --help`), however, there's a convenient [wrapper script](../../package/maven/maven.sh) that we'll use instead: it defaults some pomgen flags. Before running, make sure you have the required [external dependencies](../../package/maven/README.md#external-dependencies).
+poppy can be run directly (`bazel run @poppy//:gen -- --help`), however, there's a convenient [wrapper script](../../package/maven/maven.sh) that we'll use instead: it defaults some poppy flags. Before running, make sure you have the required [external dependencies](../../../package/maven/README.md#external-dependencies).
 
 ```
 bazel run @poppy//package/maven -- -a pomgen -l examples/java/hello-world/juicer
@@ -69,7 +69,7 @@ The command above specifies:
 - The **library** to generate poms for: `examples/java/hello-world/juicer`
 
 
-pomgen follows references between libraries; since `juicer` depends on 2 other libraries `healthyfoods` and `wintervegerables`, pomgen generated pom.xml files for all 3 libraries, ie for all modules that are part of those libraries. Usually this is the right behavior, but if there a lot of upstream libraries, it may be desirable in some cases to not follow library references. This can be accomplished by setting `-i` (ignore references) flag:
+poppy follows references between libraries; since `juicer` depends on 2 other libraries `healthyfoods` and `wintervegerables`, poppy generates pom.xml files for all 3 libraries (for all modules that are part of those libraries). Usually this is the right behavior, but if there a lot of upstream libraries, it may be desirable in some cases to not follow library references. This can be accomplished by setting `-i` (ignore references) flag:
 
 ```
 bazel run @poppy//package/maven -- -a pomgen -l examples/java/hello-world/juicer -i
@@ -78,7 +78,7 @@ bazel run @poppy//package/maven -- -a pomgen -l examples/java/hello-world/juicer
 
 ### Installing Maven Artifacts into the local Maven Repository
 
-The Maven Artifacts generated by pomgen can be installed into `~/.m2/repository` so that they are consumable by a local Maven project. Use the `install` action:
+The Maven Artifacts generated by poppy can be installed into `~/.m2/repository` so that they are consumable by a local Maven project. Use the `install` action:
 
 ```
 bazel run @poppy//package/maven -- -a install -l examples/java/hello-world/juicer
@@ -89,12 +89,12 @@ Note that before running `-a install`, pom.xml files must have been generated: `
 If you see this type of error:
 
 ```
-ERROR: did not find jar artifact at /Users/stoens/Code/pomgen/bazel-bin/examples/java/hello-world/juicer/juicer.jar
+ERROR: did not find jar artifact at /Users/<path>/pomgen/bazel-bin/examples/java/hello-world/juicer/juicer.jar
 ```
 
-This error means that pomgen did not find the jar file for the juicer module - this happens when `bazel build` did not run. There are 2 solutions:
+This error means that poppy did not find the jar file for the juicer module - this happens when `bazel build` did not run. There are 2 solutions:
 - Run `bazel build examples/java/hello-world/...`
-- If there are many upstream libraries in a large repository, it may be helpful to ask pomgen to build all upstream libraries - use the `build` action: `bazel run @poppy//package/maven -- -a build -l examples/java/hello-world/juicer`
+- If there are many upstream libraries in a large repository, it may be helpful to ask poppy to build all upstream libraries - use the `build` action: `bazel run @poppy//package/maven -- -a build -l examples/java/hello-world/juicer`
 
 Finally, note that `-a` can take multiple actions, so the above can also be run like this:
 
@@ -144,7 +144,7 @@ Then run `mvn dependency:tree`:
 
 ### Templates for pom-only artifacts
 
-pomgen supports custom pom templates for the purpose of generating pom-only artifacts (`<packaging>pom</packaging>`). This is typically needed when migrating a Maven project to Bazel that has a parent pom, meant to be inherited from: the parent pom still needs to be generated because existing Maven projects may depend on it. 
+poppy supports custom pom templates for the purpose of generating pom-only artifacts (`<packaging>pom</packaging>`). This is typically needed when migrating a Maven project to Bazel that has a parent pom, meant to be inherited from: the parent pom still needs to be generated because existing Maven projects may depend on it. 
 
 See this [example pom template](healthyfoods/parentpom/MVN-INF/pom.template) - note that the corresponding [BUILD.pom](healthyfoods/parentpom/MVN-INF/BUILD.pom) file must specify that the `pom_generation_mode` is `template`.
 

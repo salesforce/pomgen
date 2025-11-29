@@ -1,10 +1,4 @@
 artifact(
-    group_id = "com.pomgen.example.skip-art-gen",
     artifact_id = "parent2",
-    version = "1.0.0-SNAPSHOT",
     generation_mode = "dynamic",
-)
-
-artifact_update(
-    version_increment_strategy = "minor",
 )

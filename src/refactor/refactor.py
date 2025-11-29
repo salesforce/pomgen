@@ -59,9 +59,13 @@ def main(args):
                 lib_md_file_rel_path = os.path.join(lib_path, md_dir_name, mdfiles.LIB_ROOT_FILE_NAME)
                 abs_path = os.path.join(repository_root, lib_md_file_rel_path)
                 content = common.read_file(abs_path).strip()
-                assert len(content) == 0
-                content = _get_library_content(version, version_incr_strat, group_id)
-                common.write_file(abs_path, content)
+                if len(content) == 0:
+                    content = _get_library_content(version, version_incr_strat, group_id)
+                    common.write_file(abs_path, content)
+                else:
+                    # if for some reason the lib file has some content already
+                    # we don't update it
+                    pass
 
 
 def _rm_attr_from_artifacts(repository_root, attr_name, artifact_definitions):
