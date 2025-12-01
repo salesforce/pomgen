@@ -18,10 +18,10 @@ import os
 
 def load(repo_root, verbose=False):
     """
-    Looks for a config file called .pomgenrc in the following locations:
-      - <repo_root>/tools/etc/.pomgenrc
-      - <repo_root>/tools/.pomgenrc
-      - <repo_root>/.pomgenrc
+    Looks for .poppyrc in the following locations:
+      - <repo_root>/tools/etc/.poppyrc
+      - <repo_root>/tools/.poppyrc
+      - <repo_root>/.poppyrc
 
     If no config file is found, uses default values.
 
@@ -48,10 +48,9 @@ def load(repo_root, verbose=False):
 
     _load_cfg(repo_root, parser, verbose)
 
-    pom_template_p = gen("pom_template_path", "")
-
     cfg = Config(
-        pom_template_path_and_content=_read_file(repo_root, pom_template_p),
+        pom_template_path_and_content=_read_file(repo_root, gen("pom_template_path", "")),
+        pyproject_template_path_and_content=_read_file(repo_root, gen("pyproject_template_path", "")),
         maven_install_paths=gen("maven_install_paths", ()),
         locked_requirements_paths=gen("locked_requirements_paths", ()),
         override_file_paths=gen("override_file_paths", ()),
@@ -65,7 +64,6 @@ def load(repo_root, verbose=False):
         transitives_versioning_mode=artifact("transitives_versioning_mode", "semver", valid_values=("semver", "counter")),
         jar_artifact_classifier=artifact("jar_classifier", None),
         change_detection_enabled=artifact("change_detection_enabled", True),
-        manifest_language_level=manifest("language_level", ""),
     )
 
     if verbose:
@@ -104,6 +102,7 @@ class Config:
 
     def __init__(self,
         pom_template_path_and_content=("",""),
+        pyproject_template_path_and_content=("",""),
         maven_install_paths=(),
         locked_requirements_paths=(),
         override_file_paths=(),
@@ -116,11 +115,11 @@ class Config:
         excluded_src_file_extensions=(),
         transitives_versioning_mode="semver",
         jar_artifact_classifier=None,
-        change_detection_enabled=True,
-        manifest_language_level=""):
+        change_detection_enabled=True):
 
         # general
         self.pom_template_path_and_content = pom_template_path_and_content
+        self.pyproject_template_path_and_content = pyproject_template_path_and_content
         self.maven_install_paths = _to_tuple(maven_install_paths)
         self.locked_requirements_paths = _to_tuple(locked_requirements_paths)
         self.override_file_paths = _to_tuple(override_file_paths)
@@ -140,12 +139,13 @@ class Config:
         self._jar_artifact_classifier = jar_artifact_classifier
         self._change_detection_enabled = _to_bool(change_detection_enabled)
 
-        # manifest
-        self.manifest_language_level = manifest_language_level
-
     @property
     def pom_template(self):
         return self.pom_template_path_and_content[1]
+
+    @property
+    def pyproject_template(self):
+        return self.pyproject_template_path_and_content[1]
 
     @property
     def jar_artifact_classifier(self):
@@ -171,6 +171,7 @@ class Config:
     def __str__(self):
         return """[general]
 pom_template_path=%s
+pyproject_template_path=%s
 maven_install_paths=%s
 override_file_paths=%s
 pom_base_filename=%s
@@ -187,6 +188,7 @@ transitives_versioning_mode=%s
 jar_artifact_classifier=%s
 change_detection_enabled=%s
 """ % (self.pom_template_path_and_content[0],
+       self.pyproject_template_path_and_content[0],
        self.maven_install_paths,
        self.override_file_paths,
        self.pom_base_filename,

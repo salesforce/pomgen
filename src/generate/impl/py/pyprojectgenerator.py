@@ -2,35 +2,15 @@ import datetime
 import generate
 
 
-_TEMPLATE = """
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[project]
-name = "$name$"
-version = "$version$"
-requires-python = ">=$python-version$"
-$dependencies$
-
-[tool.setuptools]
-package-dir = {"" = "src"}
-
-[tool.setuptools.packages.find]
-where = ["src"]
-include = ["*"]
-"""
-
-
 _VERSION_TS_TOKEN_START = "${timestamp:"
 _VERSION_TS_TOKEN_END = "}"
 
 
 class PyProjectGenerator(generate.AbstractManifestGenerator):
 
-    def __init__(self, artifact_def, python_version):
+    def __init__(self, artifact_def, pyproject_template):
         self._artifact_def = artifact_def
-        self._python_version = python_version
+        self._pyproject_template = pyproject_template.strip()
         self._dependencies = set()
         self._dependencies_artifact_transitive_closure = set()
         self._dependencies_library_transitive_closure = set()
@@ -67,22 +47,13 @@ class PyProjectGenerator(generate.AbstractManifestGenerator):
         self._dependencies_library_transitive_closure = dependencies
 
     def get_companion_generators(self):
-        """
-        Returns an iterable of companion generators. These manifests are not
-        used as inputs to any generation algorithm; they are only part of the
-        final outputs.
-
-        Subclasses may implement.
-        """
         return ()
 
     def generate_release_manifest(self):
         """
         Generate release version of pyproject.toml.
         """
-        content = _TEMPLATE.strip()
-        content = content.replace("$name$", self._artifact_def.artifact_id)
-        content = content.replace("$python-version$", self._python_version)
+        content = self._pyproject_template.replace("$name$", self._artifact_def.artifact_id)
         content = content.replace("$version$", _get_version(self._artifact_def.version))
         if len(self._dependencies) == 0:
             content = content.replace("$dependencies$", "dependencies = []")
