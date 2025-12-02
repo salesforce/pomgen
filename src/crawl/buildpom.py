@@ -127,9 +127,9 @@ class MavenArtifactDef:
 
     """
     def __init__(self,
-                 group_id,
-                 artifact_id,
-                 version,
+                 group_id=None,
+                 artifact_id=None,
+                 version=None,
                  generation_mode=genmode.DYNAMIC,
                  custom_pom_template_content=None,
                  include_deps=True,
@@ -180,7 +180,6 @@ class MavenArtifactDef:
         # data cleanup/verification/sanitization
         # these are separate methods for better readability
         self._sanitize_additional_change_detected_packages()
-
 
     @property
     def group_id(self):

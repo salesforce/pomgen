@@ -1,4 +1,6 @@
 [general]
 pom_template_path=examples/java/pom_template.xml
 maven_install_paths=examples/java/maven_install/*.json
+
+pyproject_template_path=examples/python/pyproject_template.toml
 locked_requirements_paths=examples/python/pip/requirements_lock.txt@examples_pip

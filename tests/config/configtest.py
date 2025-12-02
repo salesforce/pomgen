@@ -17,16 +17,26 @@ class ConfigTest(unittest.TestCase):
     def test_pom_template(self):
         repo_root = tempfile.mkdtemp("root")
         pom_template_path = self._write_file(repo_root, "pom_template", "pom")
-        self._write_pomgenrc(repo_root, pom_template_path, "")
+        self._write_poppyrc(repo_root, pom_template_path=pom_template_path)
 
         cfg = config.load(repo_root)
 
         self.assertEqual("pom", cfg.pom_template)
+        self.assertEqual("", cfg.pyproject_template)        
+
+    def test_pyproject_template(self):
+        repo_root = tempfile.mkdtemp("root")
+        pyproject_template_path = self._write_file(repo_root, "pyproject_template", "amsterdam spain and vietnam")
+        self._write_poppyrc(repo_root, pyproject_template_path=pyproject_template_path)
+
+        cfg = config.load(repo_root)
+
+        self.assertEqual("amsterdam spain and vietnam", cfg.pyproject_template)
 
     def test_maven_install_paths_default(self):
         repo_root = tempfile.mkdtemp("root")
         pom_template_path = self._write_file(repo_root, "pom_template", "foo")
-        self._write_pomgenrc(repo_root, pom_template_path, None)
+        self._write_poppyrc(repo_root, pom_template_path=pom_template_path)
 
         cfg = config.load(repo_root)
 
@@ -35,7 +45,8 @@ class ConfigTest(unittest.TestCase):
     def test_maven_install_paths(self):
         repo_root = tempfile.mkdtemp("root")
         pom_template_path = self._write_file(repo_root, "pom_template", "foo")
-        self._write_pomgenrc(repo_root, pom_template_path, "eternal,world")
+        self._write_poppyrc(repo_root, pom_template_path=pom_template_path,
+                            maven_install_paths="eternal,world")
 
         cfg = config.load(repo_root)
 
@@ -44,7 +55,7 @@ class ConfigTest(unittest.TestCase):
     def test_override_file_paths_default(self):
         repo_root = tempfile.mkdtemp("root")
         pom_template_path = self._write_file(repo_root, "pom_template", "foo")
-        self._write_pomgenrc(repo_root, pom_template_path, None)
+        self._write_poppyrc(repo_root, pom_template_path=pom_template_path)
 
         cfg = config.load(repo_root)
 
@@ -198,7 +209,8 @@ excluded_dependency_labels=  //a/b/c    ,   //a/b/c:foo
     def test_str(self):
         repo_root = tempfile.mkdtemp("root")
         pom_template_path = self._write_file(repo_root, "pom_template", "foo")
-        self._write_pomgenrc(repo_root, pom_template_path, "maven, misc")
+        self._write_poppyrc(repo_root, pom_template_path=pom_template_path,
+                            maven_install_paths="maven, misc")
 
         cfg = config.load(repo_root)
 
@@ -265,30 +277,20 @@ pom_base_filename=glue-test
 
         self.assertEqual("glue-test", cfg.pom_base_filename)
 
-    def test_language_level(self):
-        repo_root = tempfile.mkdtemp("root")
-        os.makedirs(os.path.join(repo_root, "src/config"))
-        self._write_file(repo_root, "src/config/pom_template.xml", "foo")
-        self._write_file(repo_root, ".pomgenrc", """
-[manifest]
-language_level=10
-""")
+    def _write_poppyrc(self, repo_root, pom_template_path=None, maven_install_paths=None,
+                       pyproject_template_path=None):
 
-        cfg = config.load(repo_root)
+        content = "[general]\n"
+        if pom_template_path is not None:
+            content += "pom_template_path=%s\n" % pom_template_path
 
-        self.assertEqual("10", cfg.manifest_language_level)
-
-    def _write_pomgenrc(self, repo_root, pom_template_path, maven_install_paths):
-        content = """[general]
-pom_template_path=%s
-""" % pom_template_path
+        if pyproject_template_path is not None:
+            content += "pyproject_template_path=%s\n" % pyproject_template_path
 
         if maven_install_paths is not None:
-            content = content + """
-maven_install_paths=%s
-""" % maven_install_paths
+            content += "maven_install_paths=%s\n" % maven_install_paths
 
-        self._write_file(repo_root, ".pomgenrc", content)
+        self._write_file(repo_root, ".poppyrc", content)
 
     def _write_file(self, repo_root, relative_path, content):
         path = os.path.join(repo_root, relative_path)
