@@ -11,6 +11,7 @@ class PyProjectGenerator(generate.AbstractManifestGenerator):
     def __init__(self, artifact_def, pyproject_template):
         self._artifact_def = artifact_def
         self._pyproject_template = pyproject_template.strip()
+        assert len(self._pyproject_template) > 0, "pyproject template cannot be empty"
         self._dependencies = set()
         self._dependencies_artifact_transitive_closure = set()
         self._dependencies_library_transitive_closure = set()

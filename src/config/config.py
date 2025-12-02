@@ -9,6 +9,7 @@ Responsible for loading a config file. For the config file format, see /README.m
 """
 
 
+from common import common
 from common import label
 from common import logger
 from config import exclusions
@@ -235,10 +236,7 @@ def _read_file(repo_root, path):
     if path is None or len(path) == 0:
         return "", ""
     abspath = os.path.join(repo_root, path)
-    if os.path.exists(abspath):
-        with open(abspath, "r") as f:
-            return path, f.read().strip()
-    return "", ""
+    return path, common.read_file(abspath).strip()
 
 
 def _add_pathsep(paths):
