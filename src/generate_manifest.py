@@ -68,7 +68,7 @@ def main(args):
         for ctx in result.artifact_generation_contexts:
             gen_strategy = ctx.artifact_def.generation_strategy
             pomgen = gen_strategy.new_generator(ctx)
-            pom_dest_dir = os.path.join(output_dir, pomgen.bazel_package)
+            pom_dest_dir = os.path.join(output_dir, ctx.artifact_def.bazel_package)
             if not os.path.exists(pom_dest_dir):
                 os.makedirs(pom_dest_dir)
 
@@ -99,9 +99,9 @@ def main(args):
                     logger.info("Wrote companion manifest file to [%s]" % pom_path)
 
                 # if jar_path has been set in the BUILD.pom file, we write a
-                # hint file with the path out so we can find it more easily
+                # hint file with the jar path, so we can find it more easily
                 # later when jars are processed
-                jar_path = pomgen.artifact_def.jar_path
+                jar_path = ctx.artifact_def.jar_path
                 if jar_path is not None:
                     hint_file_path = os.path.join(pom_dest_dir, mdfiles.JAR_LOCATION_HINT_FILE)
                     _write_file(hint_file_path, jar_path)

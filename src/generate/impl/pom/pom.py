@@ -79,14 +79,6 @@ class AbstractPomGen(generate.AbstractManifestGenerator):
         self.dependencies_artifact_transitive_closure = set()
         self.dependencies_library_transitive_closure = set()
 
-    @property
-    def artifact_def(self):
-        return self._artifact_def
-
-    @property
-    def bazel_package(self):
-        return self._artifact_def.bazel_package
-
     def register_dependencies(self, dependencies):
         """
         Registers the dependencies the backing artifact references explicitly.
@@ -277,7 +269,7 @@ class TemplatePomGen(AbstractPomGen):
         self._external_dependencies = external_dependencies
 
     def generate_manifest(self, pomcontenttype):
-        pom_content = self.artifact_def.custom_pom_template_content
+        pom_content = self._artifact_def.custom_pom_template_content
         pom_content, parsed_dependencies = self._process_pom_template_content(pom_content)
 
         properties = self._get_properties(pomcontenttype, parsed_dependencies)
