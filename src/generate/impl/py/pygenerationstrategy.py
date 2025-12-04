@@ -43,7 +43,7 @@ class PyGenerationStrategy(generate.AbstractGenerationStrategy):
                 assert name is None
                 name = "<not used>"
                 version = "<not used>"
-            return dependency.Dependency(name, version, artifact_def)
+            return dependency.Dependency(name, version)
         else:
             assert label in self._label_to_ext_dep, "unknown third party dependency [%s]" % label
             return self._label_to_ext_dep[label]

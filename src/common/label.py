@@ -3,16 +3,16 @@ Copyright (c) 2025, salesforce.com, inc.
 All rights reserved.
 SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
-
-This module has abstractions for Bazel labels.
 """
 
+import functools
 import os
 
 
+@functools.total_ordering
 class Label(object):
     """
-    Represents a bazel Label.
+    Represents a Bazel Label.
     """
 
     def __init__(self, name):
@@ -27,6 +27,7 @@ class Label(object):
             # just a path? we treat a/b/c as //a/b/c
             name = "//%s" % name
         self._name = name
+        self._canonical = self._build_canonical_form()
 
     @property
     def package_path(self):
@@ -114,18 +115,20 @@ class Label(object):
 
         References to the default target are omitted.
         """
-        target = "" if self.is_default_target else ":%s" % self.target
-        return "%s//%s%s" % (self.repository_prefix, self.package_path, target)
+        return self._canonical
 
     def with_target(self, new_target_name):
         """
         Returns a new Label instance with the specified new target name.
         """
-        if self.is_default_target:
-            label = self.canonical_form
-        else:
-            label = self.canonical_form[:-(len(self.target)+1)]
-        return Label("%s:%s" % (label, new_target_name))
+        lbl = self.canonical_form
+        if not self.is_default_target:
+            lbl = lbl[:-(len(self.target)+1)]
+        return Label("%s:%s" % (lbl, new_target_name))
+
+    def _build_canonical_form(self):
+        target = "" if self.is_default_target else ":%s" % self.target
+        return "%s//%s%s" % (self.repository_prefix, self.package_path, target)
 
     def __hash__(self):
         return hash((self.repository_prefix, self.package_path, self.target))
@@ -136,8 +139,7 @@ class Label(object):
         if not isinstance(other, Label):
             return False
         return (self.repository_prefix == other.repository_prefix and
-                self.package_path == other.package_path and
-                self.target == other.target)
+                self.package_path == other.package_path and self.target == other.target)
 
     def __ne__(self, other):
         return not self == other
@@ -146,3 +148,7 @@ class Label(object):
         return self.canonical_form
 
     __str__ = __repr__
+
+    def __lt__(self, other):
+        return self.canonical_form < other.canonical_form
+

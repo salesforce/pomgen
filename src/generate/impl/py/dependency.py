@@ -10,23 +10,14 @@ class Dependency(generate.AbstractDependency):
     TODO - abstract common shape with maven dep into ABC.
     """
 
-    def __init__(self, name, version, artifact_def=None, extras=None):
+    def __init__(self, name, version, extras=None):
         assert name is not None
         assert version is not None
         self.name = name
         self.version = version
-        self.artifact_def = artifact_def
         self.extras = tuple(extras) if extras else ()
 
         self.child_dependencies = []
-
-    # TODO impl in terms of label in crawler
-    @property
-    def references_artifact(self):
-        if self.artifact_def is None:
-            return True # 3rd party dep
-        else:
-            return self.artifact_def.generation_mode.produces_artifact
 
     def to_pyproject_format(self):
         """Convert the dependency to pyproject.toml format."""

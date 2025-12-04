@@ -170,6 +170,15 @@ class LabelTest(unittest.TestCase):
         self.assertEqual("@poppy//b22:foo",
                          n1.with_target("foo").canonical_form)
 
+    def test_sort(self):
+        n1 = label.Label("@zoppy//aaa")        
+        n2 = label.Label("@appy//zzz")
+        n3 = label.Label("@poppy//b22")
+        n4 = label.Label("@poppy//aaa")
+
+        labels = sorted([n1, n2, n3, n4])
+
+        self.assertEqual([n2, n4, n3, n1], labels)
 
 if __name__ == '__main__':
     unittest.main()

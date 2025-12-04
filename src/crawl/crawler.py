@@ -434,7 +434,6 @@ class Crawler:
         deps = reversed(collected_dep_lists)
         deps = Crawler._flatten(deps)
         deps = Crawler._dedupe(deps)        
-        deps = Crawler._filter_non_artifact_referencing_deps(deps)
         return deps
 
     @classmethod
@@ -727,6 +726,9 @@ class Crawler:
                         # the dep, since it has the full metadata, including
                         # the aggregation target
                         artifact_def = artifact_def.parent_artifact_def
+                else:
+                    if not artifact_def.generation_mode.produces_artifact:
+                        add_dependency = False
             if add_dependency:
                 dep = downstream_artifact_def.generation_strategy.load_dependency(lbl, artifact_def)
                 deps.append(dep)

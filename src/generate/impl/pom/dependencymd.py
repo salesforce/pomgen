@@ -31,7 +31,7 @@ class DependencyMetadata:
         if dependency.classifier is not None:
             return dependency.classifier
         else:
-            if dependency.bazel_buildable:
+            if dependency.local:
                 return self._jar_artifact_classifier
         return None
                 

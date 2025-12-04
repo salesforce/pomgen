@@ -79,6 +79,9 @@ def main(args):
                 pom_content = pomgen.generate_goldfile_manifest()
                 pom_path = os.path.join(
                     pom_dest_dir, gen_strategy.released_manifest_path)
+                parent_dir = os.path.dirname(pom_path)
+                if not os.path.exists(parent_dir):
+                    os.makedirs(parent_dir)
                 _write_file(pom_path, pom_content)
                 logger.info("Wrote goldfile manifest to [%s]" % pom_path)
             else:

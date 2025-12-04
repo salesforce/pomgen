@@ -185,7 +185,12 @@ class MavenInstallParserTest(unittest.TestCase):
     def test_use_alt_lookup_coords(self):
         d1 = dependency.new_dep_from_maven_art_str("com.salesforce.servicelibs:pki-security-impl:jar:tests:1.0.0", "maven")
         top_level_deps = [d1]
-        coord_wo_vers_to_dep = {d.maven_coordinates_name:d for d in top_level_deps}
+        coord_wo_vers_to_dep = {}
+        for d in top_level_deps:
+            coord = d.native_repr
+            i = coord.rindex(":")
+            coord = coord[0:i]
+            coord_wo_vers_to_dep[coord] = d
         direct_dep_coords_wo_vers = ["com.salesforce.servicelibs:pki-security-impl:test-jar"]
 
         direct_deps = maveninstallparser._get_direct_deps(

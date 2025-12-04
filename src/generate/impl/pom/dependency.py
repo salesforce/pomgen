@@ -5,7 +5,7 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
-
+import common.label as label
 import generate
 from functools import total_ordering
  
@@ -25,50 +25,41 @@ class AbstractJarDependency(generate.AbstractDependency):
               (which could be a previously uploaded repository artifact)
               False -> this is a repository source dependency
 
-    references_artifact: True -> this dependency references another maven
-                         artifact
-                         False -> this is a "traversal only" dependency
-
-    bazel_buildable: True -> this dependency is built by bazel (-> this
-                     dependency repesents a jar built by bazel)
-                     False -> this is an external dependency or a pom artifact
-                     or something else that bazel cannot build
-
 
     Optional/may be None:
 
     classifier: the maven artifact classifier
     packaging: the maven artifact packaging
-    scope: the maven scope of the dependency
-    
-    bazel_package: The bazel package this dependency lives in, None for 
-        artifacts that are not built out of the repository (for example Guava).
-
-
-    TODO - abstract common shape with py dep into ABC.
+    scope: the maven scope of the dependency    
     """
-    def __init__(self, group_id, artifact_id,
-                 classifier=None, packaging=None, scope=None):
-        self.group_id = group_id
-        self.artifact_id = artifact_id
-        self.classifier = classifier
-        self.packaging = "jar" if packaging is None else packaging
-        self.scope = scope
+    def __init__(self, label, group_id, artifact_id,
+                 packaging=None, classifier=None, scope=None):
+        self._label = label
+        self._artifact_id = artifact_id
+        self._group_id = group_id
+        self._packaging = "jar" if packaging is None else packaging
+        self._classifier = classifier
+        self._scope = scope
 
     @property
-    def maven_coordinates_name(self):
-        """
-        The Maven "coords" representation for this dependency, EXCLUDING the
-        version.
-        """
-        c = "%s:%s" % (self.group_id, self.artifact_id)
-        if self.classifier is None:
-            if self.packaging not in (None, "jar"):
-                c = "%s:%s" % (c, self.packaging)
-        else:
-            pack = "jar" if self.packaging is None else self.packaging
-            c = "%s:%s:%s" % (c, pack, self.classifier)
-        return c
+    def artifact_id(self):
+        return self._artifact_id
+
+    @property
+    def group_id(self):
+        return self._group_id
+
+    @property
+    def packaging(self):
+        return self._packaging
+
+    @property
+    def classifier(self):
+        return self._classifier
+
+    @property
+    def scope(self):
+        return self._scope
 
     @property
     def bazel_label_name(self):
@@ -79,6 +70,7 @@ class AbstractJarDependency(generate.AbstractDependency):
         """
         return None
 
+    # impl in terms of label
     @property    
     def unqualified_bazel_label_name(self):
         """
@@ -100,55 +92,61 @@ class AbstractJarDependency(generate.AbstractDependency):
         return label
 
     @property
+    def label(self):
+        return self._label
+
+    @property
     def version(self):
         raise Exception("must be implemented in subclass")
 
     @property
-    def external(self):
+    def local(self):
         raise Exception("must be implemented in subclass")
 
     @property
-    def bazel_package(self):
-        raise Exception("must be implemented in subclass")
+    def native_repr(self):
+        c = "%s:%s" % (self._group_id, self._artifact_id)
+        if self._classifier is None:
+            if self._packaging != "jar":
+                c = "%s:%s" % (c, self.packaging)
+        else:
+            c = "%s:%s:%s" % (c, self._packaging, self._classifier)
+        return "%s:%s" % (c, self.version)
 
-    @property
-    def references_artifact(self):
-        raise Exception("must be implemented in subclass")
-
-    @property
-    def bazel_buildable(self):
-        raise Exception("must be implemented in subclass")
-
+    # note that hash/eq/lt etc don't use the version because
+    # the version can change based on the value of requires_release
+    # we need to check whether we can create dependency instances after
+    # the value of requires release is known so we can make this more consistent
     def __hash__(self):
-        return hash((self.group_id, self.artifact_id, self.classifier, self.packaging))
+        return hash((self._group_id, self._artifact_id, self._classifier, self._packaging))
 
     def __eq__(self, other):
-        return (self.group_id == other.group_id and
-                self.artifact_id == other.artifact_id and
-                self.classifier == other.classifier and
-                self.packaging == other.packaging)
+        return (self._group_id == other._group_id and
+                self._artifact_id == other._artifact_id and
+                self._classifier == other._classifier and
+                self._packaging == other._packaging)
 
     def __ne__(self, other):
-        return not self == other
+        return self != other
 
     def __lt__(self, other):
-        if self.bazel_package is None:
+        if not self.local:
             # self is a 3rd party dep
-            if other.bazel_package is None:
+            if not other.local:
                 # other is also a 3rd party dep, compare attributes:
                 # group_id, artifact_id, classifier, packaging, scope
-                my_classifier = "" if self.classifier is None else self.classifier
-                other_classifier = "" if other.classifier is None else other.classifier
-                my_packaging = "" if self.packaging is None else self.packaging
-                other_packaging = "" if other.packaging is None else other.packaging
-                my_scope = "" if self.scope is None else self.scope
-                other_scope = "" if other.scope is None else other.scope
-                return (self.group_id,
-                        self.artifact_id,
+                my_classifier = "" if self._classifier is None else self._classifier
+                other_classifier = "" if other._classifier is None else other._classifier
+                my_packaging = "" if self._packaging is None else self._packaging
+                other_packaging = "" if other._packaging is None else other._packaging
+                my_scope = "" if self._scope is None else self._scope
+                other_scope = "" if other._scope is None else other._scope
+                return (self._group_id,
+                        self._artifact_id,
                         my_classifier,
                         my_packaging,
-                        my_scope) < (other.group_id,
-                                     other.artifact_id,
+                        my_scope) < (other._group_id,
+                                     other._artifact_id,
                                      other_classifier,
                                      other_packaging,
                                      other_scope)
@@ -157,7 +155,7 @@ class AbstractJarDependency(generate.AbstractDependency):
                 return False
         else:
             # self is a repository dep
-            if other.bazel_package is None:
+            if not other.local:
                 # other is a 3rd party dep, repository goes first
                 return True
             else:
@@ -165,52 +163,43 @@ class AbstractJarDependency(generate.AbstractDependency):
                 return (self.group_id, self.artifact_id) < (other.group_id, other.artifact_id)
 
     def __str__(self):
-        if self.references_artifact:
-            return self.maven_coordinates_name
-        else:
-            return "%s (ref)" % self.bazel_package
+        s = "%s %s" % (self.native_repr, "(local)" if self.local else "")
+        return s.strip()
 
     def __repr__(self):
         return self.__str__()
 
 
-class ThirdPartyDependency(AbstractJarDependency):
+class ExternalDependency(AbstractJarDependency):
 
     def __init__(self, maven_install_name, group_id, artifact_id, version,
-                 classifier=None, packaging=None, scope=None):
-        super(ThirdPartyDependency, self).__init__(group_id, artifact_id,
-                                                   classifier, packaging, scope)
+                 packaging=None, classifier=None, scope=None):
+        label = ExternalDependency._build_label(
+            group_id, artifact_id, packaging, classifier, maven_install_name)
+        super().__init__(label, group_id, artifact_id, packaging, classifier, scope)
         self._version = version
-        if maven_install_name is not None and maven_install_name.startswith("@"):
-            maven_install_name = maven_install_name[1:]
         self._maven_install_name = maven_install_name
 
     @property
-    def external(self):
-        return True
-
-    @property
-    def bazel_package(self):
-        return None
-
-    @property
-    def references_artifact(self):
-        return True
+    def local(self):
+        return False
 
     @property
     def version(self):
         return self._version
 
     @property
+    def label(self):
+        return self._label
+
+    @property
     def bazel_label_name(self):
         name = self._bzl_artifact_name()
         if self._maven_install_name is not None:
-            name = "@%s//:%s" % (self._maven_install_name, name)
+            name = "%s//:%s" % (self._maven_install_name, name)
+            if not name.startswith("@"):
+                name = "@%s" % name
         return name
-
-    @property
-    def bazel_buildable(self):
-        return False
 
     def _bzl_artifact_name(self):
         """
@@ -222,17 +211,33 @@ class ThirdPartyDependency(AbstractJarDependency):
            "" if self.packaging in (None, "jar") else "_" + self.packaging,
            "" if self.classifier is None else "_" + self.classifier))
 
-    def _normalize(self, n):
+    @classmethod
+    def _build_label(clazz, group_id, artifact_id, packaging, classifier, repo_name):
+        label_str = ExternalDependency._normalize("%s_%s%s%s" %
+          (group_id, artifact_id,
+           "" if packaging in (None, "jar") else "_" + packaging,
+           "" if classifier is None else "_" + classifier))
+        
+        if repo_name is not None:
+            label_str = "%s//:%s" % (repo_name, label_str)
+            if not label_str.startswith("@"):
+                label_str = "@%s" % label_str
+        return label.Label(label_str)
+
+    @classmethod
+    def _normalize(clazz, n):
         n = n.replace('-', '_')
         n = n.replace('.', '_')
         return n
 
 
-class MonorepoDependency(AbstractJarDependency):
+class SourceDependency(AbstractJarDependency):
 
     def __init__(self, artifact_def):
-        super(MonorepoDependency, self).__init__(artifact_def.group_id,
-                                                 artifact_def.artifact_id)
+        lbl = label.Label(artifact_def.bazel_package)
+        if artifact_def.bazel_target is not None:
+            lbl = lbl.with_target(artifact_def.bazel_target)
+        super().__init__(lbl, artifact_def.group_id, artifact_def.artifact_id)
         self._artifact_def = artifact_def
 
     @property
@@ -241,21 +246,8 @@ class MonorepoDependency(AbstractJarDependency):
         return self._artifact_def.released_version if use_released else self._artifact_def.version
 
     @property
-    def external(self):
-        return True if self._use_previously_released_artifact() else False
-
-    @property
-    def bazel_package(self):
-        return self._artifact_def.bazel_package
-
-    @property
-    def bazel_buildable(self):
-        pom_template = self._artifact_def.custom_pom_template_content
-        return self._artifact_def.generation_mode.bazel_produced_artifact(pom_template)
-
-    @property
-    def references_artifact(self):
-        return self._artifact_def.generation_mode.produces_artifact
+    def local(self):
+        return True
 
     def _use_previously_released_artifact(self):
         if self._artifact_def.requires_release is not None:
@@ -265,7 +257,7 @@ class MonorepoDependency(AbstractJarDependency):
         return False
 
 
-def new_dep_from_maven_art_str(maven_artifact_str, name):
+def new_dep_from_maven_art_str(maven_artifact_str, maven_install_name, scope=None):
     num_coordinates = maven_artifact_str.count(':') + 1
     classifier = None
     packaging = None
@@ -283,16 +275,14 @@ def new_dep_from_maven_art_str(maven_artifact_str, name):
         raise Exception ("cannot parse artifact specification [%s]" % maven_artifact_str) from e
 
     version = version.strip()
-    if len(version) == 0:
-        # version should always be specified for external dependencies
-        raise Exception("invalid version in artifact [%s]" % maven_artifact_str)
+    assert len(version) > 0, "Invalid version in artifact [%s]" % maven_artifact_str
 
-    return ThirdPartyDependency(name, group_id, artifact_id, version,
-                                classifier, packaging)
+    return ExternalDependency(maven_install_name, group_id, artifact_id, version,
+                              packaging, classifier, scope)
 
 
 def new_dep_from_maven_artifact_def(artifact_def):
-    return MonorepoDependency(artifact_def)
+    return SourceDependency(artifact_def)
 
 
 """

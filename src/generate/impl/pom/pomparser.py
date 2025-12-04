@@ -170,12 +170,12 @@ def _get_dependency_from_xml_element(el, version_must_be_set):
         # we currently don't support "type" (for no particular reason, we could)
         raise Exception("we are dropping type on the floor %s" % _str(el))
 
-    return dependency.ThirdPartyDependency(maven_install_name=None, 
-                                           group_id=group_id, 
-                                           artifact_id=artifact_id, 
-                                           version=version,
-                                           classifier=classifier,
-                                           scope=scope)
+    return dependency.ExternalDependency(maven_install_name=None, 
+                                         group_id=group_id, 
+                                         artifact_id=artifact_id, 
+                                         version=version,
+                                         classifier=classifier,
+                                         scope=scope)
 
 
 def _pretty_str(el):
