@@ -82,7 +82,7 @@ def main(args):
                 parent_dir = os.path.dirname(pom_path)
                 if not os.path.exists(parent_dir):
                     os.makedirs(parent_dir)
-                _write_file(pom_path, pom_content)
+                common.write_file(pom_path, pom_content)
                 logger.info("Wrote goldfile manifest to [%s]" % pom_path)
             else:
                 pom_content = pomgen.generate_release_manifest()
@@ -90,7 +90,7 @@ def main(args):
                     pom_dest_dir, "%s.%s" % (
                         gen_strategy.base_manifest_filename,
                         gen_strategy.manifest_file_extension))
-                _write_file(pom_path, pom_content)
+                common.write_file(pom_path, pom_content)
                 logger.info("Wrote manifest file to [%s]" % pom_path)
                 for i, companion_pomgen in enumerate(pomgen.get_companion_generators()):
                     pom_content = companion_pomgen.generate_release_manifest()
@@ -98,7 +98,7 @@ def main(args):
                         "%s_companion%s.%s" % (
                             gen_strategy.base_manifest_filename, i,
                             gen_strategy.manifest_file_extension))
-                    _write_file(pom_path, pom_content)
+                    common.write_file(pom_path, pom_content)
                     logger.info("Wrote companion manifest file to [%s]" % pom_path)
 
                 # if jar_path has been set in the BUILD.pom file, we write a
@@ -107,7 +107,7 @@ def main(args):
                 jar_path = ctx.artifact_def.jar_path
                 if jar_path is not None:
                     hint_file_path = os.path.join(pom_dest_dir, mdfiles.JAR_LOCATION_HINT_FILE)
-                    _write_file(hint_file_path, jar_path)
+                    common.write_file(hint_file_path, jar_path)
                     logger.info("Wrote jar location hint file [%s] with content [%s]" % (hint_file_path, jar_path))
 
 
@@ -134,11 +134,6 @@ def _parse_arguments(args):
         help="The libraries hint file is used by the wrapper script in //package")
 
     return parser.parse_args(args)
-
-
-def _write_file(path, content):                    
-    with open(path, "w") as f:
-        f.write(content)
 
 
 def _get_output_dir(args):
@@ -168,7 +163,7 @@ def _write_all_libraries_hint_files(crawler_result, output_dir, start_lib_path):
         if not os.path.exists(hint_file_dir):
             os.makedirs(hint_file_dir)
         hint_file_path = os.path.join(hint_file_dir, "libraries.txt")
-        _write_file(hint_file_path, "\n".join(
+        common.write_file(hint_file_path, "\n".join(
             ["# the root lib path, followed by the paths to its upstream dependencies"] + lib_paths))
         logger.info("Wrote libraries hint file to [%s]" % hint_file_path)
 

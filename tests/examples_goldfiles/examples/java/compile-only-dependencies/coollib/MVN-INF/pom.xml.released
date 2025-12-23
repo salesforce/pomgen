@@ -6,14 +6,10 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.pomgen.example</groupId>
-    <artifactId>wintervegetables</artifactId>
-    <version>20200416.1-SNAPSHOT</version>
+    <groupId>com.pomgen.cool.example</groupId>
+    <artifactId>coollib</artifactId>
+    <version>***</version>
     <packaging>jar</packaging>
-
-    <description>
-        this is a call!
-    </description>
 
     <properties>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -22,9 +18,15 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.pomgen.example</groupId>
-            <artifactId>vegetable-api</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>33.4.8-jre</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 

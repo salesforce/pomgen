@@ -6,14 +6,10 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.pomgen.example</groupId>
-    <artifactId>fruit-api</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <groupId>com.pomgen.example.skip-art-gen</groupId>
+    <artifactId>parent2</artifactId>
+    <version>***</version>
     <packaging>jar</packaging>
-
-    <description>
-        this is a call!
-    </description>
 
     <properties>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -21,6 +17,22 @@
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>com.pomgen.example.skip-art-gen</groupId>
+            <artifactId>lib</artifactId>
+            <version>***</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>33.4.8-jre</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
         <dependency>
             <groupId>org.antlr</groupId>
             <artifactId>ST4</artifactId>
@@ -33,9 +45,9 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>extra</groupId>
-            <artifactId>dependency</artifactId>
-            <version>1.0.0</version>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.18.0</version>
             <exclusions>
                 <exclusion>
                     <groupId>*</groupId>
@@ -47,8 +59,8 @@
         <!-- The transitives of the dependencies above -->
         <dependency>
             <groupId>org.antlr</groupId>
-            <artifactId>stringtemplate</artifactId>
-            <version>3.2.1</version>
+            <artifactId>antlr-runtime</artifactId>
+            <version>3.5</version>
             <exclusions>
                 <exclusion>
                     <groupId>*</groupId>
@@ -57,9 +69,9 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>antlr</groupId>
-            <artifactId>antlr</artifactId>
-            <version>2.7.6</version>
+            <groupId>org.antlr</groupId>
+            <artifactId>stringtemplate</artifactId>
+            <version>3.2.1</version>
             <exclusions>
                 <exclusion>
                     <groupId>*</groupId>

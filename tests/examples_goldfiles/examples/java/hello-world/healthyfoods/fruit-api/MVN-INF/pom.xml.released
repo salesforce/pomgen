@@ -8,12 +8,8 @@
 
     <groupId>com.pomgen.example</groupId>
     <artifactId>fruit-api</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>***</version>
     <packaging>jar</packaging>
-
-    <description>
-        this is a call!
-    </description>
 
     <properties>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -21,17 +17,6 @@
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>org.antlr</groupId>
-            <artifactId>ST4</artifactId>
-            <version>4.0.7</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>*</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
         <dependency>
             <groupId>extra</groupId>
             <artifactId>dependency</artifactId>
@@ -43,12 +28,23 @@
                 </exclusion>
             </exclusions>
         </dependency>
+        <dependency>
+            <groupId>org.antlr</groupId>
+            <artifactId>ST4</artifactId>
+            <version>4.0.7</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
 
         <!-- The transitives of the dependencies above -->
         <dependency>
-            <groupId>org.antlr</groupId>
-            <artifactId>stringtemplate</artifactId>
-            <version>3.2.1</version>
+            <groupId>antlr</groupId>
+            <artifactId>antlr</artifactId>
+            <version>2.7.6</version>
             <exclusions>
                 <exclusion>
                     <groupId>*</groupId>
@@ -57,9 +53,9 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>antlr</groupId>
-            <artifactId>antlr</artifactId>
-            <version>2.7.6</version>
+            <groupId>org.antlr</groupId>
+            <artifactId>stringtemplate</artifactId>
+            <version>3.2.1</version>
             <exclusions>
                 <exclusion>
                     <groupId>*</groupId>

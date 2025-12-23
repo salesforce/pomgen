@@ -6,14 +6,10 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.pomgen.example</groupId>
-    <artifactId>wintervegetables</artifactId>
-    <version>20200416.1-SNAPSHOT</version>
+    <groupId>com.pomgen.depman.example</groupId>
+    <artifactId>juicer</artifactId>
+    <version>***</version>
     <packaging>jar</packaging>
-
-    <description>
-        this is a call!
-    </description>
 
     <properties>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -22,9 +18,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.pomgen.example</groupId>
-            <artifactId>vegetable-api</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
+            <groupId>com.pomgen.depman.example</groupId>
+            <artifactId>wintervegetables</artifactId>
+            <version>***</version>
         </dependency>
     </dependencies>
 

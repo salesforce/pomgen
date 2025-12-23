@@ -5,7 +5,11 @@
 - Confirm plan before making code changes
 
 
-# Verification of code changes
+# Making code changes
+
+## Verification
+
+### Unit tests
 
 For verification of all code changes made, always run:
 
@@ -13,14 +17,20 @@ For verification of all code changes made, always run:
 The command above should complete without errors.
 Note that it isn't necessary to run bazel test on individual targets targets since the codebase is small - for simplicity just always use `bazel test //...`.
 
-`rm -rf tests/examples_goldfiles/examples && bazel run //:gen -- --package examples --destdir tests/examples_goldfiles`
-The command above should complete without errors
-There should be no diffs under the tests/examples_goldfiles/examples directory
+### Goldfile tests
+
+`./tests/examples_goldfiles/run_goldfiles_test.sh`
+The command above should complete without errors.
+After running this command, there should be no diffs under the tests/examples_goldfiles/examples directory.
+
+### Formatting and Linting (automated)
 
 `ruff check src tests misc`
-The command above should complete without errors
+The command above should complete without errors.
 
 
-# Formatting
+### Formatting (manual)
 
 After making code changes, make sure there are no leading or trailing spaces shown in `git diff` output.
+
+
