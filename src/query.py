@@ -128,15 +128,16 @@ if __name__ == "__main__":
         print(_to_json(all_artifacts))
 
     if args.list_external_dependencies:
-        external_dependencies = sorted(fac.load_all_external_dependencies(), key=lambda dep: dep.bazel_label_name)
+        external_dependencies = sorted(fac.load_all_external_dependencies(), key=lambda dep: dep.label)
         ext_deps = []
         for external_dependency in external_dependencies:
             attrs = collections.OrderedDict()
             attrs["artifact_id"] = external_dependency.artifact_id
             attrs["group_id"] = external_dependency.group_id
             attrs["version"] = external_dependency.version
+            attrs["packaging"] = external_dependency.packaging
             attrs["classifier"] = external_dependency.classifier
-            attrs["name"] = external_dependency.bazel_label_name
+            attrs["name"] = external_dependency.label.canonical_form
             ext_deps.append(attrs)
         if args.filter is not None:
             # filter AFTER building result dict so that filtering on ancestors

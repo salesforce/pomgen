@@ -72,15 +72,15 @@ class PomGenerationStrategy(generate.AbstractGenerationStrategy):
             assert artifact_def is not None
             return dependency.new_dep_from_maven_artifact_def(artifact_def)
         else:
-            if label.canonical_form not in self._label_to_ext_dep:
+            if label not in self._label_to_ext_dep:
                 print(self._label_to_ext_dep.values())
                 raise Exception("Unknown external dependency - please make sure all maven install json files have been registered with pomgen (by setting maven_install_paths in the pomgen config file): [%s]" % label.canonical_form)
-            return self._label_to_ext_dep[label.canonical_form]
+            return self._label_to_ext_dep[label]
 
     def load_dependency_by_native_repr(self, str_repr):
         if str_repr.count(":") == 1:
             str_repr += ":-1"
-        return dependency.new_dep_from_maven_art_str(str_repr, None)
+        return dependency.new_dep_from_maven_art_str(str_repr, "__internal")
 
     def load_transitive_closure(self, dependency):
         return self._dependency_md.get_transitive_closure(dependency)
@@ -108,9 +108,8 @@ class PomGenerationStrategy(generate.AbstractGenerationStrategy):
 
         label_to_dep = {}
         for dep, transitives in dep_to_transitives:
-            label = dep.bazel_label_name
-            label_to_dep[label] = dep
+            label_to_dep[dep.label] = dep
             if self._verbose:
-                logger.debug("Registered dep %s" % label)
+                logger.debug("Registered dep %s" % dep.label.canonical_form)
             self._dependency_md.register_transitives(dep, transitives)
         return label_to_dep

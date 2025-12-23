@@ -116,7 +116,7 @@ def main(args):
     deps_set = set()
     updated_dependencies = []
     for dep in dependencies:
-        dedupe_key = dep.to_native_repr()
+        dedupe_key = dep.native_repr
         if dedupe_key not in deps_set:
             deps_set.add(dedupe_key)
             updated_dependencies.append(dep)

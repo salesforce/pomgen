@@ -61,9 +61,9 @@ class PomGenerationStrategyTest(unittest.TestCase):
         self.assertEqual(group_id, dep.group_id)
         self.assertEqual(artifact_id, dep.artifact_id)
         self.assertEqual(artifact_version, dep.version)
-        self.assertTrue(dep.local)
         self.assertEqual(package_name, dep.label.package_path)
         self.assertEqual(package_name, dep.label.target)
+        self.assertTrue(dep.label.is_source_ref)
         self.assertIsNone(dep.classifier)
 
     def test_parse_src_dep_with_target(self):
@@ -87,9 +87,9 @@ class PomGenerationStrategyTest(unittest.TestCase):
         self.assertEqual(group_id, dep.group_id)
         self.assertEqual(artifact_id, dep.artifact_id)
         self.assertEqual(artifact_version, dep.version)
-        self.assertTrue(dep.local)
         self.assertEqual(package_name, dep.label.package_path)
         self.assertEqual(target_name, dep.label.target)
+        self.assertTrue(dep.label.is_source_ref)
         self.assertIsNone(dep.classifier)
 
     def test_parse_ext_dep(self):
@@ -103,7 +103,7 @@ class PomGenerationStrategyTest(unittest.TestCase):
         self.assertEqual("ch.qos.logback", dep.group_id)
         self.assertEqual("logback-classic", dep.artifact_id)
         self.assertEqual("1.2.3", dep.version)
-        self.assertFalse(dep.local)
+        self.assertFalse(dep.label.is_source_ref)
 
     def test_parse_ext_dep__unknown_dep(self):
         """

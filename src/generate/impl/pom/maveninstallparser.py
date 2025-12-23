@@ -21,12 +21,13 @@ def parse_maven_install(names_and_paths, label_to_overridden_fq_label={}, verbos
       - t[1]: for the dependency at t[0], an iterable of the dependencies
               it references (the full transitive closure)
     """
-    # internal bookkeeping: stores a mapping of unqualified label (without the
-    # @maven_install_name prefix) to a list of deps with that unqualified label
-    # the label is a str, the deps are _DepWithDirects instances
+    # internal bookkeeping: stores a mapping of the label target name
+    # (@maven//:foo -> foo) to a list of deps
+    # the label target name is a str, the deps are _DepWithDirects instances
     # this is a one to many mapping because there may be multiple matching
-    # deps, each in a different maven install rule
+    # deps, each from a different maven install rule (namespace)
     unqual_label_to_deps = collections.defaultdict(list)
+
     # internal bookkeeping: stores a mapping of qualified label (with the
     # @maven_install_name prefix) to the dep with that label
     # the label is a str, the dep is a _DepWithDirects instance
@@ -36,9 +37,9 @@ def parse_maven_install(names_and_paths, label_to_overridden_fq_label={}, verbos
     for name, pinned_file_path in names_and_paths:
         for dep in _parse_pinned(name, pinned_file_path, verbose):
             d = dep.dep # dep is a _DepWithDirects instance
-            unqual_label_to_deps[d.unqualified_bazel_label_name].append(dep)
-            assert d.bazel_label_name not in fq_label_to_dep
-            fq_label_to_dep[d.bazel_label_name] = dep
+            unqual_label_to_deps[d.label.target].append(dep)
+            assert d.label.canonical_form not in fq_label_to_dep
+            fq_label_to_dep[d.label.canonical_form] = dep
 
 
     # process overrides (if there are any)

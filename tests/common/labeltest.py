@@ -1,4 +1,4 @@
-from common import label
+import common.label as label
 import unittest
 
 
@@ -179,6 +179,14 @@ class LabelTest(unittest.TestCase):
         labels = sorted([n1, n2, n3, n4])
 
         self.assertEqual([n2, n4, n3, n1], labels)
+
+    def test_label_as_key(self):
+        d1 = {}
+        k1 = label.Label("a/b/c")
+        d1[k1] = "test"
+
+        self.assertEqual("test", d1[k1])
+
 
 if __name__ == '__main__':
     unittest.main()

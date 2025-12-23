@@ -1,3 +1,4 @@
+set -e
 
 
 # remove all files so we notice when expected files are not written
@@ -17,3 +18,6 @@ bazel run //:gen -- \
 
 # generate the manifet goldfiles for all example artifacts
 bazel run //:gen -- --package examples --destdir tests/examples_goldfiles --manifest_goldfile
+
+# query output
+bazel run //:query -- --list_external_dependencies > tests/examples_goldfiles/external_dependencies.json

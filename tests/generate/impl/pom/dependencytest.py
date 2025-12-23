@@ -73,19 +73,7 @@ class DependencyTest(unittest.TestCase):
         artifact = "group:art:ver"
         dep = dependency.new_dep_from_maven_art_str(artifact, "maven")
         self.assertEqual("group:art:ver", dep.native_repr)
-        self.assertEqual("@maven//:group_art", dep.bazel_label_name)
-        self.assertEqual("group_art", dep.unqualified_bazel_label_name)
-
-    def test_external_dependency__names__none_name(self):
-        """
-        Ensures the Dependency instance for an external dependency has expected
-        names.
-        """
-        artifact = "group:art:ver"
-        dep = dependency.new_dep_from_maven_art_str(artifact, None)
-        self.assertEqual("group:art:ver", dep.native_repr)
-        self.assertEqual("group_art", dep.bazel_label_name)
-        self.assertEqual("group_art", dep.unqualified_bazel_label_name)
+        self.assertEqual("@maven//:group_art", dep.label.canonical_form)
 
     def test_external_dependency__names__maven_install_name_with_leading_at(self):
         """
@@ -94,8 +82,7 @@ class DependencyTest(unittest.TestCase):
         artifact = "group:art:ver"
         dep = dependency.new_dep_from_maven_art_str(artifact, "@maven")
         self.assertEqual("group:art:ver", dep.native_repr)
-        self.assertEqual("@maven//:group_art", dep.bazel_label_name)
-        self.assertEqual("group_art", dep.unqualified_bazel_label_name)
+        self.assertEqual("@maven//:group_art", dep.label.canonical_form)
 
     def test_external_dependency__names__default_packaging(self):
         """
@@ -108,8 +95,7 @@ class DependencyTest(unittest.TestCase):
                                               version="1.0.0",
                                               packaging="jar")
         self.assertEqual("group:art:1.0.0", dep.native_repr)
-        self.assertEqual("@name//:group_art", dep.bazel_label_name)
-        self.assertEqual("group_art", dep.unqualified_bazel_label_name)
+        self.assertEqual("@name//:group_art", dep.label.canonical_form)
 
     def test_external_dependency__names__with_packaging(self):
         """
@@ -119,8 +105,7 @@ class DependencyTest(unittest.TestCase):
         artifact = "group:art:packaging:version"
         dep = dependency.new_dep_from_maven_art_str(artifact, "maven")
         self.assertEqual("group:art:packaging:version", dep.native_repr)
-        self.assertEqual("@maven//:group_art_packaging", dep.bazel_label_name)
-        self.assertEqual("group_art_packaging", dep.unqualified_bazel_label_name)
+        self.assertEqual("@maven//:group_art_packaging", dep.label.canonical_form)
 
     def test_external_dependency__names__with_packaging_and_classifier(self):
         """
@@ -130,8 +115,7 @@ class DependencyTest(unittest.TestCase):
         artifact = "group:art:pack:class:version"
         dep = dependency.new_dep_from_maven_art_str(artifact, "mvn")
         self.assertEqual("group:art:pack:class:version", dep.native_repr)
-        self.assertEqual("@mvn//:group_art_pack_class", dep.bazel_label_name)
-        self.assertEqual("group_art_pack_class", dep.unqualified_bazel_label_name)
+        self.assertEqual("@mvn//:group_art_pack_class", dep.label.canonical_form)
 
     def test_external_dependency__names__with_classifier_and_default_packaging(self):
         """
@@ -144,8 +128,7 @@ class DependencyTest(unittest.TestCase):
                                               version="1.0.0",
                                               classifier="class")
         self.assertEqual("group:art:jar:class:1.0.0", dep.native_repr)
-        self.assertEqual("@name//:group_art_class", dep.bazel_label_name)
-        self.assertEqual("group_art_class", dep.unqualified_bazel_label_name)
+        self.assertEqual("@name//:group_art_class", dep.label.canonical_form)
 
     def test_external_dependency__unparsable_artifact(self):
         """
@@ -170,23 +153,6 @@ class DependencyTest(unittest.TestCase):
 
         self.assertIn("Invalid version", str(ctx.exception))
         
-    def test_source_dependency__from_artifact_definition__name(self):
-        """
-        Ensures the Dependency instance for a source dependency has expected
-        names.
-        """
-        group_id = "g1"
-        artifact_id = "a1"
-        version = "1.1.0"
-        package = "root/pack1"
-        art_def = buildpom.MavenArtifactDef(group_id, artifact_id, version, bazel_package=package)
-        art_def = buildpom._augment_art_def_values(
-            art_def, None, package, "MVN-INF", None, None, genmode.DYNAMIC)
-
-        dep = dependency.new_dep_from_maven_artifact_def(art_def)
-
-        self.assertIsNone(dep.bazel_label_name)
-
     def test_source_dependency__from_artifact_definition__label(self):
         """
         Checks the dependency label.
@@ -220,7 +186,6 @@ class DependencyTest(unittest.TestCase):
         self.assertEqual(group_id, dep.group_id)
         self.assertEqual(artifact_id, dep.artifact_id)
         self.assertEqual(version, dep.version)
-        self.assertTrue(dep.local)
         self.assertTrue(dep.label.is_source_ref)
 
     def test_source_dependency__from_artifact_definition__with_changes(self):
@@ -246,7 +211,6 @@ class DependencyTest(unittest.TestCase):
         self.assertEqual(group_id, dep.group_id)
         self.assertEqual(artifact_id, dep.artifact_id)
         self.assertEqual(version, dep.version)
-        self.assertTrue(dep.local)
         self.assertTrue(dep.label.is_source_ref)
 
     def test_source_dependency__from_artifact_definition__no_changes(self):
@@ -273,7 +237,6 @@ class DependencyTest(unittest.TestCase):
         self.assertEqual(group_id, dep.group_id)
         self.assertEqual(artifact_id, dep.artifact_id)
         self.assertEqual(released_version, dep.version)
-        self.assertTrue(dep.local)
         self.assertTrue(dep.label.is_source_ref)
 
     def test_sort_order(self):

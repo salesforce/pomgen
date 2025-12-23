@@ -52,7 +52,7 @@ class Label(object):
     @property
     def target(self):
         """
-        The bazel target of this label.
+        The the bazel target of this label, as a str.
         For example, for "//a/b/c:foo", returns "foo".
         """
         i = self._name.rfind(":")
@@ -104,7 +104,7 @@ class Label(object):
         """
         True if this name is a reference to source in the same repository.
         """
-        return self._name.startswith("//")
+        return self._canonical.startswith("//")
 
     @property
     def canonical_form(self):
@@ -151,4 +151,3 @@ class Label(object):
 
     def __lt__(self, other):
         return self.canonical_form < other.canonical_form
-

@@ -20,17 +20,6 @@ class AbstractJarDependency(generate.AbstractDependency):
     artifact_id: the maven artifact id (artifactId) of this depdendency.
 
     version: the maven artifact version of this depdendency.
-
-    external: True -> this dependency references a Nexus artifact 
-              (which could be a previously uploaded repository artifact)
-              False -> this is a repository source dependency
-
-
-    Optional/may be None:
-
-    classifier: the maven artifact classifier
-    packaging: the maven artifact packaging
-    scope: the maven scope of the dependency    
     """
     def __init__(self, label, group_id, artifact_id,
                  packaging=None, classifier=None, scope=None):
@@ -62,36 +51,6 @@ class AbstractJarDependency(generate.AbstractDependency):
         return self._scope
 
     @property
-    def bazel_label_name(self):
-        """
-        The bazel label used to reference this dependency.
-        TODO this isn't implemented consistently in subclasses - it is only
-        implemented/used by clients of ThirdPartyDependency
-        """
-        return None
-
-    # impl in terms of label
-    @property    
-    def unqualified_bazel_label_name(self):
-        """
-        If the bazel_label_name starts with a repository name (== maven install
-        rule name), using the syntax "@<repo name>", returns the label without
-        the repository name.
-        
-        Note that this method is implemented in terms of bazel_label_name,
-        and therefore it is not implemented in subclasses.
-        """
-        label = self.bazel_label_name
-        if label is None:
-            return None
-        if label.startswith("@"):
-            i = label.index("//")
-            label = label[i+2:]
-            if label.startswith(":"):
-                label = label[1:]
-        return label
-
-    @property
     def label(self):
         return self._label
 
@@ -100,10 +59,8 @@ class AbstractJarDependency(generate.AbstractDependency):
         raise Exception("must be implemented in subclass")
 
     @property
-    def local(self):
-        raise Exception("must be implemented in subclass")
-
-    @property
+    # REVIEW why needed - only used by extdeps pomgen, move out?
+    # or is there value in having this for py deps?
     def native_repr(self):
         c = "%s:%s" % (self._group_id, self._artifact_id)
         if self._classifier is None:
@@ -130,9 +87,9 @@ class AbstractJarDependency(generate.AbstractDependency):
         return self != other
 
     def __lt__(self, other):
-        if not self.local:
+        if not self.label.is_source_ref:
             # self is a 3rd party dep
-            if not other.local:
+            if not other.label.is_source_ref:
                 # other is also a 3rd party dep, compare attributes:
                 # group_id, artifact_id, classifier, packaging, scope
                 my_classifier = "" if self._classifier is None else self._classifier
@@ -155,7 +112,7 @@ class AbstractJarDependency(generate.AbstractDependency):
                 return False
         else:
             # self is a repository dep
-            if not other.local:
+            if not other.label.is_source_ref:
                 # other is a 3rd party dep, repository goes first
                 return True
             else:
@@ -163,7 +120,7 @@ class AbstractJarDependency(generate.AbstractDependency):
                 return (self.group_id, self.artifact_id) < (other.group_id, other.artifact_id)
 
     def __str__(self):
-        s = "%s %s" % (self.native_repr, "(local)" if self.local else "")
+        s = "%s %s" % (self.native_repr, "(local)" if self.label.is_source_ref else "")
         return s.strip()
 
     def __repr__(self):
@@ -181,10 +138,6 @@ class ExternalDependency(AbstractJarDependency):
         self._maven_install_name = maven_install_name
 
     @property
-    def local(self):
-        return False
-
-    @property
     def version(self):
         return self._version
 
@@ -192,33 +145,16 @@ class ExternalDependency(AbstractJarDependency):
     def label(self):
         return self._label
 
-    @property
-    def bazel_label_name(self):
-        name = self._bzl_artifact_name()
-        if self._maven_install_name is not None:
-            name = "%s//:%s" % (self._maven_install_name, name)
-            if not name.startswith("@"):
-                name = "@%s" % name
-        return name
-
-    def _bzl_artifact_name(self):
-        """
-        The Maven artifact name without its repo prefix.
-        """
-        return self._normalize("%s_%s%s%s" %
-          (self.group_id,
-           self.artifact_id,
-           "" if self.packaging in (None, "jar") else "_" + self.packaging,
-           "" if self.classifier is None else "_" + self.classifier))
-
     @classmethod
     def _build_label(clazz, group_id, artifact_id, packaging, classifier, repo_name):
         label_str = ExternalDependency._normalize("%s_%s%s%s" %
           (group_id, artifact_id,
            "" if packaging in (None, "jar") else "_" + packaging,
            "" if classifier is None else "_" + classifier))
-        
-        if repo_name is not None:
+
+        if repo_name is None:
+            label_str = "//:%s" % label_str
+        else:
             label_str = "%s//:%s" % (repo_name, label_str)
             if not label_str.startswith("@"):
                 label_str = "@%s" % label_str
@@ -245,10 +181,6 @@ class SourceDependency(AbstractJarDependency):
         use_released = self._use_previously_released_artifact()
         return self._artifact_def.released_version if use_released else self._artifact_def.version
 
-    @property
-    def local(self):
-        return True
-
     def _use_previously_released_artifact(self):
         if self._artifact_def.requires_release is not None:
             # better to be explicit here: requires_release has been set
@@ -258,6 +190,8 @@ class SourceDependency(AbstractJarDependency):
 
 
 def new_dep_from_maven_art_str(maven_artifact_str, maven_install_name, scope=None):
+    assert maven_artifact_str is not None
+    assert maven_install_name is not None
     num_coordinates = maven_artifact_str.count(':') + 1
     classifier = None
     packaging = None
