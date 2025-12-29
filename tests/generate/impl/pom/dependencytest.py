@@ -254,13 +254,15 @@ class DependencyTest(unittest.TestCase):
         art_def = buildpom._augment_art_def_values(
             art_def, None, "pack2", "MVN-INF", None, None, genmode.DYNAMIC)
         dep4 = dependency.new_dep_from_maven_artifact_def(art_def)
+        dep5 = dependency.new_dep_from_maven_art_str("aaa.google.guava:goo:20.0", "name")
         
-        lst = [dep3, dep2, dep1, dep4]
+        lst = [dep3, dep2, dep1, dep5, dep4]
         lst.sort()
         self.assertIs(dep4, lst[0])
         self.assertIs(dep3, lst[1])
-        self.assertIs(dep1, lst[2])
-        self.assertIs(dep2, lst[3])
+        self.assertIs(dep5, lst[2])
+        self.assertIs(dep1, lst[3])
+        self.assertIs(dep2, lst[4])
 
     def test_sort_order_includes_classifier__one_dep_without_classifier(self):
         """
