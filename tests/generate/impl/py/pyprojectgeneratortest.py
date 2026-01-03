@@ -1,7 +1,7 @@
 import unittest
 
 import crawl.buildpom as buildpom
-import generate.impl.py.dependency as dependency
+import generate.impl.py.pydependency as pydependency
 import generate.impl.py.pyprojectgenerator as pyprojectgenerator
 
 
@@ -29,7 +29,7 @@ class PyProjectGeneratorTest(unittest.TestCase):
 
     def test_generate(self):
         art_def = buildpom.MavenArtifactDef(artifact_id="a2", version="1.2.3")
-        dep = dependency.Dependency("foodep", "1.2.3")
+        dep = pydependency.PyDependency("foodep", "1.2.3")
         gen = pyprojectgenerator.PyProjectGenerator(art_def, _TEMPLATE)
         gen.register_dependencies((dep,))
 

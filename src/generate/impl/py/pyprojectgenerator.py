@@ -54,7 +54,7 @@ class PyProjectGenerator(generate.AbstractManifestGenerator):
                 "$dependencies$",
                 """dependencies = [
 %s
-]""" % "\n".join(['%s"%s",' % (" "*4, dep.to_pyproject_format()) for dep in deps]))
+]""" % "\n".join(['%s"%s",' % (" "*4, dep.native_repr) for dep in deps]))
         return content
 
 

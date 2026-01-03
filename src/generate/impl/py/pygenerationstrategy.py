@@ -1,7 +1,7 @@
 import common.common as common
 import common.label as labelm
 import common.logger as logger
-import generate.impl.py.dependency as dependency
+import generate.impl.py.pydependency as pydependency
 import generate.impl.py.pyprojectgenerator as pyprojectgenerator
 import generate.impl.py.requirementsparser as requirementsparser
 import generate
@@ -43,7 +43,7 @@ class PyGenerationStrategy(generate.AbstractGenerationStrategy):
                 assert name is None
                 name = "<not used>"
                 version = "<not used>"
-            return dependency.Dependency(name, version)
+            return pydependency.PyDependency(name, version)
         else:
             assert label in self._label_to_ext_dep, "unknown third party dependency [%s]" % label
             return self._label_to_ext_dep[label]

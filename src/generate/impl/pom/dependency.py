@@ -59,8 +59,6 @@ class AbstractJarDependency(generate.AbstractDependency):
         raise Exception("must be implemented in subclass")
 
     @property
-    # REVIEW why needed - only used by extdeps pomgen, move out?
-    # or is there value in having this for py deps?
     def native_repr(self):
         c = "%s:%s" % (self._group_id, self._artifact_id)
         if self._classifier is None:

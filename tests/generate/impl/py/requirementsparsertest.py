@@ -95,20 +95,6 @@ class RequirementsParserTest(unittest.TestCase):
         self.assertEqual("setuptools", setuptools.name)
         self.assertEqual("75.8.1", setuptools.version)
 
-        self.assertEqual(1, len(pydantic.child_dependencies))
-        self.assertIs(pydantic.child_dependencies[0], ansi)
-        self.assertEqual(1, len(cffi.child_dependencies))
-        self.assertIs(cffi.child_dependencies[0], pydantic)
-        self.assertEqual(3, len(httpx.child_dependencies))
-        self.assertIs(httpx.child_dependencies[0], ansi)
-        self.assertIs(httpx.child_dependencies[1], cffi)
-        self.assertIs(httpx.child_dependencies[2], setuptools)
-        self.assertEqual(1, len(llama_cloud.child_dependencies))
-        self.assertIs(llama_cloud.child_dependencies[0], cffi)
-        self.assertEqual(1, len(uvicorn.child_dependencies))
-        self.assertIs(uvicorn.child_dependencies[0], httpx)
-        self.assertEqual(0, len(uvloop.child_dependencies))
-
 
 if __name__ == '__main__':
     unittest.main()

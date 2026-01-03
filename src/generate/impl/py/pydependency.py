@@ -3,23 +3,21 @@ from functools import total_ordering
 
 
 @total_ordering
-class Dependency(generate.AbstractDependency):
+class PyDependency(generate.AbstractDependency):
     """
     Represents a Python package dependency.
-
-    TODO - abstract common shape with maven dep into ABC.
     """
 
     def __init__(self, name, version, extras=None):
         assert name is not None
         assert version is not None
+        assert extras is None or isinstance(extras, (list, tuple))
         self.name = name
         self.version = version
-        self.extras = tuple(extras) if extras else ()
+        self.extras = tuple(extras) if extras is not None else ()
 
-        self.child_dependencies = []
-
-    def to_pyproject_format(self):
+    @property
+    def native_repr(self):
         """Convert the dependency to pyproject.toml format."""
         extras_str = ""
         if len(self.extras) > 0:
@@ -27,7 +25,7 @@ class Dependency(generate.AbstractDependency):
         return f"{self.name}{extras_str}>={self.version}"
 
     def __eq__(self, other):
-        if not isinstance(other, Dependency):
+        if not isinstance(other, PyDependency):
             return False
         return (self.name == other.name and 
                 self.version == other.version and
