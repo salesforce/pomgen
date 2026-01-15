@@ -9,7 +9,7 @@ This is a helper module for pom generation - it contains methods dealing with
 pom.xml parsing.
 """
 import collections
-import generate.impl.pom.dependency as dependency
+import generate.impl.pom.dependency as dependencym
 import os
 
 
@@ -170,12 +170,11 @@ def _get_dependency_from_xml_element(el, version_must_be_set):
         # we currently don't support "type" (for no particular reason, we could)
         raise Exception("we are dropping type on the floor %s" % _str(el))
 
-    return dependency.ExternalDependency(maven_install_name=None, 
-                                         group_id=group_id, 
-                                         artifact_id=artifact_id, 
-                                         version=version,
-                                         classifier=classifier,
-                                         scope=scope)
+    return dependencym.PomDependency.init_with_components(
+        group_id, artifact_id, version, packaging=None,
+        classifier=classifier, scope=scope,
+        maven_install_name=None,
+        version_must_be_set=version_must_be_set)
 
 
 def _pretty_str(el):

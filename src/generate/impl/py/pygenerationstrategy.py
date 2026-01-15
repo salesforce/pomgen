@@ -1,5 +1,4 @@
 import common.common as common
-import common.label as labelm
 import common.logger as logger
 import generate.impl.py.pydependency as pydependency
 import generate.impl.py.pyprojectgenerator as pyprojectgenerator
@@ -36,14 +35,7 @@ class PyGenerationStrategy(generate.AbstractGenerationStrategy):
 
     def load_dependency(self, label, artifact_def):
         if label.is_source_ref:
-            assert artifact_def is not None
-            name = artifact_def.artifact_id
-            version = artifact_def.version
-            if not artifact_def.generation_mode.produces_artifact:
-                assert name is None
-                name = "<not used>"
-                version = "<not used>"
-            return pydependency.PyDependency(name, version)
+            return pydependency.PyDependency.init_with_artifact_def(artifact_def)            
         else:
             assert label in self._label_to_ext_dep, "unknown third party dependency [%s]" % label
             return self._label_to_ext_dep[label]
@@ -62,20 +54,19 @@ class PyGenerationStrategy(generate.AbstractGenerationStrategy):
         for rel_path in self._locked_requirements_paths:
             # path/to/requirements_lock.txt@repository_name
             at_index = rel_path.find("@")
-            assert at_index > 0, "specify the path to the requirements.lock file, followed by \"@repository_name\", for example tools/pip/requirements_lock.txt@pip"
-            repositoy_name = rel_path[at_index+1:]
+            assert at_index > 0, "Specify the path to the requirements.lock file, followed by \"@repository_name\", for example tools/pip/requirements_lock.txt@pip"
+            repository_name = rel_path[at_index+1:]
             rel_path = rel_path[0:at_index]
             path = os.path.join(self._repository_root, rel_path)
-            assert os.path.exists(path), "the requirements lock file path [%s] does not exist" % path
+            assert os.path.exists(path), "The requirements lock file path [%s] does not exist" % path
             content = common.read_file(path)
             parser = requirementsparser.RequirementsParser()
-            deps = parser.parse_requirements_lock_file(content)
-            if self._verbose and len(deps) > 0:
+            if self._verbose:
                 logger.info("Parsing locked file %s" % path)
-            for dep in deps:
-                label_name = dep.name.replace("-", "_") # what else?
-                lbl = labelm.Label("@%s//%s" % (repositoy_name, label_name)) 
-                label_to_dep[lbl] = dep
+            deps_pieces = parser.parse_requirements_lock_file(content)
+            for name, version, extras in deps_pieces:
+                dep = pydependency.PyDependency.init_with_name_and_version(name, version, extras, repository_name)
+                label_to_dep[dep.label] = dep
                 if self._verbose:
-                    logger.info("  %s->%s" % (lbl, dep))
+                    logger.info("  %s->%s" % (dep.label, dep))
         return label_to_dep

@@ -89,11 +89,7 @@ class DependencyTest(unittest.TestCase):
         Ensures the Dependency instance for an external dependency has expected
         names when packaging has a default value.
         """
-        dep = dependency.ExternalDependency(maven_install_name="name",
-                                              group_id="group",
-                                              artifact_id="art",
-                                              version="1.0.0",
-                                              packaging="jar")
+        dep = dependency.new_dep_from_maven_art_str("group:art:jar:1.0.0", "name")
         self.assertEqual("group:art:1.0.0", dep.native_repr)
         self.assertEqual("@name//:group_art", dep.label.canonical_form)
 
@@ -122,11 +118,7 @@ class DependencyTest(unittest.TestCase):
         Ensures the Dependency instance for an external dependency has expected
         names when packaging and classifier are set.
         """
-        dep = dependency.ExternalDependency(maven_install_name="name",
-                                              group_id="group",
-                                              artifact_id="art",
-                                              version="1.0.0",
-                                              classifier="class")
+        dep = dependency.new_dep_from_maven_art_str("group:art:jar:class:1.0.0", "name")
         self.assertEqual("group:art:jar:class:1.0.0", dep.native_repr)
         self.assertEqual("@name//:group_art_class", dep.label.canonical_form)
 
@@ -390,7 +382,7 @@ class DependencyTest(unittest.TestCase):
 
     def test_copy(self):
         import copy
-        dep = dependency.ExternalDependency("name", "group", "artifact", "version", "packaging", "classifier", "scope") 
+        dep = dependency.new_dep_from_maven_art_str("group:artifact:packaging:classifier:version", "name", "scope")
 
         dep_copy = copy.copy(dep)
         

@@ -29,7 +29,7 @@ class PyProjectGeneratorTest(unittest.TestCase):
 
     def test_generate(self):
         art_def = buildpom.MavenArtifactDef(artifact_id="a2", version="1.2.3")
-        dep = pydependency.PyDependency("foodep", "1.2.3")
+        dep = pydependency.PyDependency.init_with_name_and_version("foodep", "1.2.3", (), "foo")
         gen = pyprojectgenerator.PyProjectGenerator(art_def, _TEMPLATE)
         gen.register_dependencies((dep,))
 

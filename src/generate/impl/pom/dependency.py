@@ -5,34 +5,45 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
-import common.label as label
+import common.label as labelm
 import generate
 from functools import total_ordering
  
 
 @total_ordering
-class AbstractJarDependency(generate.AbstractDependency):
-    """
-    Required/always set:
+# TODO rename file
+class PomDependency(generate.AbstractDependency):
 
-    group_id: the maven artifact groupId of this depdendency.
+    @classmethod
+    def init_with_artifact_def(clazz, artifact_def):
+        assert artifact_def is not None
+        label = None
+        return PomDependency(label, artifact_def)
 
-    artifact_id: the maven artifact id (artifactId) of this depdendency.
+    @classmethod
+    def init_with_components(clazz, group_id, artifact_id, version, packaging,
+                             classifier, scope, maven_install_name,
+                             version_must_be_set):
+        if version_must_be_set:
+            assert version is not None
+        label = _build_ext_dep_label(group_id, artifact_id, packaging, classifier, maven_install_name)
+        artifact_def = None
+        return PomDependency(label, artifact_def, group_id, artifact_id,
+                             version, packaging, classifier, scope)
 
-    version: the maven artifact version of this depdendency.
-    """
-    def __init__(self, label, group_id, artifact_id,
-                 packaging=None, classifier=None, scope=None):
-        self._label = label
-        self._artifact_id = artifact_id
-        self._group_id = group_id
+    # private
+    def __init__(self, label, artifact_def, group_id=None, artifact_id=None,
+                 version=None, packaging=None, classifier=None, scope=None):
+        super().__init__(label, artifact_def, artifact_id, version)
+        if artifact_def is None:
+            assert group_id is not None
+            self._group_id = group_id
+        else:
+            assert group_id is None
+            self._group_id = artifact_def.group_id
         self._packaging = "jar" if packaging is None else packaging
         self._classifier = classifier
         self._scope = scope
-
-    @property
-    def artifact_id(self):
-        return self._artifact_id
 
     @property
     def group_id(self):
@@ -49,14 +60,6 @@ class AbstractJarDependency(generate.AbstractDependency):
     @property
     def scope(self):
         return self._scope
-
-    @property
-    def label(self):
-        return self._label
-
-    @property
-    def version(self):
-        raise Exception("must be implemented in subclass")
 
     @property
     def native_repr(self):
@@ -76,13 +79,12 @@ class AbstractJarDependency(generate.AbstractDependency):
         return hash((self._group_id, self._artifact_id, self._classifier, self._packaging))
 
     def __eq__(self, other):
+        if self is other:
+            return True
         return (self._group_id == other._group_id and
                 self._artifact_id == other._artifact_id and
                 self._classifier == other._classifier and
                 self._packaging == other._packaging)
-
-    def __ne__(self, other):
-        return self != other
 
     def __lt__(self, other):
         if not self.label.is_source_ref:
@@ -115,76 +117,22 @@ class AbstractJarDependency(generate.AbstractDependency):
                 return True
             else:
                 # other is also a repository dep, compare based on name
-                return (self.group_id, self.artifact_id) < (other.group_id, other.artifact_id)
-
-    def __str__(self):
-        s = "%s %s" % (self.native_repr, "(local)" if self.label.is_source_ref else "")
-        return s.strip()
-
-    def __repr__(self):
-        return self.__str__()
+                return (self._group_id, self._artifact_id) < (other._group_id, other._artifact_id)
 
 
-class ExternalDependency(AbstractJarDependency):
+def _build_ext_dep_label(group_id, artifact_id, packaging, classifier, maven_install_name):
+    label_str = _normalize("%s_%s%s%s" %
+      (group_id, artifact_id,
+       "" if packaging in (None, "jar") else "_" + packaging,
+       "" if classifier is None else "_" + classifier))
 
-    def __init__(self, maven_install_name, group_id, artifact_id, version,
-                 packaging=None, classifier=None, scope=None):
-        label = ExternalDependency._build_label(
-            group_id, artifact_id, packaging, classifier, maven_install_name)
-        super().__init__(label, group_id, artifact_id, packaging, classifier, scope)
-        self._version = version
-        self._maven_install_name = maven_install_name
-
-    @property
-    def version(self):
-        return self._version
-
-    @property
-    def label(self):
-        return self._label
-
-    @classmethod
-    def _build_label(clazz, group_id, artifact_id, packaging, classifier, repo_name):
-        label_str = ExternalDependency._normalize("%s_%s%s%s" %
-          (group_id, artifact_id,
-           "" if packaging in (None, "jar") else "_" + packaging,
-           "" if classifier is None else "_" + classifier))
-
-        if repo_name is None:
-            label_str = "//:%s" % label_str
-        else:
-            label_str = "%s//:%s" % (repo_name, label_str)
-            if not label_str.startswith("@"):
-                label_str = "@%s" % label_str
-        return label.Label(label_str)
-
-    @classmethod
-    def _normalize(clazz, n):
-        n = n.replace('-', '_')
-        n = n.replace('.', '_')
-        return n
-
-
-class SourceDependency(AbstractJarDependency):
-
-    def __init__(self, artifact_def):
-        lbl = label.Label(artifact_def.bazel_package)
-        if artifact_def.bazel_target is not None:
-            lbl = lbl.with_target(artifact_def.bazel_target)
-        super().__init__(lbl, artifact_def.group_id, artifact_def.artifact_id)
-        self._artifact_def = artifact_def
-
-    @property
-    def version(self):
-        use_released = self._use_previously_released_artifact()
-        return self._artifact_def.released_version if use_released else self._artifact_def.version
-
-    def _use_previously_released_artifact(self):
-        if self._artifact_def.requires_release is not None:
-            # better to be explicit here: requires_release has been set
-            if self._artifact_def.requires_release == False: # noqa: E712
-                return True
-        return False
+    if  maven_install_name is None:
+        label_str = "//:%s" % label_str
+    else:
+        label_str = "%s//:%s" % (maven_install_name, label_str)
+        if not label_str.startswith("@"):
+            label_str = "@%s" % label_str
+    return labelm.Label(label_str)
 
 
 def new_dep_from_maven_art_str(maven_artifact_str, maven_install_name, scope=None):
@@ -209,12 +157,21 @@ def new_dep_from_maven_art_str(maven_artifact_str, maven_install_name, scope=Non
     version = version.strip()
     assert len(version) > 0, "Invalid version in artifact [%s]" % maven_artifact_str
 
-    return ExternalDependency(maven_install_name, group_id, artifact_id, version,
-                              packaging, classifier, scope)
+    return PomDependency.init_with_components(
+        group_id, artifact_id, version,
+        packaging, classifier, scope,
+        maven_install_name,
+        version_must_be_set=True)
 
 
 def new_dep_from_maven_artifact_def(artifact_def):
-    return SourceDependency(artifact_def)
+    return PomDependency.init_with_artifact_def(artifact_def)
+
+
+def _normalize(n):
+    n = n.replace('-', '_')
+    n = n.replace('.', '_')
+    return n
 
 
 """

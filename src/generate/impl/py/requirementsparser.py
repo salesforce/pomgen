@@ -1,28 +1,23 @@
-import generate.impl.py.pydependency as pydependency
-
-
 class RequirementsParser:
     """
     Requirements lock file parser.
     """
     def parse_requirements_lock_file(self, content):
         """
-        Parses the requirements lock file content into a list of PyDependency
-        instances. Ignores hash information and comments.
+        Parses the requirements lock file content into a list of tuples
+        consisting of (name[str], version[str], extras[tuple]).
         
         Args:
             content: Content of a requirements lock file
             
         Returns:
-            List of PyDependency instances.
+            List of tuples.
         """
         return self._parse_dependencies(content)
 
     def _parse_dependencies(self, content):
         # return values:
         dependencies = []  # list of Dependeny instances to preserve order
-        name_to_dependency = {}  # dict of dependency name -> PyDependency inst
-        name_to_vias = {}  # dict of dependency name -> list of via values
 
         for line in content.splitlines():
             line = line.strip()
@@ -43,6 +38,5 @@ class RequirementsParser:
                     name = name[:extras_start_index]
                 space_index = line.find(" ", version_sep_index)
                 version = line[version_sep_index + len(version_sep):space_index]
-                dependency = pydependency.PyDependency(name, version, extras=extras)
-                dependencies.append(dependency)
+                dependencies.append((name, version, extras))
         return dependencies

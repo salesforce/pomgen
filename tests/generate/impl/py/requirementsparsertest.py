@@ -64,36 +64,37 @@ class RequirementsParserTest(unittest.TestCase):
 
         self.assertEqual(8, len(dependencies))
         ansi = dependencies[0]
-        self.assertEqual("ansi", ansi.name)
-        self.assertEqual("0.3.7", ansi.version)
-        self.assertEqual(0, len(ansi.extras))
+        self.assertEqual("ansi", ansi[0])
+        self.assertEqual("0.3.7", ansi[1])
+        self.assertEqual(0, len(ansi[2]))
         pydantic = dependencies[1]
-        self.assertEqual("pydantic", pydantic.name)
-        self.assertEqual("2.10.5", pydantic.version)
-        self.assertEqual(0, len(pydantic.extras))
+        self.assertEqual("pydantic", pydantic[0])
+        self.assertEqual("2.10.5", pydantic[1])
+        self.assertEqual(0, len(pydantic[2]))
         cffi = dependencies[2]
-        self.assertEqual("cffi", cffi.name)
-        self.assertEqual("1.17.1", cffi.version)
-        self.assertEqual(0, len(cffi.extras))
+        self.assertEqual("cffi", cffi[0])
+        self.assertEqual("1.17.1", cffi[1])
+        self.assertEqual(0, len(cffi[2]))
         httpx = dependencies[3]
-        self.assertEqual("httpx", httpx.name)
-        self.assertEqual("0.27.2", httpx.version)
-        self.assertEqual(0, len(httpx.extras))
+        self.assertEqual("httpx", httpx[0])
+        self.assertEqual("0.27.2", httpx[1])
+        self.assertEqual(0, len(httpx[2]))
         uvicorn = dependencies[4]
-        self.assertEqual("uvicorn", uvicorn.name)
-        self.assertEqual("0.34.0", uvicorn.version)
-        self.assertEqual("standard", uvicorn.extras[0])
+        self.assertEqual("uvicorn", uvicorn[0])
+        self.assertEqual("0.34.0", uvicorn[1])
+        self.assertEqual("standard", uvicorn[2][0])
         uvloop = dependencies[5]
-        self.assertEqual("uvloop", uvloop.name)
-        self.assertEqual("0.21.0", uvloop.version)
-        self.assertEqual(0, len(uvloop.extras))
+        self.assertEqual("uvloop", uvloop[0])
+        self.assertEqual("0.21.0", uvloop[1])
+        self.assertEqual(0, len(uvloop[2]))
         llama_cloud = dependencies[6]
-        self.assertEqual("llama-cloud", llama_cloud.name)
-        self.assertEqual("0.1.15", llama_cloud.version)
-        self.assertEqual(0, len(llama_cloud.extras))
+        self.assertEqual("llama-cloud", llama_cloud[0])
+        self.assertEqual("0.1.15", llama_cloud[1])
+        self.assertEqual(0, len(llama_cloud[2]))
         setuptools = dependencies[7]
-        self.assertEqual("setuptools", setuptools.name)
-        self.assertEqual("75.8.1", setuptools.version)
+        self.assertEqual("setuptools", setuptools[0])
+        self.assertEqual("75.8.1", setuptools[1])
+        self.assertEqual(0, len(setuptools[2]))
 
 
 if __name__ == '__main__':
