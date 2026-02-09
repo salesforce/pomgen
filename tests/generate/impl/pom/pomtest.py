@@ -31,6 +31,7 @@ TEST_POM_TEMPLATE = """
 class PomTest(unittest.TestCase):
 
     def setUp(self):
+        self.maxDiff = None
         f = dependency.new_dep_from_maven_art_str
         self.t1_dep = f("gt1:t1:1.0.0", "maven")
         self.t2_dep = f("gt2:t2:1.0.0", "maven")
@@ -45,7 +46,7 @@ class PomTest(unittest.TestCase):
         """
         Ensures that dynamic pom generation isn't totally broken.
         """
-        artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3")
+        artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3", bazel_package="pack1")
         artifact_def = buildpom._augment_art_def_values(
             artifact_def, None, "pack1", "MVN-INF", None, None,
             genmode.DYNAMIC)
@@ -61,7 +62,7 @@ class PomTest(unittest.TestCase):
         # appending a dependency that is built from source
         # (should not have an exclusions block)
         artifact_def = buildpom.MavenArtifactDef(
-            "repo", "my-dep", "1.2.3", bazel_target="t1")
+            "repo", "my-dep", "1.2.3", bazel_package="pack2", bazel_target="t1")
         dep = dependency.new_dep_from_maven_artifact_def(artifact_def)
         deps.append(dep)
         pomgen.register_dependencies(deps)
@@ -242,13 +243,15 @@ class PomTest(unittest.TestCase):
         a bazel-built dependency
         """
         depmd = dependencymdm.DependencyMetadata("split-the-g")
-        root_artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3")
+        root_artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3",
+                                                      bazel_package="pack1")
         root_artifact_def = buildpom._augment_art_def_values(
             root_artifact_def, None, "pack1", "WEB-INF", None, None,
             genmode.DYNAMIC)
         pomgen = pom.DynamicPomGen(root_artifact_def, TEST_POM_TEMPLATE,
                                    manifestcontent.NOOP, depmd)
-        dep_art_def = buildpom.MavenArtifactDef("class-group", "class-art", "1", bazel_target="g1")
+        dep_art_def = buildpom.MavenArtifactDef("class-group", "class-art", "1",
+                                                bazel_package="pack1", bazel_target="g1")
         dep = dependency.new_dep_from_maven_artifact_def(dep_art_def)
 
         dep_element, _ = pomgen._gen_dependency_element(
@@ -320,7 +323,7 @@ class PomTest(unittest.TestCase):
 unqualified #{ch_qos_logback_logback_classic.version}
 qualified #{@maven//:ch_qos_logback_logback_classic.version}
 coord #{ch.qos.logback:logback-classic:version}
-monorepo artifact version #{version}
+repo artifact version #{version}
 """
         external_dependencies = [self.logback_dep,]
         pomgen = pom.TemplatePomGen(artifact_def, external_dependencies,
@@ -330,9 +333,9 @@ monorepo artifact version #{version}
 
         self.assertIn("unqualified 1.2.3", generated_pom)
         self.assertIn("qualified 1.2.3", generated_pom)
-        self.assertIn("monorepo artifact version 1.4.4", generated_pom)
+        self.assertIn("repo artifact version 1.4.4", generated_pom)
 
-    def test_template_var_sub__monorepo_deps(self):
+    def test_template_var_sub__repo_deps(self):
         """
         Verifies references of source dependency versions in a pom template.
         """
@@ -340,7 +343,7 @@ monorepo artifact version #{version}
         artifact_def.custom_pom_template_content = "srpc #{com.grail.srpc:srpc-api:version}"
         srpc_artifact_def = buildpom.MavenArtifactDef(
             "com.grail.srpc", "srpc-api", "5.6.7", bazel_package="a/b/c")
-        srpc_dep = dependency.MonorepoDependency(srpc_artifact_def)
+        srpc_dep = dependency.new_dep_from_maven_artifact_def(srpc_artifact_def)
         pomgen = pom.TemplatePomGen(artifact_def, [], self.dependencymd)
         pomgen.register_dependencies_transitive_closure__library(set([srpc_dep]))
 
@@ -451,7 +454,7 @@ v2 #{@maven2//:org_apache_maven_mult_versions.version}
         # this guava dep is conflicting with an external dep --
         # internal package called a/b/c
         art = buildpom.MavenArtifactDef("com.google.guava","guava","29.0", bazel_package="a/b/c")
-        d = dependency.MonorepoDependency(art)
+        d = dependency.new_dep_from_maven_artifact_def(art)
         pomgen.register_dependencies_transitive_closure__library(set([d]))
 
         generated_pom = pomgen.generate_release_manifest()
@@ -484,7 +487,7 @@ v2 #{@maven2//:org_apache_maven_mult_versions.version}
         srpc_artifact_def = buildpom._augment_art_def_values(
             srpc_artifact_def, None, "pack1", "WEB-INF", None, None,
             genmode.DYNAMIC)
-        srpc_dep = dependency.MonorepoDependency(srpc_artifact_def)
+        srpc_dep = dependency.new_dep_from_maven_artifact_def(srpc_artifact_def)
         artifact_def.custom_pom_template_content = """
 this artifact version #{version}
 logback coord #{ch.qos.logback:logback-classic:version}
@@ -628,9 +631,9 @@ __pomgen.end_dependency_customization__
         pomgen = pom.TemplatePomGen(artifact_def, [], self.dependencymd)
         srpc_artifact_def = buildpom.MavenArtifactDef(
             "com.grail.srpc", "srpc-api", "5.6.7", bazel_package="a/b/c")
-        internal_dep = dependency.MonorepoDependency(srpc_artifact_def)
+        internal_dep = dependency.new_dep_from_maven_artifact_def(srpc_artifact_def)
 
-        external_dep = dependency.ThirdPartyDependency("name", "cg", "ca", "0.0.1")
+        external_dep = dependency.new_dep_from_maven_art_str("cg:ca:0.0.1", "name")
         pomgen.register_dependencies_transitive_closure__library(set([external_dep, internal_dep]))
 
         generated_pom = pomgen.generate_release_manifest()
@@ -697,7 +700,7 @@ __pomgen.end_dependency_customization__
         artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
         artifact_def.custom_pom_template_content = pom_template
         pomgen = pom.TemplatePomGen(artifact_def, [], self.dependencymd)
-        crawled_dep = dependency.ThirdPartyDependency("name", "cg", "ca", "0.0.1")
+        crawled_dep = dependency.new_dep_from_maven_art_str("cg:ca:0.0.1", "name")
         pomgen.register_dependencies_transitive_closure__library(set([crawled_dep]))
 
         generated_pom = pomgen.generate_release_manifest()
@@ -746,7 +749,7 @@ __pomgen.end_dependency_customization__
         artifact_def = buildpom.MavenArtifactDef("groupId", "artifactId", "1.2.3")
         artifact_def.custom_pom_template_content = pom_template
         pomgen = pom.TemplatePomGen(artifact_def, [], self.dependencymd)
-        crawled_dep = dependency.ThirdPartyDependency("name", "cg", "ca", "0.0.1")
+        crawled_dep = dependency.new_dep_from_maven_art_str("cg:ca:0.0.1", "name")
         pomgen.register_dependencies_transitive_closure__library(set([crawled_dep]))
 
         generated_pom = pomgen.generate_release_manifest()

@@ -98,7 +98,7 @@ class MavenInstallParserTest(unittest.TestCase):
         guava = dependency.new_dep_from_maven_art_str("google.guava:guava:0.0.1", "maven")
         antlr = dependency.new_dep_from_maven_art_str("antlr:antlr:1.0.0", "maven")
 
-        label_to_overridden_fq_label = {guava.unqualified_bazel_label_name: antlr.bazel_label_name}
+        label_to_overridden_fq_label = {guava.label.target: antlr.label.canonical_form}
 
         result = maveninstallparser.parse_maven_install([("maven", path)], label_to_overridden_fq_label)
 
@@ -130,8 +130,8 @@ class MavenInstallParserTest(unittest.TestCase):
         guava = dependency.new_dep_from_maven_art_str("google.guava:guava:1.0.0", "maven")
 
         label_to_overridden_fq_label = {
-            logback_core.unqualified_bazel_label_name: zookeeper.bazel_label_name,
-            guava.unqualified_bazel_label_name: antlr.bazel_label_name
+            logback_core.label.target: zookeeper.label.canonical_form,
+            guava.label.target: antlr.label.canonical_form
         }
 
         result = maveninstallparser.parse_maven_install(
@@ -152,9 +152,9 @@ class MavenInstallParserTest(unittest.TestCase):
             result, "antlr", "antlr", "maven")
         dep, transitives = self._get_dep_and_transitives(
             result, "ch.qos.logback", "logback-classic", "nevam")
-        self.assertTrue(dep.bazel_label_name.startswith("@nevam"))
+        self.assertTrue(dep.label.canonical_form.startswith("@nevam"), "Bad dep %s" % dep.label)
         self.assertEqual(1, len(transitives))
-        self.assertTrue(antlr.bazel_label_name.startswith("@maven"))
+        self.assertTrue(antlr.label.canonical_form.startswith("@maven"))
         self.assertIs(maven_antlr, transitives[0])
 
     def test_conflict_resolution_is_honored(self):
@@ -185,7 +185,12 @@ class MavenInstallParserTest(unittest.TestCase):
     def test_use_alt_lookup_coords(self):
         d1 = dependency.new_dep_from_maven_art_str("com.salesforce.servicelibs:pki-security-impl:jar:tests:1.0.0", "maven")
         top_level_deps = [d1]
-        coord_wo_vers_to_dep = {d.maven_coordinates_name:d for d in top_level_deps}
+        coord_wo_vers_to_dep = {}
+        for d in top_level_deps:
+            coord = d.native_repr
+            i = coord.rindex(":")
+            coord = coord[0:i]
+            coord_wo_vers_to_dep[coord] = d
         direct_dep_coords_wo_vers = ["com.salesforce.servicelibs:pki-security-impl:test-jar"]
 
         direct_deps = maveninstallparser._get_direct_deps(
@@ -198,7 +203,7 @@ class MavenInstallParserTest(unittest.TestCase):
             d = t[0]
             # startswith is not correct when there are common prefixes, but
             # this is a test, so its ok
-            if d.group_id == group_id and d.artifact_id == artifact_id and d.bazel_label_name.startswith("@" + rule_name):
+            if d.group_id == group_id and d.artifact_id == artifact_id and d.label.repository_prefix.startswith("@" + rule_name):
                 return t
         assert False, "didn't find %s:%s in result:\n%s" % (group_id, artifact_id, result)
 

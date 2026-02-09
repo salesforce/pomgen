@@ -79,14 +79,6 @@ class AbstractPomGen(generate.AbstractManifestGenerator):
         self.dependencies_artifact_transitive_closure = set()
         self.dependencies_library_transitive_closure = set()
 
-    @property
-    def artifact_def(self):
-        return self._artifact_def
-
-    @property
-    def bazel_package(self):
-        return self._artifact_def.bazel_package
-
     def register_dependencies(self, dependencies):
         """
         Registers the dependencies the backing artifact references explicitly.
@@ -164,7 +156,7 @@ class AbstractPomGen(generate.AbstractManifestGenerator):
 
         This method is only intended to be called by subclasses.
         """
-        return MASKED_VERSION if pomcontenttype is PomContentType.GOLDFILE and dep.bazel_package is not None else dep.version
+        return MASKED_VERSION if pomcontenttype is PomContentType.GOLDFILE and dep.label.is_source_ref else dep.version
 
     def _xml(self, content, element, indent, value=None, close_element=False):
         """
@@ -277,7 +269,7 @@ class TemplatePomGen(AbstractPomGen):
         self._external_dependencies = external_dependencies
 
     def generate_manifest(self, pomcontenttype):
-        pom_content = self.artifact_def.custom_pom_template_content
+        pom_content = self._artifact_def.custom_pom_template_content
         pom_content, parsed_dependencies = self._process_pom_template_content(pom_content)
 
         properties = self._get_properties(pomcontenttype, parsed_dependencies)
@@ -350,7 +342,7 @@ class TemplatePomGen(AbstractPomGen):
         # transitives of this library
         all_deps = \
             list(self._external_dependencies) + \
-            [d for d in self.dependencies_library_transitive_closure if d.bazel_package is not None]
+            [d for d in self.dependencies_library_transitive_closure if d.label.is_source_ref]
 
         for dep in all_deps:
             key = self._get_unqual_ga_key(dep)
@@ -369,9 +361,9 @@ class TemplatePomGen(AbstractPomGen):
                 # only the name prefixed with the maven_install rule name is
                 key_to_version[key] = version_from_dep
             key_to_dep[key] = dep
-            if dep.bazel_label_name is not None:
+            if not dep.label.is_source_ref:
                 # this is fq name, leading with the maven_install name
-                key = "%s.version" % dep.bazel_label_name
+                key = "%s.version" % dep.label.canonical_form
                 if key in key_to_version and version_from_dep != key_to_version[key]:
                     raise Exception("%s version: %s is already in versions, previous: %s" % (key, self._dep_version(pomcontenttype, dep), key_to_version[key]))
                 key_to_version[key] = dep.version
@@ -396,10 +388,21 @@ class TemplatePomGen(AbstractPomGen):
         return key_to_version
 
     def _get_unqual_ga_key(self, dep):
-        return "%s:version" % dep.maven_coordinates_name
+        return "%s:version" % self._build_coord_key(dep)
+
+    def _build_coord_key(self, dep):
+        c = "%s:%s" % (dep.group_id, dep.artifact_id)
+        if dep.classifier is None:
+            if dep.packaging not in (None, "jar"):
+                c = "%s:%s" % (c, dep.packaging)
+        else:
+            pack = "jar" if dep.packaging is None else dep.packaging
+            c = "%s:%s:%s" % (c, pack, dep.classifier)
+        return c
 
     def _get_unqual_label_key(self, dep):
-        return "%s.version" % dep.unqualified_bazel_label_name
+        assert not dep.label.is_source_ref
+        return "%s.version" % dep.label.target
 
     def _get_crawled_dependencies_properties(self, pomcontenttype, pom_template_parsed_deps):
         # this is somewhat lame: an educated guess on where the properties
@@ -430,13 +433,13 @@ class TemplatePomGen(AbstractPomGen):
         True, if there is a conflict but we can tolerate it, or raises if the
         conflict is fatal.
         """
-        if dep1.bazel_package is None and dep2.bazel_package is None:
+        if not dep1.label.is_source_ref and not dep2.label.is_source_ref:
             # both deps are external
             if dep1.version == dep2.version:
                 return False # no problem
-            else:
+            else: 
                 return True # we tolerate diff versions for ext deps
-        elif dep1.bazel_package is not None and dep2.bazel_package is not None:
+        elif dep1.label.is_source_ref and dep2.label.is_source_ref:
             # both deps are internal, it doesn't make sense to get here
             raise Exception("All internal dependencies must always be on the same versions! [%s] vs [%s]" % (dep1, dep2))
 
@@ -481,9 +484,9 @@ class TemplatePomGen(AbstractPomGen):
                 parsed_dep.classifier is not None):
                 dep = copy.copy(dep)
                 if parsed_dep.scope is not None:
-                    dep.scope = parsed_dep.scope
+                    dep._scope = parsed_dep.scope
                 if parsed_dep.classifier is not None:
-                    dep.classifier = parsed_dep.classifier
+                    dep._classifier = parsed_dep.classifier
         return dep
 
 
@@ -544,7 +547,7 @@ class DynamicPomGen(AbstractPomGen):
             content, indent = self._gen_dependency_element(pomcontenttype, dep, content, indent, close_element=False)
             # handle <exclusions>
             # if a dep is built in the shared-repo, do not add any exclusions, they will do that themselves.
-            if not dep.bazel_buildable:
+            if not dep.label.is_source_ref:
                 # exclude all transitives from <dependencies> as all transitives are already root level anyway
                 excluded_group_and_artifact_ids = [("*", "*")]
                 content, indent = self._gen_exclusions(content, indent, excluded_group_and_artifact_ids)

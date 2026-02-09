@@ -33,9 +33,6 @@ class GenerationMode:
           Whether this generation mode produces a artifact (for example a maven
           jar, pom or a python wheel)
 
-        bazel_produced_artifact:
-          Whether the artifact is built by bazel
-
         query_dependency_attributes:
           Whether to query the rule attributes that point to other dependencies
           (and whether to crawl those dependencies, since that's why we query
@@ -54,9 +51,6 @@ class GenerationMode:
         self.query_dependency_attributes = query_dependency_attributes
         self.dependency_attributes =\
             ("deps", "runtime_deps") + tuple(additional_dependency_attrs)
-
-        def bazel_produced_artifact(self, pom_template_content):
-            raise Exception("Method must be implemented")
 
     def __str__(self):
         return self.name
@@ -78,12 +72,6 @@ TEMPLATE = GenerationMode("template", produces_artifact=True,
                           # have a BUILD file - if there is one, it
                           # is generally not related to the template
                           query_dependency_attributes=False)
-# this is a hack for custom pom templates - their packaging tends to be
-# "pom" - that's the whole point. but we have a couple of cases with different
-# values (such as maven-plugin), in which case bazel is expected to build
-# something also
-TEMPLATE.bazel_produced_artifact = types.MethodType(
-    lambda self, pom_template_content: pom_template_content.find("<packaging>pom</packaging>") == -1, TEMPLATE)
 
 
 # this bazel package is skipped over at manifest generation time
@@ -92,24 +80,18 @@ TEMPLATE.bazel_produced_artifact = types.MethodType(
 SKIP = GenerationMode("skip", produces_artifact=False,
                       query_dependency_attributes=True,
                       additional_dependency_attrs=("exports",))
-SKIP.bazel_produced_artifact = types.MethodType(
-    lambda self, pom_template_content: False, SKIP)
 
 
 # this generation mode is like "dynamic" but for a module that uses bazel's
 # 1:1:1 structure (many bazel child packages)
 DYNAMIC_ONEONEONE = GenerationMode("dynamic_111", produces_artifact=True,
                                    query_dependency_attributes=True)
-DYNAMIC_ONEONEONE.bazel_produced_artifact = types.MethodType(
-    lambda self, pom_template_content: True, DYNAMIC_ONEONEONE)
 
 
 # this generation mode marks a bazel child bazel package in a 1:1:1 enabled
 # module
 ONEONEONE_CHILD = GenerationMode("111_child", produces_artifact=False,
                                  query_dependency_attributes=True)
-ONEONEONE_CHILD.bazel_produced_artifact = types.MethodType(
-    lambda self, pom_template_content: False, ONEONEONE_CHILD)
 
 
 # these can be set explicitly in module metadata files

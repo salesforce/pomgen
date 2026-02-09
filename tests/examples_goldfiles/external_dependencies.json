@@ -1,0 +1,82 @@
+[
+  {
+    "artifact_id": "antlr",
+    "group_id": "antlr",
+    "version": "2.7.6",
+    "packaging": "jar",
+    "classifier": null,
+    "name": "@antlr//:antlr_antlr"
+  },
+  {
+    "artifact_id": "ST4",
+    "group_id": "org.antlr",
+    "version": "4.0.7",
+    "packaging": "jar",
+    "classifier": null,
+    "name": "@antlr//:org_antlr_ST4"
+  },
+  {
+    "artifact_id": "antlr-runtime",
+    "group_id": "org.antlr",
+    "version": "3.5",
+    "packaging": "jar",
+    "classifier": null,
+    "name": "@antlr//:org_antlr_antlr_runtime"
+  },
+  {
+    "artifact_id": "stringtemplate",
+    "group_id": "org.antlr",
+    "version": "3.2.1",
+    "packaging": "jar",
+    "classifier": null,
+    "name": "@antlr//:org_antlr_stringtemplate"
+  },
+  {
+    "artifact_id": "guava",
+    "group_id": "com.google.guava",
+    "version": "33.4.8-jre",
+    "packaging": "jar",
+    "classifier": null,
+    "name": "@maven//:com_google_guava_guava"
+  },
+  {
+    "artifact_id": "ST4",
+    "group_id": "org.antlr",
+    "version": "4.0.7",
+    "packaging": "jar",
+    "classifier": null,
+    "name": "@maven//:org_antlr_ST4"
+  },
+  {
+    "artifact_id": "antlr-runtime",
+    "group_id": "org.antlr",
+    "version": "3.5",
+    "packaging": "jar",
+    "classifier": null,
+    "name": "@maven//:org_antlr_antlr_runtime"
+  },
+  {
+    "artifact_id": "stringtemplate",
+    "group_id": "org.antlr",
+    "version": "3.2.1",
+    "packaging": "jar",
+    "classifier": null,
+    "name": "@maven//:org_antlr_stringtemplate"
+  },
+  {
+    "artifact_id": "commons-lang3",
+    "group_id": "org.apache.commons",
+    "version": "3.18.0",
+    "packaging": "jar",
+    "classifier": null,
+    "name": "@maven//:org_apache_commons_commons_lang3"
+  },
+  {
+    "artifact_id": "commons-math3",
+    "group_id": "org.apache.commons",
+    "version": "3.6.1",
+    "packaging": "jar",
+    "classifier": null,
+    "name": "@maven//:org_apache_commons_commons_math3"
+  }
+]

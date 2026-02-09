@@ -1,4 +1,4 @@
-from common import label
+import common.label as label
 import unittest
 
 
@@ -169,6 +169,23 @@ class LabelTest(unittest.TestCase):
         n1 = label.Label("@poppy//b22:blah")
         self.assertEqual("@poppy//b22:foo",
                          n1.with_target("foo").canonical_form)
+
+    def test_sort(self):
+        n1 = label.Label("@zoppy//aaa")        
+        n2 = label.Label("@appy//zzz")
+        n3 = label.Label("@poppy//b22")
+        n4 = label.Label("@poppy//aaa")
+
+        labels = sorted([n1, n2, n3, n4])
+
+        self.assertEqual([n2, n4, n3, n1], labels)
+
+    def test_label_as_key(self):
+        d1 = {}
+        k1 = label.Label("a/b/c")
+        d1[k1] = "test"
+
+        self.assertEqual("test", d1[k1])
 
 
 if __name__ == '__main__':

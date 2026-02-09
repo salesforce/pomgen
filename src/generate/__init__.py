@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+from functools import total_ordering
+import common.label as labelm
 import os
 
 
@@ -27,6 +29,8 @@ class AbstractManifestGenerator(ABC):
         Formats the given golfile manifest for comparison.
 
         Hook to optionally modify manifest content before comaprison.
+
+        TODO use explicit __hook naming?
 
         Args:
             manifest_content: The manifest content as a string
@@ -135,14 +139,82 @@ class AbstractGenerationStrategy(ABC):
         """
         Returns a new AbstractManifestGenerator instance.
 
-        Hook method, only meant to be implementation in subclasses.
+        Hook method, only meant to be called from this class
+        and optionally implemented in subclasses.
         """
         pass
 
 
+@total_ordering
 class AbstractDependency(ABC):
-    """
-    TODO for source dependencies, abstract here how we decide whether a 
-    previously released version should be used or not
-    """
-    pass
+
+    def __init__(self, label, artifact_def, artifact_id=None, version=None):
+        if artifact_def is None:
+            assert isinstance(label, labelm.Label)
+            self._label = label
+            self._artifact_def = None
+            assert artifact_id is not None
+            self._artifact_id = artifact_id
+            self._version = version
+        else:
+            assert label is None, "pass in label as None, it will be built here"
+            self._label = labelm.Label(artifact_def.bazel_package)
+            if artifact_def.bazel_target is not None:
+                self._label = self._label.with_target(artifact_def.bazel_target)
+            self._artifact_def = artifact_def
+            assert artifact_id is None
+            self._artifact_id = artifact_def.artifact_id
+            assert version is None
+
+    @property
+    @abstractmethod
+    def native_repr(self):
+        raise Exception("Must be implemented in subclasses")
+    
+    @property
+    def label(self):
+        return self._label
+
+    @property
+    def artifact_id(self):
+        return self._artifact_id
+
+    @property
+    def version(self):
+        if self._artifact_def is None:
+            return self._version
+        else:
+            use_released = self._use_previously_released_artifact()
+            return self._artifact_def.released_version if use_released else self._artifact_def.version
+
+    def _use_previously_released_artifact(self):
+        if self._artifact_def.requires_release is not None:
+            # better to be explicit here: requires_release has been set
+            if self._artifact_def.requires_release == False: # noqa: E712
+                return True
+        return False
+
+    # note that hash/eq/lt etc don't use the version because
+    # the version can change based on the value of requires_release
+    # we need to check whether we can create dependency instances after
+    # the value of requires release is known so we can make this more consistent
+    def __hash__(self):
+        return hash((self._artifact_id))
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        return self._artifact_id == other._artifact_id
+
+    def __ne__(self, other):
+        return self != other
+
+    def __lt__(self, other):
+        return self._artifact_id < other._artifact_id
+
+    def __str__(self):
+        s = "%s %s" % (self.native_repr, "(local)" if self.label.is_source_ref else "")
+        return s.strip()
+
+    def __repr__(self):
+        return self.__str__()

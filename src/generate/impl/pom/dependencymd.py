@@ -31,7 +31,7 @@ class DependencyMetadata:
         if dependency.classifier is not None:
             return dependency.classifier
         else:
-            if dependency.bazel_buildable:
+            if dependency.label.is_source_ref:
                 return self._jar_artifact_classifier
         return None
                 
@@ -48,4 +48,4 @@ class DependencyMetadata:
         self._dep_key_to_dependency.clear()
 
     def _get_key(self, dependency):
-        return dependency.bazel_label_name # the label used in BUILD files
+        return dependency.label

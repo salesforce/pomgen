@@ -436,20 +436,20 @@ class CrawlerTest(unittest.TestCase):
         ctx = [ctx for ctx in result.artifact_generation_contexts if ctx.artifact_def.bazel_package == "libs/a/a1"][0]
 
         # direct dependencies
-        dependency_paths = [d.bazel_package for d in ctx.direct_dependencies]
+        dependency_paths = [d.label.package_path for d in ctx.direct_dependencies]
         self.assertEqual(2, len(dependency_paths))
         self.assertIn("libs/b/a1", dependency_paths)
         self.assertIn("libs/c/a1", dependency_paths)
 
         # transitive closure of artifact dependencies
-        dependency_paths = [d.bazel_package for d in ctx.artifact_transitive_closure]
+        dependency_paths = [d.label.package_path for d in ctx.artifact_transitive_closure]
         self.assertEqual(3, len(dependency_paths))
         self.assertIn("libs/b/a1", dependency_paths)
         self.assertIn("libs/c/a1", dependency_paths)
         self.assertIn("libs/d/a1", dependency_paths)
 
         # transitive closure of library dependencies
-        dependency_paths = [d.bazel_package for d in ctx.library_transitive_closure]
+        dependency_paths = [d.label.package_path for d in ctx.library_transitive_closure]
         self.assertEqual(5, len(dependency_paths))
         self.assertIn("libs/a/a1", dependency_paths) # own artifact included
         self.assertIn("libs/a/a2", dependency_paths) # own artifact included
@@ -461,15 +461,15 @@ class CrawlerTest(unittest.TestCase):
         ctx = [ctx for ctx in result.artifact_generation_contexts if ctx.artifact_def.bazel_package == "libs/a/a2"][0]
 
         # direct dependencies
-        dependency_paths = [d.bazel_package for d in ctx.direct_dependencies]
+        dependency_paths = [d.label.package_path for d in ctx.direct_dependencies]
         self.assertEqual(0, len(dependency_paths))
 
         # transitive closure of artifact dependencies
-        dependency_paths = [d.bazel_package for d in ctx.artifact_transitive_closure]
+        dependency_paths = [d.label.packag_path for d in ctx.artifact_transitive_closure]
         self.assertEqual(0, len(dependency_paths))
 
         # transitive closure of library dependencies
-        dependency_paths = [d.bazel_package for d in ctx.library_transitive_closure]
+        dependency_paths = [d.label.package_path for d in ctx.library_transitive_closure]
         self.assertEqual(5, len(dependency_paths))
         self.assertIn("libs/a/a1", dependency_paths) # own artifact included
         self.assertIn("libs/a/a2", dependency_paths) # own artifact included
@@ -481,18 +481,18 @@ class CrawlerTest(unittest.TestCase):
         ctx = [ctx for ctx in result.artifact_generation_contexts if ctx.artifact_def.bazel_package == "libs/b/a1"][0]
 
         # direct dependencies
-        dependency_paths = [d.bazel_package for d in ctx.direct_dependencies]
+        dependency_paths = [d.label.package_path for d in ctx.direct_dependencies]
         self.assertEqual(1, len(dependency_paths))
         self.assertIn("libs/c/a1", dependency_paths)
 
         # transitive closure of artifact dependencies
-        dependency_paths = [d.bazel_package for d in ctx.artifact_transitive_closure]
+        dependency_paths = [d.label.package_path for d in ctx.artifact_transitive_closure]
         self.assertEqual(2, len(dependency_paths))
         self.assertIn("libs/c/a1", dependency_paths)
         self.assertIn("libs/d/a1", dependency_paths)
 
         # transitive closure of library dependencies
-        dependency_paths = [d.bazel_package for d in ctx.library_transitive_closure]
+        dependency_paths = [d.label.package_path for d in ctx.library_transitive_closure]
         self.assertEqual(4, len(dependency_paths))
         self.assertIn("libs/b/a1", dependency_paths) # own artifact included
         self.assertIn("libs/b/a2", dependency_paths) # own artifact included
@@ -503,15 +503,15 @@ class CrawlerTest(unittest.TestCase):
         ctx = [ctx for ctx in result.artifact_generation_contexts if ctx.artifact_def.bazel_package == "libs/b/a2"][0]
 
         # direct dependencies
-        dependency_paths = [d.bazel_package for d in ctx.direct_dependencies]
+        dependency_paths = [d.label.package_path for d in ctx.direct_dependencies]
         self.assertEqual(0, len(dependency_paths))
 
         # transitive closure of artifact dependencies
-        dependency_paths = [d.bazel_package for d in ctx.artifact_transitive_closure]
+        dependency_paths = [d.label.package_path for d in ctx.artifact_transitive_closure]
         self.assertEqual(0, len(dependency_paths))
 
         # transitive closure of library dependencies
-        dependency_paths = [d.bazel_package for d in ctx.library_transitive_closure]
+        dependency_paths = [d.label.package_path for d in ctx.library_transitive_closure]
         self.assertEqual(4, len(dependency_paths))
         self.assertIn("libs/b/a1", dependency_paths) # own artifact included
         self.assertIn("libs/b/a2", dependency_paths) # own artifact included
@@ -522,17 +522,17 @@ class CrawlerTest(unittest.TestCase):
         ctx = [ctx for ctx in result.artifact_generation_contexts if ctx.artifact_def.bazel_package == "libs/c/a1"][0]
 
         # direct dependencies
-        dependency_paths = [d.bazel_package for d in ctx.direct_dependencies]
+        dependency_paths = [d.label.package_path for d in ctx.direct_dependencies]
         self.assertEqual(1, len(dependency_paths))
         self.assertIn("libs/d/a1", dependency_paths)
 
         # transitive closure of artifact dependencies
-        dependency_paths = [d.bazel_package for d in ctx.artifact_transitive_closure]
+        dependency_paths = [d.label.package_path for d in ctx.artifact_transitive_closure]
         self.assertEqual(1, len(dependency_paths))
         self.assertIn("libs/d/a1", dependency_paths)
 
         # transitive closure of library dependencies
-        dependency_paths = [d.bazel_package for d in ctx.library_transitive_closure]
+        dependency_paths = [d.label.package_path for d in ctx.library_transitive_closure]
         self.assertEqual(3, len(dependency_paths))
         self.assertIn("libs/c/a1", dependency_paths) # own artifact included
         self.assertIn("libs/c/a2", dependency_paths) # own artifact included
@@ -542,15 +542,15 @@ class CrawlerTest(unittest.TestCase):
         ctx = [ctx for ctx in result.artifact_generation_contexts if ctx.artifact_def.bazel_package == "libs/c/a2"][0]
 
         # direct dependencies
-        dependency_paths = [d.bazel_package for d in ctx.direct_dependencies]
+        dependency_paths = [d.label.package_path for d in ctx.direct_dependencies]
         self.assertEqual(0, len(dependency_paths))
 
         # transitive closure of artifact dependencies
-        dependency_paths = [d.bazel_package for d in ctx.artifact_transitive_closure]
+        dependency_paths = [d.label.package_path for d in ctx.artifact_transitive_closure]
         self.assertEqual(0, len(dependency_paths))
 
         # transitive closure of library dependencies
-        dependency_paths = [d.bazel_package for d in ctx.library_transitive_closure]
+        dependency_paths = [d.label.package_path for d in ctx.library_transitive_closure]
         self.assertEqual(3, len(dependency_paths))
         self.assertIn("libs/c/a1", dependency_paths) # own artifact included
         self.assertIn("libs/c/a2", dependency_paths) # own artifact included
@@ -560,15 +560,15 @@ class CrawlerTest(unittest.TestCase):
         ctx = [ctx for ctx in result.artifact_generation_contexts if ctx.artifact_def.bazel_package == "libs/d/a1"][0]
 
         # direct dependencies
-        dependency_paths = [d.bazel_package for d in ctx.direct_dependencies]
+        dependency_paths = [d.label.package_path for d in ctx.direct_dependencies]
         self.assertEqual(0, len(dependency_paths))
 
         # transitive closure of artifact dependencies
-        dependency_paths = [d.bazel_package for d in ctx.artifact_transitive_closure]
+        dependency_paths = [d.label.package_path for d in ctx.artifact_transitive_closure]
         self.assertEqual(0, len(dependency_paths))
 
         # transitive closure of library dependencies
-        dependency_paths = [d.bazel_package for d in ctx.library_transitive_closure]
+        dependency_paths = [d.label.package_path for d in ctx.library_transitive_closure]
         self.assertEqual(2, len(dependency_paths))
         self.assertIn("libs/d/a1", dependency_paths) # own artifact included
         self.assertIn("libs/d/a2", dependency_paths) # own artifact included
@@ -577,15 +577,15 @@ class CrawlerTest(unittest.TestCase):
         ctx = [ctx for ctx in result.artifact_generation_contexts if ctx.artifact_def.bazel_package == "libs/d/a2"][0]
 
         # direct dependencies
-        dependency_paths = [d.bazel_package for d in ctx.direct_dependencies]
+        dependency_paths = [d.label.package_path for d in ctx.direct_dependencies]
         self.assertEqual(0, len(dependency_paths))
 
         # transitive closure of artifact dependencies
-        dependency_paths = [d.bazel_package for d in ctx.artifact_transitive_closure]
+        dependency_paths = [d.label.package_path for d in ctx.artifact_transitive_closure]
         self.assertEqual(0, len(dependency_paths))
 
         # transitive closure of library dependencies
-        dependency_paths = [d.bazel_package for d in ctx.library_transitive_closure]
+        dependency_paths = [d.label.package_path for d in ctx.library_transitive_closure]
         self.assertEqual(2, len(dependency_paths))
         self.assertIn("libs/d/a1", dependency_paths) # own artifact included
         self.assertIn("libs/d/a2", dependency_paths) # own artifact included

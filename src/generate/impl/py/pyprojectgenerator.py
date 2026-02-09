@@ -16,16 +16,6 @@ class PyProjectGenerator(generate.AbstractManifestGenerator):
         self._dependencies_artifact_transitive_closure = set()
         self._dependencies_library_transitive_closure = set()
 
-    # required currently, pomgen.py uses it, fix this
-    @property
-    def artifact_def(self):
-        return self._artifact_def
-
-    # required currently, pomgen.py uses it, fix this
-    @property
-    def bazel_package(self):
-        return self._artifact_def.bazel_package
-
     def register_dependencies(self, dependencies):
         """
         Registers the dependencies the backing artifact references explicitly.
@@ -64,7 +54,7 @@ class PyProjectGenerator(generate.AbstractManifestGenerator):
                 "$dependencies$",
                 """dependencies = [
 %s
-]""" % "\n".join(['%s"%s",' % (" "*4, dep.to_pyproject_format()) for dep in deps]))
+]""" % "\n".join(['%s"%s",' % (" "*4, dep.native_repr) for dep in deps]))
         return content
 
 

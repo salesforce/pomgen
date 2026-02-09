@@ -11,6 +11,10 @@
     <version>10.0.0-qual1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
+    <description>
+        this is a call!
+    </description>
+
     <properties>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

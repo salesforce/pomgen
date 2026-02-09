@@ -1,0 +1,4 @@
+# the root lib path, followed by the paths to its upstream dependencies
+examples/java/hello-world/juicer
+examples/java/hello-world/healthyfoods
+examples/java/hello-world/wintervegetables

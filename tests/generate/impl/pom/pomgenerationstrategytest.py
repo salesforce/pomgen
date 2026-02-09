@@ -55,14 +55,15 @@ class PomGenerationStrategyTest(unittest.TestCase):
         _write_build_pom(self.repo_root, package_name, artifact_id, group_id, artifact_version)
         artifact_def = self.ws.parse_maven_artifact_def(package_name)
 
-        label = labelm.Label("//%s" % package_name)
+        label = labelm.Label("//foo") # not actually used, just needs to be a source label
         dep = self.fac._pomstrategy.load_dependency(label, artifact_def)
 
         self.assertEqual(group_id, dep.group_id)
         self.assertEqual(artifact_id, dep.artifact_id)
         self.assertEqual(artifact_version, dep.version)
-        self.assertFalse(dep.external)
-        self.assertEqual(package_name, dep.bazel_package)
+        self.assertEqual(package_name, dep.label.package_path)
+        self.assertEqual(package_name, dep.label.target)
+        self.assertTrue(dep.label.is_source_ref)
         self.assertIsNone(dep.classifier)
 
     def test_parse_src_dep_with_target(self):
@@ -74,18 +75,21 @@ class PomGenerationStrategyTest(unittest.TestCase):
         package_name = "package1"
         group_id = "group1"
         artifact_id = "art1"
+        target_name = "t1"
         _touch_file_at_path(self.repo_root, "", "MVN-INF", "LIBRARY.root")
-        _write_build_pom(self.repo_root, package_name, artifact_id, group_id, artifact_version)
+        _write_build_pom(self.repo_root, package_name, artifact_id, group_id, artifact_version,
+                         target_name=target_name)
         artifact_def = self.ws.parse_maven_artifact_def(package_name)
 
-        label = labelm.Label("//%s:target_name" % package_name)
+        label = labelm.Label("//foo") # not actually used, just needs to be a source label
         dep = self.fac._pomstrategy.load_dependency(label, artifact_def)
 
         self.assertEqual(group_id, dep.group_id)
         self.assertEqual(artifact_id, dep.artifact_id)
         self.assertEqual(artifact_version, dep.version)
-        self.assertFalse(dep.external)
-        self.assertEqual(package_name, dep.bazel_package)
+        self.assertEqual(package_name, dep.label.package_path)
+        self.assertEqual(target_name, dep.label.target)
+        self.assertTrue(dep.label.is_source_ref)
         self.assertIsNone(dep.classifier)
 
     def test_parse_ext_dep(self):
@@ -99,8 +103,7 @@ class PomGenerationStrategyTest(unittest.TestCase):
         self.assertEqual("ch.qos.logback", dep.group_id)
         self.assertEqual("logback-classic", dep.artifact_id)
         self.assertEqual("1.2.3", dep.version)
-        self.assertTrue(dep.external)
-        self.assertIsNone(dep.bazel_package)
+        self.assertFalse(dep.label.is_source_ref)
 
     def test_parse_ext_dep__unknown_dep(self):
         """
@@ -153,8 +156,7 @@ class PomGenerationStrategyTest(unittest.TestCase):
 
         self.assertIsNotNone(dep)
         self.assertEqual(released_version, dep.version) # <-- prev rel version
-        self.assertTrue(dep.external) # <-- external == previously uploaded
-        self.assertEqual(package_name, dep.bazel_package)
+        self.assertEqual(package_name, dep.label.package_path)
         self.assertEqual(group_id, dep.group_id)
         self.assertEqual(artifact_id, dep.artifact_id)
 
@@ -186,8 +188,7 @@ class PomGenerationStrategyTest(unittest.TestCase):
 
         self.assertIsNotNone(dep)
         self.assertEqual(version, dep.version) # <-- current version
-        self.assertFalse(dep.external) # <-- not external, built internally
-        self.assertEqual(package_name, dep.bazel_package)
+        self.assertEqual(package_name, dep.label.package_path)
         self.assertEqual(group_id, dep.group_id)
         self.assertEqual(artifact_id, dep.artifact_id)
 
@@ -209,23 +210,28 @@ def _touch_file_at_path(repo_root_path, package_rel_path, within_package_rel_pat
             f.write("abc\n")
 
 
-def _write_build_pom(repo_root_path, package_rel_path, artifact_id, group_id, version):
-    build_pom = """
+def _write_build_pom(repo_root_path, package_rel_path, artifact_id, group_id, version, target_name=None):
+    content = """
 maven_artifact(
     artifact_id = "%s",
     group_id = "%s",
     version = "%s",
     pom_generation_mode = "dynamic",
+    $target_name$
 )
 
 maven_artifact_update(
     version_increment_strategy = "minor",
 )
-"""
+"""  % (artifact_id, group_id, version)
+    if target_name is None:
+        content = content.replace("$target_name$", "")
+    else:
+        content = content.replace("$target_name$", 'target_name = "%s",' % target_name)
     path = os.path.join(repo_root_path, package_rel_path, "MVN-INF")
     os.makedirs(path)
     with open(os.path.join(path, "BUILD.pom"), "w") as f:
-        f.write(build_pom % (artifact_id, group_id, version))
+        f.write(content)
 
 
 def _write_build_pom_released(repo_root_path, package_rel_path, released_version, released_artifact_hash):

@@ -7,8 +7,8 @@ This makes it easier to detect fundamental changes in how manifest files are gen
 To regenerate the goldfiles, run from the root of this repository:
 
 ```
-rm -rf tests/examples_goldfiles/examples
-bazel run //:gen -- --package examples --destdir tests/examples_goldfiles
+./tests/examples_goldfiles/run_goldfiles_test.sh 
 ```
 
-Then use git commands to see if anything unexpected changed.
+If all is well, then there should be no "git diff".
+
