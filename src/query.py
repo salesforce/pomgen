@@ -168,7 +168,10 @@ if __name__ == "__main__":
                 incremental_rel_enabled = cfg.transitives_versioning_mode == "counter"
                 for node in libaggregator.LibraryNode.ALL_LIBRARY_NODES:
                     transitive = node not in root_library_nodes
-                    increment_rel_qualifier = incremental_rel_enabled and transitive
+                    increment_rel_qualifier = (
+                        incremental_rel_enabled and
+                        transitive and
+                        len([p for p in cfg.always_semver_path_prefixes if node.library_path.startswith(p)]) == 0)
                     version_strat = _get_version_increment_strategy(
                         node, increment_rel_qualifier)
                     attrs = collections.OrderedDict()
