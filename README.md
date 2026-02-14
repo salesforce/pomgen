@@ -164,6 +164,10 @@ excluded_extensions=
 # Possible values: semver|counter
 transitives_versioning_mode=
 
+# Path prefixes for libraries that must always use semver versioning
+# Default value: []
+always_semver_path_prefixes=
+
 # The classifier used for all jars artifacts assembled by pomgen
 # The same value can also be specified by setting the environment variable
 # POMGEN_JAR_CLASSIFIER - the environment variable takes precedence over the

@@ -6,6 +6,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 """
 
 import config.config as config
+import common.common as common
 import common.label as label
 import os
 import tempfile
@@ -68,7 +69,7 @@ class ConfigTest(unittest.TestCase):
 pom_template_path=""" + pom_template_path + """
 override_file_paths=override.bzl"""
 
-        self._write_file(repo_root, ".pomgenrc", content)
+        self._write_file(repo_root, ".poppyrc", content)
 
         cfg = config.load(repo_root)
 
@@ -78,7 +79,7 @@ override_file_paths=override.bzl"""
         repo_root = tempfile.mkdtemp("root")
         os.makedirs(os.path.join(repo_root, "src/config"))
         self._write_file(repo_root, "src/config/pom_template.xml", "foo")
-        self._write_file(repo_root, ".pomgenrc", """
+        self._write_file(repo_root, ".poppyrc", """
 [artifact]
 transitives_versioning_mode=semver
 """)
@@ -91,7 +92,7 @@ transitives_versioning_mode=semver
         repo_root = tempfile.mkdtemp("root")
         os.makedirs(os.path.join(repo_root, "src/config"))
         self._write_file(repo_root, "src/config/pom_template.xml", "foo")
-        self._write_file(repo_root, ".pomgenrc", """
+        self._write_file(repo_root, ".poppyrc", """
 [artifact]
 transitives_versioning_mode=counter
 """)
@@ -105,7 +106,7 @@ transitives_versioning_mode=counter
         os.makedirs(os.path.join(repo_root, "src/config"))
         self._write_file(repo_root, "WORKSPACE", "foo")
         self._write_file(repo_root, "src/config/pom_template.xml", "foo")
-        self._write_file(repo_root, ".pomgenrc", """
+        self._write_file(repo_root, ".poppyrc", """
 [artifact]
 transitives_versioning_mode=foo
 """)
@@ -120,7 +121,7 @@ transitives_versioning_mode=foo
         repo_root = tempfile.mkdtemp("root")
         os.makedirs(os.path.join(repo_root, "src/config"))
         self._write_file(repo_root, "src/config/pom_template.xml", "foo")
-        self._write_file(repo_root, ".pomgenrc", "")
+        self._write_file(repo_root, ".poppyrc", "")
 
         cfg = config.load(repo_root)
 
@@ -130,7 +131,7 @@ transitives_versioning_mode=foo
         repo_root = tempfile.mkdtemp("root")
         os.makedirs(os.path.join(repo_root, "src/config"))
         self._write_file(repo_root, "src/config/pom_template.xml", "foo")
-        self._write_file(repo_root, ".pomgenrc", """
+        self._write_file(repo_root, ".poppyrc", """
 [artifact]
 jar_classifier=jdk8
 """)
@@ -143,7 +144,7 @@ jar_classifier=jdk8
         repo_root = tempfile.mkdtemp("root")
         os.makedirs(os.path.join(repo_root, "src/config"))
         self._write_file(repo_root, "src/config/pom_template.xml", "foo")
-        self._write_file(repo_root, ".pomgenrc", """
+        self._write_file(repo_root, ".poppyrc", """
 [artifact]
 jar_classifier=jdk8
 """)
@@ -160,7 +161,7 @@ jar_classifier=jdk8
         repo_root = tempfile.mkdtemp("root")
         os.makedirs(os.path.join(repo_root, "src/config"))
         self._write_file(repo_root, "src/config/pom_template.xml", "foo")
-        self._write_file(repo_root, ".pomgenrc", "")
+        self._write_file(repo_root, ".poppyrc", "")
 
         cfg = config.load(repo_root)
 
@@ -170,7 +171,7 @@ jar_classifier=jdk8
         repo_root = tempfile.mkdtemp("root")
         os.makedirs(os.path.join(repo_root, "src/config"))
         self._write_file(repo_root, "src/config/pom_template.xml", "foo")
-        self._write_file(repo_root, ".pomgenrc", """
+        self._write_file(repo_root, ".poppyrc", """
 [artifact]
 change_detection_enabled=True
 """)
@@ -183,7 +184,7 @@ change_detection_enabled=True
         repo_root = tempfile.mkdtemp("root")
         os.makedirs(os.path.join(repo_root, "src/config"))
         self._write_file(repo_root, "src/config/pom_template.xml", "foo")
-        self._write_file(repo_root, ".pomgenrc", """
+        self._write_file(repo_root, ".poppyrc", """
 [artifact]
 change_detection_enabled=False
 """)
@@ -196,7 +197,7 @@ change_detection_enabled=False
         repo_root = tempfile.mkdtemp("root")
         os.makedirs(os.path.join(repo_root, "src/config"))
         self._write_file(repo_root, "src/config/pom_template.xml", "foo")
-        self._write_file(repo_root, ".pomgenrc", """
+        self._write_file(repo_root, ".poppyrc", """
 [crawler]
 excluded_dependency_labels=  //a/b/c    ,   //a/b/c:foo
 """)
@@ -256,7 +257,7 @@ excluded_dependency_labels=  //a/b/c    ,   //a/b/c:foo
         repo_root = tempfile.mkdtemp("root")
         os.makedirs(os.path.join(repo_root, "src/config"))
         self._write_file(repo_root, "src/config/pom_template.xml", "foo")
-        self._write_file(repo_root, ".pomgenrc", """
+        self._write_file(repo_root, ".poppyrc", """
 [general]
 """)
 
@@ -268,7 +269,7 @@ excluded_dependency_labels=  //a/b/c    ,   //a/b/c:foo
         repo_root = tempfile.mkdtemp("root")
         os.makedirs(os.path.join(repo_root, "src/config"))
         self._write_file(repo_root, "src/config/pom_template.xml", "foo")
-        self._write_file(repo_root, ".pomgenrc", """
+        self._write_file(repo_root, ".poppyrc", """
 [general]
 pom_base_filename=glue-test
 """)
@@ -276,6 +277,19 @@ pom_base_filename=glue-test
         cfg = config.load(repo_root)
 
         self.assertEqual("glue-test", cfg.pom_base_filename)
+
+    def test_always_semver_paths(self):
+        repo_root = tempfile.mkdtemp("root")
+        os.makedirs(os.path.join(repo_root, "src/config"))
+        self._write_file(repo_root, "src/config/pom_template.xml", "foo")
+        self._write_file(repo_root, ".poppyrc", """
+[artifact]
+always_semver_path_prefixes=a/b/c,d/e/f, ,
+""")
+
+        cfg = config.load(repo_root)
+
+        self.assertEqual(("a/b/c", "d/e/f"), cfg.always_semver_path_prefixes)
 
     def _write_poppyrc(self, repo_root, pom_template_path=None, maven_install_paths=None,
                        pyproject_template_path=None):
@@ -294,8 +308,7 @@ pom_base_filename=glue-test
 
     def _write_file(self, repo_root, relative_path, content):
         path = os.path.join(repo_root, relative_path)
-        with open(path, "w") as f:
-            f.write(content)
+        common.write_file(path, content)
         return path
 
 

@@ -63,6 +63,7 @@ def load(repo_root, verbose=False):
         excluded_src_file_names=artifact("excluded_filenames", (".gitignore",)),
         excluded_src_file_extensions=artifact("excluded_extensions", (".md",)),
         transitives_versioning_mode=artifact("transitives_versioning_mode", "semver", valid_values=("semver", "counter")),
+        always_semver_path_prefixes=artifact("always_semver_path_prefixes", ()),
         jar_artifact_classifier=artifact("jar_classifier", None),
         change_detection_enabled=artifact("change_detection_enabled", True),
     )
@@ -115,6 +116,7 @@ class Config:
         excluded_src_file_names=(),
         excluded_src_file_extensions=(),
         transitives_versioning_mode="semver",
+        always_semver_path_prefixes=(),
         jar_artifact_classifier=None,
         change_detection_enabled=True):
 
@@ -137,6 +139,7 @@ class Config:
         self.excluded_src_file_names = _to_tuple(excluded_src_file_names)
         self.excluded_src_file_extensions = _to_tuple(excluded_src_file_extensions)
         self.transitives_versioning_mode = transitives_versioning_mode
+        self.always_semver_path_prefixes = _to_tuple(always_semver_path_prefixes)
         self._jar_artifact_classifier = jar_artifact_classifier
         self._change_detection_enabled = _to_bool(change_detection_enabled)
 
@@ -186,6 +189,7 @@ excluded_relative_paths=%s
 excluded_filenames=%s
 excluded_extensions=%s
 transitives_versioning_mode=%s
+always_semver_path_prefixes=%s
 jar_artifact_classifier=%s
 change_detection_enabled=%s
 """ % (self.pom_template_path_and_content[0],
@@ -199,6 +203,7 @@ change_detection_enabled=%s
        self.excluded_src_file_names,
        self.excluded_src_file_extensions,
        self.transitives_versioning_mode,
+       self.always_semver_path_prefixes,
        self.jar_artifact_classifier,
        self.change_detection_enabled)
 
