@@ -112,20 +112,21 @@ if __name__ == "__main__":
         print(_to_json(all_libs))
 
     if args.list_artifacts:
-        maven_artifacts = [ws.parse_maven_artifact_def(p) for p in packages]
-        all_artifacts = []
+        artifacts = [ws.parse_maven_artifact_def(p) for p in packages]
         if args.filter is not None:
             query = instancequery.InstanceQuery(args.filter)
-            maven_artifacts = query(maven_artifacts)
-        for maven_artifact in sorted(maven_artifacts, key=lambda a: a.bazel_package):
+            artifacts = query(artifacts)
+        output = []
+        for artifact in sorted(artifacts, key=lambda a: a.bazel_package):
             attrs = collections.OrderedDict()
-            attrs["artifact_id"] = maven_artifact.artifact_id
-            if maven_artifact.group_id is not None:
-                attrs["group_id"] = maven_artifact.group_id
-            attrs["version"] = maven_artifact.version
-            attrs["path"] = maven_artifact.bazel_package
-            all_artifacts.append(attrs)
-        print(_to_json(all_artifacts))
+            attrs["artifact_id"] = artifact.artifact_id
+            if artifact.group_id is not None:
+                attrs["group_id"] = artifact.group_id
+            attrs["version"] = artifact.version
+            attrs["path"] = artifact.bazel_package
+            attrs["library_path"] = artifact.library_path
+            output.append(attrs)
+        print(_to_json(output))
 
     if args.list_external_dependencies:
         external_dependencies = sorted(fac.load_all_external_dependencies(), key=lambda dep: dep.label)
