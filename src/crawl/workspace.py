@@ -124,7 +124,7 @@ def _build_oneoneone_child_artifact_def(package, parent_artifact_def):
         generation_strategy=parent_artifact_def.generation_strategy,
         library_path=parent_artifact_def.library_path,
         requires_release=False,
-        group_id = None,
-        artifact_id = None,
-        version = parent_artifact_def.version,
-    )
+        group_id=None,
+        artifact_id=None,
+        version=parent_artifact_def.version,
+        version_increment_strategy=parent_artifact_def.version_increment_strategy)

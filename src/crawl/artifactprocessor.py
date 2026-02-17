@@ -13,9 +13,9 @@ helps with testing.
 """
 
 import common.code as code
-from common import mdfiles
-from crawl import git
-from crawl import releasereason
+import common.mdfiles as mdfiles
+import crawl.git as git
+import crawl.releasereason as releasereason
 import os
 
 
@@ -32,9 +32,14 @@ def augment_artifact_def(repo_root_path,
 
     # release state
     if art_def.released_version is None or art_def.released_artifact_hash is None:
-        # never released?
-        art_def.requires_release = True
-        art_def.release_reason = releasereason.FIRST
+        if art_def.generation_mode.produces_artifact:
+            # never released (previous release not tracked)
+            art_def.requires_release = True
+            art_def.release_reason = releasereason.FIRST
+        else:
+            # no artifact -> nothing to release
+            art_def.requires_release = False
+            art_def.release_reason = None
     else:
         if change_detection_enabled and art_def.change_detection:
             has_changed = _has_changed_since_last_release(repo_root_path, art_def, source_exclusions)
