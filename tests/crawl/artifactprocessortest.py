@@ -4,13 +4,14 @@ All rights reserved.
 SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
+import common.genmode as genmode
+import common.manifestcontent as manifestcontent
 import common.os_util as os_util
 import config.config as config
 import config.exclusions as exclusions
 import crawl.artifactprocessor as artifactprocessor
 import crawl.buildpom as buildpom
 import crawl.git as git
-import common.manifestcontent as manifestcontent
 import crawl.releasereason as releasereason
 import generate.impl.pom.dependencymd as dependencymd
 import generate.impl.pom.maveninstallinfo as maveninstallinfo
@@ -31,6 +32,16 @@ class ArtifactProcessorTest(unittest.TestCase):
         art_def = artifactprocessor.augment_artifact_def(repo_root, art_def, exclusions.src_exclusions(), change_detection_enabled=True)
 
         self.assertTrue(art_def.requires_release)
+
+    def test_non_producing_artifact_def_should_not_be_released(self):        
+        art_def = buildpom.MavenArtifactDef("g1", "a1", "1.0.0", bazel_package="", generation_strategy=self._get_strategy(), generation_mode=genmode.SKIP)
+        repo_root = tempfile.mkdtemp("repo")
+        self._touch_file_at_path(repo_root, "", "MVN-INF", "LIBRARY.root")
+        self.assertIs(None, art_def.released_artifact_hash)
+
+        art_def = artifactprocessor.augment_artifact_def(repo_root, art_def, exclusions.src_exclusions(), change_detection_enabled=True)
+
+        self.assertFalse(art_def.requires_release)
 
     def test_library_root(self):
         repo_root = tempfile.mkdtemp("repo")

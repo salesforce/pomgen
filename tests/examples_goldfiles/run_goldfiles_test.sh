@@ -21,3 +21,6 @@ bazel run //:gen -- --package examples --destdir tests/examples_goldfiles --mani
 
 # query output
 bazel run //:query -- --list_external_dependencies > tests/examples_goldfiles/external_dependencies.json
+
+# list libraries
+bazel run //:query -- --library_release_plan_json --package examples > tests/examples_goldfiles/libraries_release_plan_json
