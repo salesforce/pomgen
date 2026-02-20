@@ -35,15 +35,15 @@ class LibraryNode:
         self.requires_release = requires_release
         self.release_reason = release_reason
         # this is the current version of the library, its value depends on
-        # whether the library has changed or not since it was last released
-        # - if it has changed, this is the current version in the metadata file
-        #   (typically without version qualifier, such as -SNAPSHOT)
+        # whether the library has changed or not since it was last released:
+        # - if it has changed, this is the current version in the library
+        #   md file (md_version below)
         # - if the library has not changed, it is the last released version
+        #   (released_version below)
         self.version = version
-        # this is always the version set in the library md file, regardless of
-        # release state
+        # this is the version set in the library md file
         self.md_version = md_version
-        # this is always the last released version, regardless of release state
+        # this is the last released version
         self.released_version = released_version
         self.version_increment_strategy_name = version_increment_strategy_name
         self._library_path_to_child_node = {}
