@@ -28,12 +28,22 @@ class LibraryNode:
 
     ALL_LIBRARY_NODES = []
 
-    def __init__(self, library_path, requires_release, release_reason, version,
-                 released_version, version_increment_strategy_name):
+    def __init__(self, library_path, requires_release, release_reason,
+                 version, md_version, released_version,
+                 version_increment_strategy_name):
         self.library_path = library_path
         self.requires_release = requires_release
         self.release_reason = release_reason
+        # this is the current version of the library, its value depends on
+        # whether the library has changed or not since it was last released
+        # - if it has changed, this is the current version in the metadata file
+        #   (typically without version qualifier, such as -SNAPSHOT)
+        # - if the library has not changed, it is the last released version
         self.version = version
+        # this is always the version set in the library md file, regardless of
+        # release state
+        self.md_version = md_version
+        # this is always the last released version, regardless of release state
         self.released_version = released_version
         self.version_increment_strategy_name = version_increment_strategy_name
         self._library_path_to_child_node = {}
@@ -127,7 +137,9 @@ def _walk(artifact_node, library_path_to_library_node):
             # make sure that version is None for the expected reason:
             assert not artifact_def.generation_mode.produces_artifact
         library_node = LibraryNode(library_path, artifact_def.requires_release,
-                                   artifact_def.release_reason, version,
+                                   artifact_def.release_reason,
+                                   version,
+                                   artifact_def.version,
                                    artifact_def.released_version,
                                    artifact_def.version_increment_strategy)
         library_path_to_library_node[library_path] = library_node
