@@ -1,7 +1,7 @@
 artifact(
     group_id = "com.pomgen.example.skip-art-gen",
     artifact_id = "lib",
-    version = "1.0.0-SNAPSHOT",
+    version = "1.3.4-SNAPSHOT",
     generation_mode = "dynamic",
 )
 

@@ -184,8 +184,8 @@ if __name__ == "__main__":
                     next_release_version = None
                     next_dev_version = None
                     if version_strat is not None:
-                        next_release_version = version_strat.get_next_release_version(node.version)
-                        next_dev_version = version_strat.get_next_development_version(node.version)
+                        next_release_version = version_strat.get_next_release_version(node.md_version)
+                        next_dev_version = version_strat.get_next_development_version(node.md_version)
                     attrs["proposed_release_version"] = next_release_version
                     attrs["proposed_next_dev_version"] = next_dev_version
 

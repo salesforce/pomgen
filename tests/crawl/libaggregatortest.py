@@ -18,34 +18,44 @@ class LibAggregatorTest(unittest.TestCase):
 
     def test_single_lib__requires_release(self):
         a1 = self._create_library_artifact_node("g1", "a1", "1.0.0", "mylib",
-                                                requires_release=True)
+                                                requires_release=True,
+                                                released_version="0.0.1")
         a2 = self._create_library_artifact_node("g1", "a2", "1.0.0", "mylib",
-                                                requires_release=True)
+                                                requires_release=True,
+                                                released_version="0.0.1")
         a3 = self._create_library_artifact_node("g1", "a3", "1.0.0", "mylib",
-                                                requires_release=True)
+                                                requires_release=True,
+                                                released_version="0.0.1")
 
         lib_nodes = libaggregator.get_libraries_to_release([a1, a2, a3])
 
         self.assertEqual(1, len(lib_nodes))
         self.assertEqual(0, len(lib_nodes[0].children))
         self.assertEqual("1.0.0-SNAPSHOT", lib_nodes[0].version)
+        self.assertEqual("1.0.0-SNAPSHOT", lib_nodes[0].md_version)
+        self.assertEqual("0.0.1", lib_nodes[0].released_version)
         self.assertEqual(lib_nodes[0].library_path, "mylib")
         self.assertTrue(lib_nodes[0].requires_release)
         self.assertEqual(rr.ARTIFACT, lib_nodes[0].release_reason)
 
     def test_single_lib__does_not_require_release(self):
         a1 = self._create_library_artifact_node("g1", "a1", "1.0.0", "mylib",
-                                                requires_release=False)
+                                                requires_release=False,
+                                                released_version="0.0.1")
         a2 = self._create_library_artifact_node("g1", "a2", "1.0.0", "mylib",
-                                                requires_release=False)
+                                                requires_release=False,
+                                                released_version="0.0.1")
         a3 = self._create_library_artifact_node("g1", "a3", "1.0.0", "mylib",
-                                                requires_release=False)
+                                                requires_release=False,
+                                                released_version="0.0.1")
 
         lib_nodes = libaggregator.get_libraries_to_release([a1, a2, a3])
 
         self.assertEqual(1, len(lib_nodes))
         self.assertEqual(0, len(lib_nodes[0].children))
-        self.assertEqual("1.0.0", lib_nodes[0].version)
+        self.assertEqual("0.0.1", lib_nodes[0].version)
+        self.assertEqual("1.0.0-SNAPSHOT", lib_nodes[0].md_version)
+        self.assertEqual("0.0.1", lib_nodes[0].released_version)
         self.assertEqual(lib_nodes[0].library_path, "mylib")
         self.assertFalse(lib_nodes[0].requires_release)
         self.assertIsNone(lib_nodes[0].release_reason)
@@ -82,11 +92,14 @@ class LibAggregatorTest(unittest.TestCase):
         referencing an artifact in mylib2, g2:a1.
         """
         l1a1 = self._create_library_artifact_node("g1", "a1", "1.0.0", "mylib",
-                                                  requires_release=True)
+                                                  requires_release=True,
+                                                  released_version="0")
         l1a2 = self._create_library_artifact_node("g1", "a2", "1.0.0", "mylib",
-                                                  requires_release=True)
+                                                  requires_release=True,
+                                                  released_version="0")
         l2a1 = self._create_library_artifact_node("g2", "a1", "2.0.0", "mylib2",
-                                                  requires_release=True)
+                                                  requires_release=True,
+                                                  released_version="1")
 
         l1a2.children = [l2a1]
         l2a1.parent = l1a2        
@@ -96,12 +109,16 @@ class LibAggregatorTest(unittest.TestCase):
         self.assertEqual(1, len(lib_nodes[0].children))
         lib = lib_nodes[0]
         self.assertEqual("1.0.0-SNAPSHOT", lib.version)
+        self.assertEqual("1.0.0-SNAPSHOT", lib.md_version)
+        self.assertEqual("0", lib.released_version)
         self.assertEqual(lib.library_path, "mylib")
         self.assertTrue(lib.requires_release)
         self.assertEqual(rr.ARTIFACT, lib.release_reason)
 
         lib = lib.children[0]
         self.assertEqual("2.0.0-SNAPSHOT", lib.version)
+        self.assertEqual("2.0.0-SNAPSHOT", lib.md_version)
+        self.assertEqual("1", lib.released_version)
         self.assertEqual(lib.library_path, "mylib2")
         self.assertTrue(lib.requires_release)
         self.assertEqual(rr.ARTIFACT, lib.release_reason)
@@ -156,9 +173,11 @@ class LibAggregatorTest(unittest.TestCase):
 
     def _create_library_artifact_node(self, group_id, artifact_id, version,
                                       library_path, requires_release,
-                                      release_reason=None):
+                                      release_reason=None,
+                                      released_version=None):
         dev_version = version + "-SNAPSHOT"
-        released_version = version
+        if released_version is None:
+            released_version = version
         if requires_release and release_reason is None:
             release_reason = rr.ARTIFACT
         artifact_def =\
