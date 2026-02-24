@@ -274,18 +274,20 @@ class Crawler:
                 previous_manifest = generator.format_for_comparison(art_def.released_pom_content)
                 manifest_changed = current_manifest != previous_manifest
                 if manifest_changed:
-                    art_def.requires_release = True
-                    art_def.release_reason = releasereason.MANIFEST
+                    #art_def.requires_release = True
+                    #art_def.release_reason = releasereason.MANIFEST
 
-                    if self.verbose:
-                        logger.debug("pom diff %s %s" % (art_def, art_def.bazel_package))
-                        diff = difflib.unified_diff(previous_manifest.splitlines(True), current_manifest.splitlines(True))
-                        logger.raw(''.join(diff))
-                        logger.debug("%s computed manifest:" % art_def)
-                        logger.raw(current_manifest)
-                        logger.debug("%s released manifest:" % art_def)
-                        logger.raw(previous_manifest)
+                    #logger.debug("pom diff %s %s" % (art_def, art_def.bazel_package))
+                    diff = difflib.unified_diff(previous_manifest.splitlines(True), current_manifest.splitlines(True))
 
+                    with open('/tmp/manifest_diff.out', 'a') as f:
+                        f.write("\n%s diff manifest for:\n" % art_def)
+                        f.write(''.join(diff))
+                        f.write("\n%s computed manifest:\n" % art_def)
+                        f.write(current_manifest)
+                        f.write("\n%s released manifest:\n" % art_def)
+                        f.write(previous_manifest)
+                        f.write("\n" + "="*80 + "\n")
 
     def _compute_transitive_closures_of_deps(self):
         """
