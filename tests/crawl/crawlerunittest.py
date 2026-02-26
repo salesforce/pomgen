@@ -474,7 +474,7 @@ class CrawlerUnitTest(unittest.TestCase):
         self.assertEqual(d2, a1_deps[5])
         self.assertEqual(d3, a1_deps[6])
 
-    def test_propagate_requires_release_up__single_child(self):
+    def test_propagate_requires_release_up__single_leaf_node(self):
         """
         l1 -> l2, l2 requires release
         """
@@ -488,17 +488,16 @@ class CrawlerUnitTest(unittest.TestCase):
         crawler.library_to_nodes["l2"].append(a2_node)
         crawler.library_to_artifact["l1"].append(a1_node.artifact_def)
         crawler.library_to_artifact["l2"].append(a2_node.artifact_def)
-
         crawler.leafnodes = (a2_node,)
-
         a2_node.artifact_def.requires_release = True
         a2_node.artifact_def.release_reason = "some reason"
+
         crawler._calculate_artifact_release_flag(force_release=False)
 
         self.assertTrue(a1_node.artifact_def.requires_release)
         self.assertIn("transitive", a1_node.artifact_def.release_reason)
 
-    def test_propagate_requires_release_up__two_children(self):
+    def test_propagate_requires_release_up__two_leaf_nodes(self):
         """
         l1 -> (l2, l3), l3 requires release
         """
@@ -507,7 +506,6 @@ class CrawlerUnitTest(unittest.TestCase):
         a2_node = self._build_node("a2", "d/e/f", strategy, parent_node=a1_node, library_path="l2")
         a3_node = self._build_node("a3", "g/h/i", strategy, parent_node=a1_node, library_path="l3")
         a1_node.children = (a2_node, a3_node,)
-
         ws = self._get_workspace()
         crawler = crawlerm.Crawler(ws, strategy)
         crawler.library_to_nodes["l1"].append(a1_node)
@@ -516,11 +514,46 @@ class CrawlerUnitTest(unittest.TestCase):
         crawler.library_to_artifact["l1"].append(a1_node.artifact_def)
         crawler.library_to_artifact["l2"].append(a2_node.artifact_def)
         crawler.library_to_artifact["l3"].append(a3_node.artifact_def)
-
         crawler.leafnodes = (a2_node, a3_node)
-
         a3_node.artifact_def.requires_release = True
-        a2_node.artifact_def.release_reason = "some reason"
+        a3_node.artifact_def.release_reason = "some reason"
+
+        crawler._calculate_artifact_release_flag(force_release=False)
+
+        self.assertTrue(a1_node.artifact_def.requires_release)
+        self.assertIn("transitive", a1_node.artifact_def.release_reason)
+
+    def test_propagate_requires_release__two_middle_nodes(self):
+        """
+        l1 -> (l2, l3) -> l4
+        l3 requires release
+
+        l2 is traversed first and then reaches l1 without needing to release
+        l3 is next and needs to update l1 although l1 was visited already
+        """
+        strategy = self._get_strategy()
+        a1_node = self._build_node("a1", "a/b/c", strategy, library_path="l1")
+        a2_node = self._build_node("a2", "d/e/f", strategy, parent_node=a1_node, library_path="l2")
+        a3_node = self._build_node("a3", "g/h/i", strategy, parent_node=a1_node, library_path="l3")
+        a4_node = self._build_node("a4", "x/y/z", strategy, parent_node=a2_node, library_path="l4")
+        a4_node.parents.append(a3_node)
+        a1_node.children = (a2_node, a3_node,)
+        a2_node.children = (a4_node,)
+        a3_node.children = (a4_node,)
+        ws = self._get_workspace()
+        crawler = crawlerm.Crawler(ws, strategy)
+        crawler.library_to_nodes["l1"].append(a1_node)
+        crawler.library_to_nodes["l2"].append(a2_node)
+        crawler.library_to_nodes["l3"].append(a3_node)
+        crawler.library_to_nodes["l4"].append(a4_node)
+        crawler.library_to_artifact["l1"].append(a1_node.artifact_def)
+        crawler.library_to_artifact["l2"].append(a2_node.artifact_def)
+        crawler.library_to_artifact["l3"].append(a3_node.artifact_def)
+        crawler.library_to_artifact["l4"].append(a4_node.artifact_def)
+        crawler.leafnodes = (a4_node,)
+        a3_node.artifact_def.requires_release = True
+        a3_node.artifact_def.release_reason = "some reason"
+
         crawler._calculate_artifact_release_flag(force_release=False)
 
         self.assertTrue(a1_node.artifact_def.requires_release)
