@@ -481,17 +481,23 @@ class Crawler:
                                     processed_nodes=processed_nodes)
 
     def _propagate_req_rel(self, node, transitive_dep_requires_release, force_release, processed_nodes):
+        requires_release = transitive_dep_requires_release or force_release
         if node in processed_nodes:
-            return
-        processed_nodes.add(node)
+            if requires_release and not node.artifact_def.requires_release:
+                # this node has been visited already but we are now visiting it
+                # through a diff path where releasing is required, so we need
+                # to do one more pass
+                pass
+            else:
+                return
+        else:
+            processed_nodes.add(node)
         art_def = node.artifact_def
         library_path = art_def.library_path
         all_artifact_defs = self.library_to_artifact[library_path]
         assert len(all_artifact_defs) > 0, "expected some artifact defs"
         sibling_artifact_requires_release, sibling_release_reason = self._any_artifact_requires_releasing(all_artifact_defs)
-        if (force_release or
-            sibling_artifact_requires_release or
-            transitive_dep_requires_release):
+        if requires_release or sibling_artifact_requires_release:
             if self.verbose:
                 if force_release:
                     print("Library", library_path, "requires release because force is enabled")
@@ -502,20 +508,17 @@ class Crawler:
                 else:
                     assert False, "bug"
             # update all artifacts belonging to the library at once
-            updated_artifact_defs = []
             for artifact_def in all_artifact_defs:
-                if force_release or not artifact_def.requires_release:
-                    artifact_def.requires_release = True
-                    updated_artifact_defs.append(artifact_def)
-                    if force_release:
-                        artifact_def.release_reason = releasereason.ALWAYS
+                artifact_def.requires_release = True
+                if force_release:
+                    artifact_def.release_reason = releasereason.ALWAYS
+                else:
+                    if sibling_artifact_requires_release:
+                        artifact_def.release_reason = sibling_release_reason
+                    elif transitive_dep_requires_release:
+                        artifact_def.release_reason = releasereason.TRANSITIVE
                     else:
-                        if sibling_artifact_requires_release:
-                            artifact_def.release_reason = sibling_release_reason
-                        elif transitive_dep_requires_release:
-                            artifact_def.release_reason = releasereason.TRANSITIVE
-                        else:
-                            raise Exception("release_reason not set on artifact - this is a bug")
+                        raise Exception("release_reason not set on artifact - this is a bug")
         else: # release not required
             if self.verbose:
                 print("Library", library_path, "does not required to be released")
