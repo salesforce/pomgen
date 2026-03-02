@@ -16,7 +16,7 @@ The [library in this example](BUILD) depends on `org.antlr:ST4` (`@antlr//:org_a
 Generate a pom.xml file for this example's library:
 
 ```
-bazel run @poppy//:pomgen -- --package examples/java/dep-overrides --destdir /tmp/overrides
+bazel run @poppy//:gen -- --package examples/java/dep-overrides --destdir /tmp/overrides
 ```
 
 Have a look at the generated pom.xml - note that the pom brings in the transitives listed above.

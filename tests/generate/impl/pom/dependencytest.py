@@ -346,6 +346,19 @@ class DependencyTest(unittest.TestCase):
         self.assertIs(dep3, lst[1])
         self.assertIs(dep2, lst[2])
 
+    def test_sort_order_source_dep_and_third_party(self):
+        group_id = "g1"
+        artifact_id = "a1"
+        version = "1.0.0"
+        art_def = buildpom.MavenArtifactDef(group_id, artifact_id, version, bazel_package="p1")
+        src_dep = dependency.new_dep_from_maven_artifact_def(art_def)
+        outside_dep = dependency.new_dep_from_maven_art_str("%s:%s:%s" % (group_id, artifact_id, version), "name")
+
+        lst = [outside_dep, src_dep]
+        lst.sort()
+        self.assertIs(src_dep, lst[0])
+        self.assertIs(outside_dep, lst[1])
+
     def test_equals_hash_code(self):
         dep1 = dependency.new_dep_from_maven_art_str("com.google.guava:guava:20.0", "name")
         dep2 = dependency.new_dep_from_maven_art_str("com.google.guava:guava:20.0", "name")
@@ -373,6 +386,21 @@ class DependencyTest(unittest.TestCase):
         self.assertEqual(1, len(s))
         self.assertTrue(dep1 in s)
         self.assertTrue(dep2 in s)
+
+    def test_equals_hash_code__src_vs_3rdparty(self):
+        group_id = "g1"
+        artifact_id = "a1"
+        version = "1.0.0"
+        art_def = buildpom.MavenArtifactDef(group_id, artifact_id, version, bazel_package="p1")
+        src_dep = dependency.new_dep_from_maven_artifact_def(art_def)
+        outside_dep = dependency.new_dep_from_maven_art_str("%s:%s:%s" % (group_id, artifact_id, version), "name")
+
+        s = set()
+        s.add(src_dep)
+        s.add(outside_dep)
+        self.assertEqual(2, len(s))
+
+        self.assertNotEqual(src_dep, outside_dep)
 
     def test_equals_ignores_version(self):
         dep1 = dependency.new_dep_from_maven_art_str("com.google.guava:guava:20.0", "name")

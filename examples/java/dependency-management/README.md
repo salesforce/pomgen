@@ -10,23 +10,31 @@ The dependency management pom contains a `<dependencyManagement>` section with t
 From the root of the repository:
 
 ```
-bazel build examples/java/dependency-management/...
+bazel run @poppy//:gen -- --destdir /tmp/depman --package examples/java/dependency-management/juicer
 ```
 
-```
-bazel run @poppy//package/maven -- -a pomgen,install -l examples/java/dependency-management
-```
+The depdendency management pom is at `/tmp/depman/examples/java/dependency-management/juicer/pom_companion0.xml`.
 
+
+### Consuming the dependency management pom
+
+#### Produce artifacts
+
+First, install everything into `$HOME/.m2/repository` so that Maven can find it:
+
+bazel run @poppy//package/maven -- -a pomgen,build,install -l examples/java/dependency-management/juicer
+```
 Now look under your `$HOME/.m2/repository`:
 
 The usual `jar` packaging pom is at:
-`com/pomgen/depman/example/juicer/3.0.0-SNAPSHOT/juicer-3.0.0-SNAPSHOT.pom`
+`$HOME/.m2/repository/com/pomgen/depman/example/juicer/3.0.0-SNAPSHOT/juicer-3.0.0-SNAPSHOT.pom`
 
 The dependency management pom (`pom` packaging) is at:
-`com/pomgen/depman/example/juicer.depmanagement/3.0.0-SNAPSHOT/juicer.depmanagement-3.0.0-SNAPSHOT.pom`
+`$HOME/.m2/repository/com/pomgen/depman/example/juicer.depmanagement/3.0.0-SNAPSHOT/juicer.depmanagement-3.0.0-SNAPSHOT.pom`
 
+#### Consume artifacts
 
-The `<dependencyManagement>` in the dependency management pom can be used (imported) the following way:
+The `<dependencyManagement>` in the dependency management pom can be used (imported) into a pom.xml the following way:
 
 ```
 <dependencyManagement>

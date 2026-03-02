@@ -171,6 +171,20 @@ class LibAggregatorTest(unittest.TestCase):
         self.assertEqual(rr.UNCOMMITTED_CHANGES, libaggregator._get_lib_release_reason(rr.UNCOMMITTED_CHANGES, rr.TRANSITIVE))
         self.assertEqual(rr.UNCOMMITTED_CHANGES, libaggregator._get_lib_release_reason(rr.UNCOMMITTED_CHANGES, rr.UNCOMMITTED_CHANGES))
 
+    def test_equals_and_hash(self):
+        l1 = libaggregator.LibraryNode("a/b/c", False, "reason", "1.0.0",
+                                       "2.0.0", "3.0.0", "incr")
+        l2 = libaggregator.LibraryNode("a/b/c", False, "reason", "1.0.0",
+                                       "2.0.0", "3.0.0", "incr")
+
+        self.assertEqual(l1, l2)
+
+        s = set()
+        s.add(l1)
+        s.add(l2)
+
+        self.assertEqual(1, len(s))
+
     def _create_library_artifact_node(self, group_id, artifact_id, version,
                                       library_path, requires_release,
                                       release_reason=None,

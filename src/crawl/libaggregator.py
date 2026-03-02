@@ -4,9 +4,8 @@ All rights reserved.
 SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
-
-
 import crawl.releasereason as releasereason
+from functools import total_ordering
 
 
 def get_libraries_to_release(artifact_nodes):
@@ -24,6 +23,7 @@ def get_libraries_to_release(artifact_nodes):
     return library_nodes
 
 
+@total_ordering
 class LibraryNode:
 
     ALL_LIBRARY_NODES = []
@@ -115,6 +115,21 @@ class LibraryNode:
 
     def __str__(self):
         return self.library_path
+
+    def __hash__(self):
+        return hash(self.library_path)
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        if not isinstance(other, LibraryNode):
+            return NotImplemented
+        return self.library_path == other.library_path
+
+    def __lt__(self, other):
+        if not isinstance(other, LibraryNode):
+            return NotImplemented
+        return self.library_path < other.library_path
 
     __rep__ = __str__
 

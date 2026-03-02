@@ -74,19 +74,24 @@ class PomDependency(generate.AbstractDependency):
     # note that hash/eq/lt etc don't use the version because
     # the version can change based on the value of requires_release
     # we need to check whether we can create dependency instances after
-    # the value of requires release is known so we can make this more consistent
+    # the value of requires_release is known so we can make this more consistent
     def __hash__(self):
-        return hash((self._group_id, self._artifact_id, self._classifier, self._packaging))
+        return hash((self._group_id, self._artifact_id, self._classifier, self._packaging, self.label.is_source_ref))
 
     def __eq__(self, other):
         if self is other:
             return True
+        if not isinstance(other, PomDependency):
+            return NotImplemented
         return (self._group_id == other._group_id and
                 self._artifact_id == other._artifact_id and
                 self._classifier == other._classifier and
-                self._packaging == other._packaging)
+                self._packaging == other._packaging and
+                self.label.is_source_ref == other.label.is_source_ref)
 
     def __lt__(self, other):
+        if not isinstance(other, PomDependency):
+            return NotImplemented
         if not self.label.is_source_ref:
             # self is a 3rd party dep
             if not other.label.is_source_ref:
