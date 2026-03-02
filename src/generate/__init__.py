@@ -140,7 +140,7 @@ class AbstractGenerationStrategy(ABC):
         Returns a new AbstractManifestGenerator instance.
 
         Hook method, only meant to be called from this class
-        and optionally implemented in subclasses.
+        and optionally implementeded in subclasses.
         """
         pass
 
@@ -205,9 +205,6 @@ class AbstractDependency(ABC):
         if self is other:
             return True
         return self._artifact_id == other._artifact_id
-
-    def __ne__(self, other):
-        return self != other
 
     def __lt__(self, other):
         return self._artifact_id < other._artifact_id

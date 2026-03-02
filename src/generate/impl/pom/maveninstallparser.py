@@ -43,8 +43,7 @@ def parse_maven_install(names_and_paths, label_to_overridden_fq_label={}, verbos
 
 
     # process overrides (if there are any)
-    # for each dep, we update the direct transitives with the overridden
-    # dep(s)
+    # for each dep, we update the direct transitives with the overridden dep(s)
     for unqual_label, fq_label in label_to_overridden_fq_label.items():
         src_deps = unqual_label_to_deps.get(unqual_label, [])
         for src_dep in src_deps:

@@ -166,7 +166,8 @@ if __name__ == "__main__":
             if args.library_release_plan_json:
                 all_libs_json = []
                 incremental_rel_enabled = cfg.transitives_versioning_mode == "counter"
-                for node in libaggregator.LibraryNode.ALL_LIBRARY_NODES:
+                all_lib_nodes = sorted(libaggregator.LibraryNode.ALL_LIBRARY_NODES)
+                for node in all_lib_nodes:
                     transitive = node not in root_library_nodes
                     increment_rel_qualifier = (
                         incremental_rel_enabled and
