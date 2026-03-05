@@ -42,7 +42,7 @@ class PomGenTest(unittest.TestCase):
 
     def _setup_workspace(self):
         self.repo_root_path = tempfile.mkdtemp("repo")
-        self._add_WORKSPACE_file()
+        self._add_module_bazel_file()
         self._add_pom_template()
         self._write_file("","","maven_install.json", """
 {
@@ -62,7 +62,7 @@ maven_install_paths=maven_install.json
 """)
 
 
-    def _add_WORKSPACE_file(self):
+    def _add_module_bazel_file(self):
         content = """
 # too slow - check a couple of jar into the repo instead?
 #maven_jar(
@@ -70,7 +70,7 @@ maven_install_paths=maven_install.json
 #    artifact = "com.google.guava:guava:23.0",
 #)
 """
-        self._write_file("", "", "WORKSPACE", content)
+        self._write_file("", "", "MODULE.bazel", content)
 
     def _add_pom_template(self):
         content = """

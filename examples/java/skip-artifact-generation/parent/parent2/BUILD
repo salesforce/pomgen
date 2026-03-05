@@ -4,7 +4,7 @@ java_library(
     # these deps get pulled into the pom generated for *this* package
     # because the reference below has pomgen mode == skip
     deps = ["//examples/java/skip-artifact-generation/passthrough:set1"],
-    runtime_deps = ["@maven//:org_antlr_ST4"],
+    runtime_deps = ["@poppy_mvn//:org_antlr_ST4"],
 )
 
 java_binary(

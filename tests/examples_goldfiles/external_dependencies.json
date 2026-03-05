@@ -5,7 +5,7 @@
     "version": "2.7.6",
     "packaging": "jar",
     "classifier": null,
-    "name": "@antlr//:antlr_antlr"
+    "name": "@poppy_antlr//:antlr_antlr"
   },
   {
     "artifact_id": "ST4",
@@ -13,7 +13,7 @@
     "version": "4.0.7",
     "packaging": "jar",
     "classifier": null,
-    "name": "@antlr//:org_antlr_ST4"
+    "name": "@poppy_antlr//:org_antlr_ST4"
   },
   {
     "artifact_id": "antlr-runtime",
@@ -21,7 +21,7 @@
     "version": "3.5",
     "packaging": "jar",
     "classifier": null,
-    "name": "@antlr//:org_antlr_antlr_runtime"
+    "name": "@poppy_antlr//:org_antlr_antlr_runtime"
   },
   {
     "artifact_id": "stringtemplate",
@@ -29,7 +29,7 @@
     "version": "3.2.1",
     "packaging": "jar",
     "classifier": null,
-    "name": "@antlr//:org_antlr_stringtemplate"
+    "name": "@poppy_antlr//:org_antlr_stringtemplate"
   },
   {
     "artifact_id": "guava",
@@ -37,7 +37,7 @@
     "version": "33.4.8-jre",
     "packaging": "jar",
     "classifier": null,
-    "name": "@maven//:com_google_guava_guava"
+    "name": "@poppy_mvn//:com_google_guava_guava"
   },
   {
     "artifact_id": "ST4",
@@ -45,7 +45,7 @@
     "version": "4.0.7",
     "packaging": "jar",
     "classifier": null,
-    "name": "@maven//:org_antlr_ST4"
+    "name": "@poppy_mvn//:org_antlr_ST4"
   },
   {
     "artifact_id": "antlr-runtime",
@@ -53,7 +53,7 @@
     "version": "3.5",
     "packaging": "jar",
     "classifier": null,
-    "name": "@maven//:org_antlr_antlr_runtime"
+    "name": "@poppy_mvn//:org_antlr_antlr_runtime"
   },
   {
     "artifact_id": "stringtemplate",
@@ -61,7 +61,7 @@
     "version": "3.2.1",
     "packaging": "jar",
     "classifier": null,
-    "name": "@maven//:org_antlr_stringtemplate"
+    "name": "@poppy_mvn//:org_antlr_stringtemplate"
   },
   {
     "artifact_id": "commons-lang3",
@@ -69,7 +69,7 @@
     "version": "3.18.0",
     "packaging": "jar",
     "classifier": null,
-    "name": "@maven//:org_apache_commons_commons_lang3"
+    "name": "@poppy_mvn//:org_apache_commons_commons_lang3"
   },
   {
     "artifact_id": "commons-math3",
@@ -77,6 +77,6 @@
     "version": "3.6.1",
     "packaging": "jar",
     "classifier": null,
-    "name": "@maven//:org_apache_commons_commons_math3"
+    "name": "@poppy_mvn//:org_apache_commons_commons_math3"
   }
 ]
