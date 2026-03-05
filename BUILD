@@ -22,7 +22,7 @@ py_library(
     data = ["examples/java/pom_template.xml"],
     deps = ["@pip//lxml"],
     imports = ["src"],
-    visibility = ["@poppy//:__subpackages__",],
+    visibility = ["//:__subpackages__"],
 )
 
 py_binary(

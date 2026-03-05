@@ -1,3 +1,3 @@
 overrides = {
-    "org.antlr:stringtemplate": "@maven//:com_google_guava_guava"
+    "org.antlr:stringtemplate": "@poppy_mvn//:com_google_guava_guava"
 }

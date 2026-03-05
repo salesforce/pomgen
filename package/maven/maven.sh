@@ -15,7 +15,7 @@ Usage: bazel run @poppy//package/maven.sh -a action(s) -l path/to/library/root/d
   Required arguments:
 
   -a (actions)
-    specifies which action(s) to run, see below for detaols on the actions.
+    specifies which action(s) to run, see below for details on the actions.
     Make sure you run 'pomgen' before trying other actions.
     The actions to run may be comma-separated if there is more than one,
     for example: -a pomgen,install
@@ -252,27 +252,25 @@ if [ "$debug" = true ]; then
 fi
 
 # load helper functions
+loaded=false
 helper_functions_file="maven_functions.sh"
-this_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-
-if [ -f "${this_script_dir}/${helper_functions_file}" ]; then
-    # look relative to this file
-    source "${this_script_dir}/${helper_functions_file}"
-else
-    # to support running through "bazel run", look in a few other places
-    p="external/poppy/package/maven/${helper_functions_file}"
+p="external/_main~_repo_rules~poppy/package/maven/${helper_functions_file}"
+if [ -f "${p}" ]; then
+    # MODULE.bazel external repository path
+    source "${p}"
+    loaded=true
+fi
+if [ "$loaded" = false ]; then
+    p="package/maven/${helper_functions_file}"
     if [ -f "${p}" ]; then
-        # remote repository
+        # when running locally in this repository
         source "${p}"
-    else
-        p="package/maven/${helper_functions_file}"
-        if [ -f "${p}" ]; then
-            # local poppy repository
-            source "${p}"
-        else
-            echo "[ERROR] Unable to locate ${helper_functions_file}" && exit 1
-        fi
+        loaded=true
     fi
+fi
+if [ "$loaded" = false ]; then
+    echo "[ERROR] Unable to locate ${helper_functions_file}"
+    exit 1
 fi
 
 # figure out where this script is being run from, accordingly set repo_root_path
@@ -281,7 +279,7 @@ if [ -f "WORKSPACE" ]; then
 else
     # "bazel run" sets the env var BUILD_WORKING_DIRECTORY, which points
     # to the root of the repository
-    if [ -f "$BUILD_WORKING_DIRECTORY/WORKSPACE" ]; then
+    if [ -f "$BUILD_WORKING_DIRECTORY/MODULE.bazel" ]; then
         # $BUILD_WORKING_DIRECTORY is set by "bazel run"
         repo_root_path=$BUILD_WORKING_DIRECTORY
         cd $repo_root_path

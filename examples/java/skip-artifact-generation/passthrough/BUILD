@@ -1,7 +1,7 @@
 java_library(
     name = "set1",
     runtime_deps = [":set2",],
-    exports = ["@maven//:com_google_guava_guava",],
+    exports = ["@poppy_mvn//:com_google_guava_guava",],
     visibility = ["//visibility:public"],
 )
 
@@ -12,5 +12,5 @@ java_library(
 
 java_library(
     name = "set3",
-    runtime_deps = ["@maven//:org_apache_commons_commons_lang3",],
+    runtime_deps = ["@poppy_mvn//:org_apache_commons_commons_lang3",],
 )

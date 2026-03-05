@@ -4,7 +4,7 @@ java_library(
     deps = ["//examples/java/hello-world/healthyfoods/fruit-api", 
             "//examples/java/hello-world/healthyfoods/vegetable-api",
             "//examples/java/hello-world/wintervegetables:wintervegetables_lib2",
-            "@maven//:com_google_guava_guava",
+            "@poppy_mvn//:com_google_guava_guava",
     ]
 )
 
