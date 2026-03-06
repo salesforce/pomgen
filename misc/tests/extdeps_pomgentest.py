@@ -37,13 +37,13 @@ class ExtDepsPomgenTest(unittest.TestCase):
 
     def _setup_workspace(self):
         self.repo_root_path = tempfile.mkdtemp("monorepo")
-        self._add_WORKSPACE_file()
+        self._add_MODULE_file()
         self._add_maven_install_json_file()
         self._add_pom_template()
         self._add_rc_file()
 
-    def _add_WORKSPACE_file(self):
-        self._write_file("", "", "WORKSPACE", "needs to exist")
+    def _add_MODULE_file(self):
+        self._write_file("", "", "MODULE.bazel", "needs to exist")
 
     def _add_maven_install_json_file(self):
         content = """
