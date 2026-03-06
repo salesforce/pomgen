@@ -290,16 +290,11 @@ else
 fi
 
 
-# load the configured classifier to use for jar artifacts, this classifier is
-# used for jars processed below by this script, and it is added to generated
-# pom.xml files referencing those jars
-jar_artifact_classifier=$(bazel run @poppy//misc:configvalueloader -- --key artifact.jar_classifier --default None)
+# load config values in bulk
+config_output=$(bazel run @poppy//misc:configvalueloader -- --key artifact.jar_classifier --key general.pom_base_filename)
 
-# also load the pom base filename - I guess we shouldn't keep adding these load
-# stmts, so if we end up adding a 3rd one, refactor to bulk load in a single
-# call
-pom_base_filename=$(bazel run @poppy//misc:configvalueloader -- --key general.pom_base_filename)
-
+# parse the output (values separated by |)
+IFS='|' read -r jar_artifact_classifier pom_base_filename <<< "$config_output"
 
 for action in $(echo $actions | tr "," "\n")
 do
