@@ -105,6 +105,12 @@ Usage: bazel run @poppy//package/maven.sh -a action(s) -l path/to/library/root/d
       '...:all-targets' to include targets not built by default (such as
       _deploy.jar from java_binary rules)
 
+    BZL_ACTION_ENV_*: any environment variable prefixed with BZL_ACTION_ENV_
+      will be passed to bazel build as --action_env arguments.
+      For example:
+          export BZL_ACTION_ENV_JAVA_HOME=/usr/lib/jvm/java-11
+      will add --action_env JAVA_HOME=/usr/lib/jvm/java-11 to bazel build
+
 
   Examples (run from repository root):
 
@@ -162,6 +168,23 @@ _use_libraries_hint_file() {
 }
 
 
+_build_action_env_args() {
+    # Converts BZL_ACTION_ENV_* environment variables to --action_env arguments
+    # Example: BZL_ACTION_ENV_JAVA_HOME=/usr/lib -> --action_env JAVA_HOME=/usr/lib
+    local action_env_args=""
+    local prefix="BZL_ACTION_ENV_"
+
+    while IFS='=' read -r name value; do
+        if [[ "$name" == ${prefix}* ]]; then
+            local key="${name#$prefix}"
+            action_env_args="${action_env_args} --action_env ${key}=${value}"
+        fi
+    done < <(env)
+
+    echo "$action_env_args"
+}
+
+
 _for_each_library() {
     local action=$1
     local repo_root_path=$2
@@ -187,9 +210,10 @@ _for_each_library() {
         if [ "$action" == "install" ]; then
           _for_each_pom "install_main_artifact" $repo_root_path $pom_base_filename $jar_artifact_classifier "/$library_path"
         elif [ "$action" == "build" ]; then
-          local cmd="bazel build ${library_path}/${BZL_BUILD_WILDCARD:-"..."}"
+          local action_env_args="$(_build_action_env_args)"
+          local cmd="bazel build${action_env_args} ${library_path}/${BZL_BUILD_WILDCARD:-"..."}"
           echo "[INFO] Running $cmd"
-          $cmd
+          eval $cmd
         fi
     done <<< "$(cat $libraries_file_path)"
 }
