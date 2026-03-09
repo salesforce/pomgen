@@ -45,7 +45,7 @@ class BuildPomTest(unittest.TestCase):
         self.assertFalse(art_def.include_deps)
         self.assertTrue(art_def.change_detection)
         self.assertEqual(package_rel_path, art_def.bazel_package)
-        self.assertEqual("package2", art_def.bazel_target)
+        self.assertEqual(None, art_def.bazel_target)
         self.assertEqual(None, art_def.released_version)
         self.assertEqual(None, art_def.released_artifact_hash)
         self.assertEqual("major", art_def.version_increment_strategy)
