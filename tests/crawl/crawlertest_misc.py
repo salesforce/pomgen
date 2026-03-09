@@ -70,7 +70,7 @@ class CrawlerTestMisc(unittest.TestCase):
         self.assertEqual("lib/a2", result.nodes[0].artifact_def.bazel_package)
         self.assertEqual(1, len(result.nodes[0].children))
         self.assertEqual("lib/a1", result.nodes[0].children[0].artifact_def.bazel_package)
-        self.assertEqual("a1", result.nodes[0].children[0].artifact_def.bazel_target)
+        self.assertEqual(None, result.nodes[0].children[0].artifact_def.bazel_target)
 
     def test_non_default_package_ref(self):
         """

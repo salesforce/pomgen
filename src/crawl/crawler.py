@@ -686,10 +686,8 @@ class Crawler:
     def _merge(clazz, label, artifact_def):
         assert isinstance(label, labelm.Label), "->%s" % label
         assert isinstance(artifact_def, buildpom.MavenArtifactDef), "->%s" % artifact_def
-        pack_label = labelm.Label(label.package_path)
-        if pack_label.target == artifact_def.bazel_target:
-            # by default, the artifact def gets the default package target,
-            # so ok to override it (maybe it should just be None...?)
+        if artifact_def.bazel_target is None:
+            # no custom target specified, ok to override it
             return label
         else:
             # the artifact def specifies a target that is not the package

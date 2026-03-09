@@ -4,7 +4,6 @@ All rights reserved.
 SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
-import types
 
 
 def from_string(generation_mode_string):
@@ -62,9 +61,6 @@ class GenerationMode:
 # template
 DYNAMIC = GenerationMode("dynamic", produces_artifact=True,
                          query_dependency_attributes=True)
-DYNAMIC.bazel_produced_artifact = types.MethodType(
-    lambda self, pom_template_content: True, DYNAMIC)
-
 
 # the manifest is generated based on a custom template file only
 TEMPLATE = GenerationMode("template", produces_artifact=True,
