@@ -12,6 +12,7 @@ The poppy manifest generation cmdline entry-point.
 import argparse
 import common.argsupport as argsupport
 import common.common as common
+import common.label as label
 import common.logger as logger
 import common.mdfiles as mdfiles
 import config.config as config
@@ -64,6 +65,7 @@ def main(args):
                     # so we do not bother with the other cases for now
                     path = lib_paths[0]
                     _write_all_libraries_hint_files(result, output_dir, path)
+                    _write_module_labels_file(result, output_dir, path)
 
         for ctx in result.artifact_generation_contexts:
             gen_strategy = ctx.artifact_def.generation_strategy
@@ -166,6 +168,24 @@ def _write_all_libraries_hint_files(crawler_result, output_dir, start_lib_path):
         common.write_file(hint_file_path, "\n".join(
             ["# the root lib path, followed by the paths to its upstream dependencies"] + lib_paths))
         logger.info("Wrote libraries hint file to [%s]" % hint_file_path)
+
+
+def _write_module_labels_file(result, output_dir, start_lib_path):
+    artifact_defs = [
+        ctx.artifact_def for ctx in result.artifact_generation_contexts
+        if ctx.artifact_def.bazel_target is not None
+    ]
+    if len(artifact_defs) > 0:
+        labels = sorted([
+            label.Label("//%s:%s" % (ad.bazel_package, ad.bazel_target))
+            for ad in artifact_defs
+        ])
+        labels_file_dir = os.path.join(output_dir, start_lib_path)
+        if not os.path.exists(labels_file_dir):
+            os.makedirs(labels_file_dir)
+        labels_file_path = os.path.join(labels_file_dir, "module_labels.txt")
+        common.write_file(labels_file_path, "\n".join([str(lbl) for lbl in labels]))
+        logger.info("Wrote module labels file to [%s]" % labels_file_path)
 
 
 if __name__ == "__main__":
