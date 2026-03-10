@@ -1,0 +1,2 @@
+//examples/java/hello-world/juicer:juicer_lib
+//examples/java/hello-world/wintervegetables:wintervegetables_lib2

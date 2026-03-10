@@ -190,13 +190,13 @@ _for_each_library() {
     local repo_root_path=$2
     local $pom_base_filename=$3
     local jar_artifact_classifier=$4
-    local library_path=$5
+    local root_library_path=$5
 
     if ! [[ "$action" =~ ^(install|build)$ ]]; then
         echo "ERROR: Unknown action $action" && exit 1
     fi
 
-    libraries_file_path="$(_build_libraries_file_path $repo_root_path $library_path)"
+    libraries_file_path="$(_build_libraries_file_path $repo_root_path $root_library_path)"
     echo "[INFO] libraries to process:"
     cat "$libraries_file_path"
     echo ""
@@ -216,6 +216,21 @@ _for_each_library() {
           eval $cmd
         fi
     done <<< "$(cat $libraries_file_path)"
+
+    # Additionally build module labels if the file exists (only for build action)
+    if [ "$action" == "build" ]; then
+        local module_labels_file_path="$repo_root_path/bazel-bin$root_library_path/module_labels.txt"
+        if [ -f "$module_labels_file_path" ]; then
+            echo ""
+            echo "[INFO] Building module labels from: $module_labels_file_path"
+            cat "$module_labels_file_path"
+            echo ""
+            local action_env_args="$(_build_action_env_args)"
+            local cmd="bazel build${action_env_args} --target_pattern_file=\"${module_labels_file_path}\""
+            echo "[INFO] Running $cmd"
+            eval $cmd
+        fi
+    fi
 }
 
 
