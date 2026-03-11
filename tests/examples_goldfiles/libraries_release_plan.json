@@ -68,8 +68,8 @@
     "released_version": null,
     "requires_release": true,
     "release_reason": "artifact has never been released",
-    "proposed_release_version": "20260310.1",
-    "proposed_next_dev_version": "20260310.1-SNAPSHOT"
+    "proposed_release_version": "20260311.1",
+    "proposed_next_dev_version": "20260311.1-SNAPSHOT"
   },
   {
     "library_path": "examples/java/java-import",

@@ -103,11 +103,18 @@ _for_each_pom() {
                 # check if the BUILD.pom file specifies a custom target name
                 local target_name=$(grep target_name "$build_pom_path" | grep -v '^[[:space:]]*#' | tr -s ' ' | cut -d= -f2 | tr -d '", ' || echo -n "")
                 if [ -z "$target_name" ]; then
-                   # default target
-                   target_name="$package_name"
+                    # no custom target was given, default to the package name
+                    target_name="$package_name"
+                else
+                    # since we re-append .jar below, it is simplest to remove it
+                    # here for the special deploy.jar from java_binary
+                    if [[ "$target_name" == *.jar ]]; then
+                        target_name="${target_name%.jar}"
+                    fi
                 fi
                 # the filename of the jar built by Bazel uses this pattern:
                 jar_artifact_path="$build_dir_package_path/lib${target_name}.jar"
+
                 # bazel's java_library rule has an implicit target that builds
                 # a jar containing the sources, see
                 # https://bazel.build/reference/be/java#java_library:
@@ -115,25 +122,13 @@ _for_each_pom() {
                 # note that this file only exists if that implicit target ran!
                 sources_jar_path="$build_dir_package_path/lib${target_name}-src.jar"
                 if [ ! -f "${jar_artifact_path}" ]; then
-                    echo "WARN: lib${package_name}.jar not found, looking for alternatives"
-                    # we also support executable jars - this is an edge case but
-                    # there are use-cases where it is convenient to be able to
-                    # upload a "uber jar" to Nexus instead of building a docker
-                    # image for it
-
-                    # first we look for the special <target-name>_deploy.jar
-                    # created by java_binary
-                    jar_artifact_path="$build_dir_package_path/${target_name}_deploy.jar"
+                    echo "WARN: ${jar_artifact_path} not found, looking for alternatives"
+                    # we also check if <target-name>.jar exists - this is use
+                    # by springboot packaging:
+                    # https://github.com/salesforce/rules_spring
+                    jar_artifact_path="$build_dir_package_path/${target_name}.jar"
                     if [ -f "${jar_artifact_path}" ]; then
                         echo "INFO: Found ${jar_artifact_path}"
-                    else
-                        # last attempt: maybe a jar called <target-name>.jar
-                        # exists - this is used by springboot packaging:
-                        # https://github.com/salesforce/rules_spring
-                        jar_artifact_path="$build_dir_package_path/${target_name}.jar"
-                        if [ -f "${jar_artifact_path}" ]; then
-                            echo "INFO: Found ${jar_artifact_path}"
-                        fi
                     fi
                     # we've seen the jar cmd break in weird ways when trying
                     # to unjar large "uber" jars:
