@@ -124,11 +124,26 @@ class Label(object):
         lbl = self.canonical_form
         if not self.is_default_target:
             lbl = lbl[:-(len(self.target)+1)]
+            assert not lbl.endswith(":")
         return Label("%s:%s" % (lbl, new_target_name))
 
+    def with_dotdotdot_wildcard(self):
+        """
+        Returns a new Label instance with ... after the current package, for
+        example path/to/package/...
+        """
+        return Label("%s/%s" % (self.package_path, _DOT_DOT_DOT))
+
     def _build_canonical_form(self):
-        target = "" if self.is_default_target else ":%s" % self.target
-        return "%s//%s%s" % (self.repository_prefix, self.package_path, target)
+        if self.is_default_target:
+            target = ""
+            target_sep = ""
+        else:
+            target = self.target
+            target_sep = ":"
+        if target == _DOT_DOT_DOT:
+            target_sep = "/"
+        return "%s//%s%s%s" % (self.repository_prefix, self.package_path, target_sep, target)
 
     def __hash__(self):
         return hash((self.repository_prefix, self.package_path, self.target))
@@ -151,3 +166,6 @@ class Label(object):
 
     def __lt__(self, other):
         return self.canonical_form < other.canonical_form
+
+
+_DOT_DOT_DOT = "..."

@@ -576,7 +576,7 @@ class Crawler:
             parent_node.artifact_def if parent_node is not None else None)
         if artifact_def is None:
             raise Exception("No artifact defined at package %s" % label)
-        label = Crawler._merge(label, artifact_def)
+        label = Crawler._merge(label, artifact_def, parent_node)
         if label in self.target_to_node:
             # if we have already processed this target, we can re-use the
             # children we discovered previously
@@ -683,7 +683,7 @@ class Crawler:
         return updated_labels
 
     @classmethod
-    def _merge(clazz, label, artifact_def):
+    def _merge(clazz, label, artifact_def, parent_node):
         assert isinstance(label, labelm.Label), "->%s" % label
         assert isinstance(artifact_def, buildpom.MavenArtifactDef), "->%s" % artifact_def
         if artifact_def.bazel_target is None:
@@ -696,7 +696,13 @@ class Crawler:
                 # the label uses the default, so ok to overwrite
                 return label.with_target(artifact_def.bazel_target)
             else:
-                assert label.target == artifact_def.bazel_target, "conflicting target information: the artifact specifies [%s] but the current label is [%s]" % (artifact_def.bazel_target, label)
+                # we used to assert here but we now allow this for edge-casey
+                # build file structures, for example:
+                # java_library <- just to export some deps
+                # java_binary <- refs target above, we want self contained jar,
+                #     so build.pom file has deploy.jar as target_name
+                if label.target != artifact_def.bazel_target:
+                    logger.warning("Conflicting target information: the artifact at [%s] specifies [%s] but the current label is [%s]. We got here from [%s]" % (artifact_def, artifact_def.bazel_target, label, "none" if parent_node is None else parent_node.artifact_def))
                 return label
         raise AssertionError("we should not get here " + str(label))
 

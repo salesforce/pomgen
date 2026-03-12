@@ -29,6 +29,19 @@ class LabelTest(unittest.TestCase):
         n = label.Label("@foo//a/b/c")
         self.assertEqual("a/b/c", n.package_path)
 
+    def test_wildcard_label(self):
+        n = label.Label("path/to/package")
+        n = n.with_dotdotdot_wildcard()
+        self.assertEqual("...", n.target)
+        self.assertFalse(n.is_default_target)
+        self.assertEqual("//path/to/package/...", n.canonical_form)
+
+        n = label.Label("path/to/package:remove_me")
+        n = n.with_dotdotdot_wildcard()
+        self.assertEqual("...", n.target)
+        self.assertFalse(n.is_default_target)
+        self.assertEqual("//path/to/package/...", n.canonical_form)
+
     def test_is_source_ref(self):
         n = label.Label("@foo//a/b/c")
         self.assertFalse(n.is_source_ref)
@@ -147,6 +160,9 @@ class LabelTest(unittest.TestCase):
         n1 = label.Label("//path/blah:blah")
         self.assertEqual("//path/blah", n1.canonical_form)
 
+        n1 = label.Label("@poppy//blah")
+        self.assertEqual("@poppy//blah", n1.canonical_form)
+
         n1 = label.Label("@poppy//blah:foo")
         self.assertEqual("@poppy//blah:foo", n1.canonical_form)
 
@@ -159,16 +175,16 @@ class LabelTest(unittest.TestCase):
 
     def test_with_target(self):
         n1 = label.Label("@poppy//b22")
-        self.assertEqual("@poppy//b22:foo",
-                         n1.with_target("foo").canonical_form)
+        self.assertEqual("@poppy//b22:newt",
+                         n1.with_target("newt").canonical_form)
         
         n1 = label.Label("@poppy//b22:b22")
-        self.assertEqual("@poppy//b22:foo",
-                         n1.with_target("foo").canonical_form)
+        self.assertEqual("@poppy//b22:newt2",
+                         n1.with_target("newt2").canonical_form)
 
         n1 = label.Label("@poppy//b22:blah")
-        self.assertEqual("@poppy//b22:foo",
-                         n1.with_target("foo").canonical_form)
+        self.assertEqual("@poppy//b22:newt3",
+                         n1.with_target("newt3").canonical_form)
 
     def test_sort(self):
         n1 = label.Label("@zoppy//aaa")        

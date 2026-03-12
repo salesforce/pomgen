@@ -63,9 +63,12 @@ def main(args):
                 if len(lib_paths) == 1:
                     # a single lib as a starting point is the common case,
                     # so we do not bother with the other cases for now
-                    path = lib_paths[0]
-                    _write_all_libraries_hint_files(result, output_dir, path)
-                    _write_module_labels_file(result, output_dir, path)
+                    root_lib_path = lib_paths[0]
+                    libaggregator.get_libraries_to_release(result.nodes)
+                    lib_paths = [lib.library_path for lib in libaggregator.LibraryNode.ALL_LIBRARY_NODES if lib.requires_release]
+                    hint_output_dir = os.path.join(output_dir, root_lib_path)
+                    _write_all_libraries_hint_files(lib_paths, hint_output_dir)
+                    _write_bazel_labels_file(result, lib_paths, hint_output_dir)
 
         for ctx in result.artifact_generation_contexts:
             gen_strategy = ctx.artifact_def.generation_strategy
@@ -157,35 +160,35 @@ def _get_output_dir(args):
     return destdir
 
 
-def _write_all_libraries_hint_files(crawler_result, output_dir, start_lib_path):
-    libaggregator.get_libraries_to_release(crawler_result.nodes)
-    lib_paths = [lib.library_path for lib in libaggregator.LibraryNode.ALL_LIBRARY_NODES if lib.requires_release]
-    if len(lib_paths) > 0:
-        hint_file_dir = os.path.join(output_dir, start_lib_path)
-        if not os.path.exists(hint_file_dir):
-            os.makedirs(hint_file_dir)
-        hint_file_path = os.path.join(hint_file_dir, "libraries.txt")
-        common.write_file(hint_file_path, "\n".join(
-            ["# the root lib path, followed by the paths to its upstream dependencies"] + lib_paths))
-        logger.info("Wrote libraries hint file to [%s]" % hint_file_path)
+def _write_all_libraries_hint_files(lib_paths, output_dir):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    hint_file_path = os.path.join(output_dir, "libraries.txt")
+    common.write_file(hint_file_path, "\n".join(
+        ["# the root lib path, followed by the paths to its upstream dependencies"] + lib_paths))
+    logger.info("Wrote libraries hint file to [%s]" % hint_file_path)
 
 
-def _write_module_labels_file(result, output_dir, start_lib_path):
+def _write_bazel_labels_file(result, lib_paths, output_dir):
+    # all libraries as path/to/library/... labels
+    library_labels = sorted([label.Label("//%s" % p).with_dotdotdot_wildcard() for p in lib_paths])
+
+    # collect custom labels specified in md files
     artifact_defs = [
         ctx.artifact_def for ctx in result.artifact_generation_contexts
         if ctx.artifact_def.bazel_target is not None
     ]
-    if len(artifact_defs) > 0:
-        labels = sorted([
-            label.Label("//%s:%s" % (ad.bazel_package, ad.bazel_target))
-            for ad in artifact_defs
-        ])
-        labels_file_dir = os.path.join(output_dir, start_lib_path)
-        if not os.path.exists(labels_file_dir):
-            os.makedirs(labels_file_dir)
-        labels_file_path = os.path.join(labels_file_dir, "module_labels.txt")
-        common.write_file(labels_file_path, "\n".join([str(lbl) for lbl in labels]))
-        logger.info("Wrote module labels file to [%s]" % labels_file_path)
+    custom_module_labels = sorted([
+        label.Label("//%s:%s" % (ad.bazel_package, ad.bazel_target))
+        for ad in artifact_defs
+    ])
+
+    all_labels = library_labels + custom_module_labels
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    labels_file_path = os.path.join(output_dir, "bazel_labels.txt")
+    common.write_file(labels_file_path, "\n".join([str(lbl) for lbl in all_labels]))
+    logger.info("Wrote bazel labels file to [%s]" % labels_file_path)
 
 
 if __name__ == "__main__":

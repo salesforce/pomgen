@@ -18,7 +18,7 @@ Usage: bazel run @poppy//package/maven.sh -a action(s) -l path/to/library/root/d
     specifies which action(s) to run, see below for details on the actions.
     Make sure you run 'pomgen' before trying other actions.
     The actions to run may be comma-separated if there is more than one,
-    for example: -a pomgen,install
+    for example: -a pomgen,build,install
 
   Optional arguments:
 
@@ -99,17 +99,13 @@ Usage: bazel run @poppy//package/maven.sh -a action(s) -l path/to/library/root/d
     POM_DESCRIPTION: if set, used as the value of the <description> element
       in the generated pom(s).
 
-    BZL_BUILD_WILDCARD: the 'build' action uses '...' as wildcard when building
-      from the root of each library directory. This env var controls the
-      wildcard to use, specifically in some cases it may be useful to use
-      '...:all-targets' to include targets not built by default (such as
-      _deploy.jar from java_binary rules)
-
     BZL_ACTION_ENV_*: any environment variable prefixed with BZL_ACTION_ENV_
-      will be passed to bazel build as --action_env arguments.
-      For example:
-          export BZL_ACTION_ENV_JAVA_HOME=/usr/lib/jvm/java-11
-      will add --action_env JAVA_HOME=/usr/lib/jvm/java-11 to bazel build
+      will be passed to bazel build as --action_env arguments, when the "build
+      action" runs. For example:
+          export BZL_ACTION_ENV_MY_KEY=my_value
+          bazel run @poppy//package/maven -- -a pomgen,build,install -l path/lib
+      will add --action_env MY_KEY=value to the bazel build cmdline that the
+      "build action" ends up running.
 
 
   Examples (run from repository root):
@@ -197,36 +193,33 @@ _for_each_library() {
     fi
 
     libraries_file_path="$(_build_libraries_file_path $repo_root_path $root_library_path)"
-    echo "[INFO] libraries to process:"
-    cat "$libraries_file_path"
-    echo ""
-    while read library_path;
-    do
-        if [[ "$library_path" == \#* ]]; then
-            # the line starts with the comment character
-            continue
-        fi
-        echo "[INFO] Processing library: $library_path"
-        if [ "$action" == "install" ]; then
-          _for_each_pom "install_main_artifact" $repo_root_path $pom_base_filename $jar_artifact_classifier "/$library_path"
-        elif [ "$action" == "build" ]; then
-          local action_env_args="$(_build_action_env_args)"
-          local cmd="bazel build${action_env_args} ${library_path}/${BZL_BUILD_WILDCARD:-"..."}"
-          echo "[INFO] Running $cmd"
-          eval $cmd
-        fi
-    done <<< "$(cat $libraries_file_path)"
 
-    # Additionally build module labels if the file exists (only for build action)
+    # Handle install action by iterating over libraries
+    if [ "$action" == "install" ]; then
+        echo "[INFO] libraries to process:"
+        cat "$libraries_file_path"
+        echo ""
+        while read library_path;
+        do
+            if [[ "$library_path" == \#* ]]; then
+                # the line starts with the comment character
+                continue
+            fi
+            echo "[INFO] Processing library: $library_path"
+            _for_each_pom "install_main_artifact" $repo_root_path $pom_base_filename $jar_artifact_classifier "/$library_path"
+        done <<< "$(cat $libraries_file_path)"
+    fi
+
+    # Handle build action using bazel labels file
     if [ "$action" == "build" ]; then
-        local module_labels_file_path="$repo_root_path/bazel-bin$root_library_path/module_labels.txt"
-        if [ -f "$module_labels_file_path" ]; then
+        local bazel_labels_file_path="$repo_root_path/bazel-bin$root_library_path/bazel_labels.txt"
+        if [ -f "$bazel_labels_file_path" ]; then
             echo ""
-            echo "[INFO] Building module labels from: $module_labels_file_path"
-            cat "$module_labels_file_path"
+            echo "[INFO] Building bazel labels from: $bazel_labels_file_path"
+            cat "$bazel_labels_file_path"
             echo ""
             local action_env_args="$(_build_action_env_args)"
-            local cmd="bazel build${action_env_args} --target_pattern_file=\"${module_labels_file_path}\""
+            local cmd="bazel build${action_env_args} --target_pattern_file=\"${bazel_labels_file_path}\""
             echo "[INFO] Running $cmd"
             eval $cmd
         fi
