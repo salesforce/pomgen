@@ -101,7 +101,7 @@ _for_each_pom() {
             else
                 local build_pom_path="$src_dir_package_path/MVN-INF/BUILD.pom"
                 # check if the BUILD.pom file specifies a custom target name
-                local target_name=$(grep target_name "$build_pom_path" | grep -v '^[[:space:]]*#' | tr -s ' ' | cut -d= -f2 | tr -d '", ' || echo -n "")
+                local target_name=$(grep target_name "$build_pom_path" | grep -v '^[[:space:]]*#' | tr -s ' ' | cut -d= -f2 | cut -d'#' -f1 | tr -d '", ' || echo -n "")
                 if [ -z "$target_name" ]; then
                     # no custom target was given, default to the package name
                     target_name="$package_name"
