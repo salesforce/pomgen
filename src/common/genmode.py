@@ -32,6 +32,10 @@ class GenerationMode:
           Whether this generation mode produces a artifact (for example a maven
           jar, pom or a python wheel)
 
+        bazel_built:
+          Whether bazel builds this artifact (for example, yes for a jar, no
+          for a pom-only artifact)
+
         query_dependency_attributes:
           Whether to query the rule attributes that point to other dependencies
           (and whether to crawl those dependencies, since that's why we query
@@ -43,10 +47,12 @@ class GenerationMode:
           "runtime_deps".
           Additional attributes may be added using this attribute.
     """
-    def __init__(self, name, produces_artifact, query_dependency_attributes,
+    def __init__(self, name, produces_artifact,
+                 bazel_built, query_dependency_attributes,
                  additional_dependency_attrs=()):
         self.name = name
         self.produces_artifact = produces_artifact
+        self.bazel_built = bazel_built
         self.query_dependency_attributes = query_dependency_attributes
         self.dependency_attributes =\
             ("deps", "runtime_deps") + tuple(additional_dependency_attrs)
@@ -59,11 +65,15 @@ class GenerationMode:
 
 # the manifest is generated from scratch, using a repository-wide common base
 # template
-DYNAMIC = GenerationMode("dynamic", produces_artifact=True,
+DYNAMIC = GenerationMode("dynamic",
+                         produces_artifact=True,
+                         bazel_built=True,
                          query_dependency_attributes=True)
 
 # the manifest is generated based on a custom template file only
-TEMPLATE = GenerationMode("template", produces_artifact=True,
+TEMPLATE = GenerationMode("template",
+                          produces_artifact=True,
+                          bazel_built=False,
                           # False here because pom templates may or may not
                           # have a BUILD file - if there is one, it
                           # is generally not related to the template
@@ -73,20 +83,26 @@ TEMPLATE = GenerationMode("template", produces_artifact=True,
 # this bazel package is skipped over at manifest generation time
 # dependencies from this bazel package are "pushed up" to the closest parent
 # that has an artifact producing generation_mode
-SKIP = GenerationMode("skip", produces_artifact=False,
+SKIP = GenerationMode("skip",
+                      produces_artifact=False,
+                      bazel_built=False,
                       query_dependency_attributes=True,
                       additional_dependency_attrs=("exports",))
 
 
 # this generation mode is like "dynamic" but for a module that uses bazel's
 # 1:1:1 structure (many bazel child packages)
-DYNAMIC_ONEONEONE = GenerationMode("dynamic_111", produces_artifact=True,
+DYNAMIC_ONEONEONE = GenerationMode("dynamic_111",
+                                   produces_artifact=True,
+                                   bazel_built=True,
                                    query_dependency_attributes=True)
 
 
 # this generation mode marks a bazel child bazel package in a 1:1:1 enabled
 # module
-ONEONEONE_CHILD = GenerationMode("111_child", produces_artifact=False,
+ONEONEONE_CHILD = GenerationMode("111_child",
+                                 produces_artifact=False,
+                                 bazel_built=True,
                                  query_dependency_attributes=True)
 
 
