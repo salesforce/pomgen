@@ -68,7 +68,7 @@ def main(args):
                     lib_paths = [lib.library_path for lib in libaggregator.LibraryNode.ALL_LIBRARY_NODES if lib.requires_release]
                     hint_output_dir = os.path.join(output_dir, root_lib_path)
                     _write_all_libraries_hint_files(lib_paths, hint_output_dir)
-                    _write_bazel_labels_file(result, lib_paths, hint_output_dir)
+                    _write_bazel_labels_file(result, hint_output_dir)
 
         for ctx in result.artifact_generation_contexts:
             gen_strategy = ctx.artifact_def.generation_strategy
@@ -169,25 +169,22 @@ def _write_all_libraries_hint_files(lib_paths, output_dir):
     logger.info("Wrote libraries hint file to [%s]" % hint_file_path)
 
 
-def _write_bazel_labels_file(result, lib_paths, output_dir):
-    # all libraries as path/to/library/... labels
-    library_labels = sorted([label.Label("//%s" % p).with_dotdotdot_wildcard() for p in lib_paths])
+def _write_bazel_labels_file(result, output_dir):
+    labels = []
+    for ctx in result.artifact_generation_contexts:
+        art_def = ctx.artifact_def
+        assert art_def.requires_release, "bug, everything is wrong"
+        if art_def.generation_mode.bazel_built or art_def.bazel_target is not None:
+            lbl = label.Label(art_def.bazel_package)
+            if art_def.bazel_target is not None:
+                lbl = lbl.with_target(art_def.bazel_target)
+            labels.append(lbl)
 
-    # collect custom labels specified in md files
-    artifact_defs = [
-        ctx.artifact_def for ctx in result.artifact_generation_contexts
-        if ctx.artifact_def.bazel_target is not None
-    ]
-    custom_module_labels = sorted([
-        label.Label("//%s:%s" % (ad.bazel_package, ad.bazel_target))
-        for ad in artifact_defs
-    ])
-
-    all_labels = library_labels + custom_module_labels
+    labels.sort()
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     labels_file_path = os.path.join(output_dir, "bazel_labels.txt")
-    common.write_file(labels_file_path, "\n".join([str(lbl) for lbl in all_labels]))
+    common.write_file(labels_file_path, "\n".join([str(lbl) for lbl in labels]))
     logger.info("Wrote bazel labels file to [%s]" % labels_file_path)
 
 
