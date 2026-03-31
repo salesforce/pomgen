@@ -1,0 +1,6 @@
+{
+    "name": "greeter-constants",
+    "version": "1.0.0",
+    "main": "src/constants.js",
+    "types": "src/constants.d.ts"
+}

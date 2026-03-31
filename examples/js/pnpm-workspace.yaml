@@ -1,0 +1,4 @@
+packages:
+  - hello-world/greeter
+  - hello-world/greeter-lib
+  - hello-world/greeter-constants

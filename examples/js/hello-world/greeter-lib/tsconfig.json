@@ -1,0 +1,9 @@
+{
+    "compilerOptions": {
+        "declaration": true,
+        "esModuleInterop": true,
+        "paths": {
+            "greeter-constants": ["../greeter-constants/src/constants"]
+        }
+    }
+}

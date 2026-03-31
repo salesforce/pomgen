@@ -1,0 +1,4 @@
+artifact(
+    artifact_id = "greeter-lib",
+    generation_mode = "dynamic",
+)

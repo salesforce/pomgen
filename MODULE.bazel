@@ -3,6 +3,8 @@ module(
     repo_name = "poppy",
 )
 
+bazel_dep(name = "aspect_rules_js", version = "2.1.0")
+bazel_dep(name = "aspect_rules_ts", version = "3.8.6") # example only
 bazel_dep(name = "aspect_rules_py", version = "1.2.1")
 bazel_dep(name = "rules_python", version = "0.29.0")
 bazel_dep(name = "rules_java", version = "7.12.5")
@@ -21,6 +23,10 @@ pip.parse(
     requirements_lock = "//tools/pip:requirements_lock.txt",
 )
 use_repo(pip, "pip")
+
+
+# All content below is to support the examples under the /examples directory
+
 pip.parse(
     hub_name = "examples_pip",
     python_version = "3.11",
@@ -81,3 +87,23 @@ maven.install(
 )
 
 use_repo(maven, "poppy_mvn", "poppy_antlr")
+
+npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
+# regenerate the lock file:
+# bazel run @pnpm//:pnpm -- --dir $PWD/examples/js install --lockfile-only
+npm.npm_translate_lock(
+    name = "npm",
+    pnpm_lock = "//examples/js:pnpm-lock.yaml",
+)
+use_repo(npm, "npm")
+
+pnpm = use_extension("@aspect_rules_js//npm:extensions.bzl", "pnpm", dev_dependency = True)
+use_repo(pnpm, "pnpm")
+
+rules_ts_ext = use_extension("@aspect_rules_ts//ts:extensions.bzl", "ext", dev_dependency = True)
+
+rules_ts_ext.deps(
+    ts_version_from = "//examples/js:package.json",
+)
+
+use_repo(rules_ts_ext, "npm_typescript")

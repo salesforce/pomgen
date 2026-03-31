@@ -16,8 +16,7 @@ class RequirementsParser:
         return self._parse_dependencies(content)
 
     def _parse_dependencies(self, content):
-        # return values:
-        dependencies = []  # list of Dependeny instances to preserve order
+        dependencies = []
 
         for line in content.splitlines():
             line = line.strip()

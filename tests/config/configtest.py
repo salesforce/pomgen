@@ -34,6 +34,36 @@ class ConfigTest(unittest.TestCase):
 
         self.assertEqual("amsterdam spain and vietnam", cfg.pyproject_template)
 
+    def test_jspackage_template(self):
+        repo_root = tempfile.mkdtemp("root")
+        jspackage_template_path = self._write_file(repo_root, "package_template.json", '{"name": "$name$"}')
+        self._write_poppyrc(repo_root, jspackage_template_path=jspackage_template_path)
+
+        cfg = config.load(repo_root)
+
+        self.assertEqual('{"name": "$name$"}', cfg.jspackage_template)
+        self.assertEqual("", cfg.pom_template)
+        self.assertEqual("", cfg.pyproject_template)
+
+    def test_pnpm_lockfile_paths_default(self):
+        repo_root = tempfile.mkdtemp("root")
+        pom_template_path = self._write_file(repo_root, "pom_template", "foo")
+        self._write_poppyrc(repo_root, pom_template_path=pom_template_path)
+
+        cfg = config.load(repo_root)
+
+        self.assertEqual((), cfg.pnpm_lockfile_paths)
+
+    def test_pnpm_lockfile_paths(self):
+        repo_root = tempfile.mkdtemp("root")
+        pom_template_path = self._write_file(repo_root, "pom_template", "foo")
+        self._write_poppyrc(repo_root, pom_template_path=pom_template_path,
+                            pnpm_lockfile_paths="path/to/pnpm-lock.yaml,another/pnpm-lock.yaml")
+
+        cfg = config.load(repo_root)
+
+        self.assertEqual(("path/to/pnpm-lock.yaml", "another/pnpm-lock.yaml"), cfg.pnpm_lockfile_paths)
+
     def test_maven_install_paths_default(self):
         repo_root = tempfile.mkdtemp("root")
         pom_template_path = self._write_file(repo_root, "pom_template", "foo")
@@ -210,13 +240,24 @@ excluded_dependency_labels=  //a/b/c    ,   //a/b/c:foo
     def test_str(self):
         repo_root = tempfile.mkdtemp("root")
         pom_template_path = self._write_file(repo_root, "pom_template", "foo")
+        pyproject_template_path = self._write_file(repo_root, "pyproject_template", "bar")
+        jspackage_template_path = self._write_file(repo_root, "package_template.json", "baz")
         self._write_poppyrc(repo_root, pom_template_path=pom_template_path,
-                            maven_install_paths="maven, misc")
+                            pyproject_template_path=pyproject_template_path,
+                            jspackage_template_path=jspackage_template_path,
+                            maven_install_paths="maven, misc",
+                            pnpm_lockfile_paths="path/pnpm-lock.yaml")
 
         cfg = config.load(repo_root)
 
         self.assertIn("pom_template_path=%s" % pom_template_path, str(cfg))
+        self.assertIn("pyproject_template_path=%s" % pyproject_template_path, str(cfg))
+        self.assertIn("jspackage_template_path=%s" % jspackage_template_path, str(cfg))
         self.assertIn("maven_install_paths=('maven', 'misc')" , str(cfg))
+        self.assertIn("pnpm_lockfile_paths=('path/pnpm-lock.yaml',)", str(cfg))
+        self.assertIn("pom_base_filename=pom", str(cfg))
+        self.assertIn("pyproject_base_filename=pyproject", str(cfg))
+        self.assertIn("jspackage_base_filename=package", str(cfg))
 
     def test_pathsep__excluded_dependency_paths(self):
         cfg = config.Config(excluded_dependency_paths="abc")
@@ -278,6 +319,31 @@ pom_base_filename=glue-test
 
         self.assertEqual("glue-test", cfg.pom_base_filename)
 
+    def test_jspackage_base_filename__default(self):
+        repo_root = tempfile.mkdtemp("root")
+        os.makedirs(os.path.join(repo_root, "src/config"))
+        self._write_file(repo_root, "src/config/pom_template.xml", "foo")
+        self._write_file(repo_root, ".poppyrc", """
+[general]
+""")
+
+        cfg = config.load(repo_root)
+
+        self.assertEqual("package", cfg.jspackage_base_filename)
+
+    def test_jspackage_base_filename__custom(self):
+        repo_root = tempfile.mkdtemp("root")
+        os.makedirs(os.path.join(repo_root, "src/config"))
+        self._write_file(repo_root, "src/config/pom_template.xml", "foo")
+        self._write_file(repo_root, ".poppyrc", """
+[general]
+jspackage_base_filename=pkg
+""")
+
+        cfg = config.load(repo_root)
+
+        self.assertEqual("pkg", cfg.jspackage_base_filename)
+
     def test_always_semver_paths(self):
         repo_root = tempfile.mkdtemp("root")
         os.makedirs(os.path.join(repo_root, "src/config"))
@@ -292,7 +358,8 @@ always_semver_path_prefixes=a/b/c,d/e/f, ,
         self.assertEqual(("a/b/c", "d/e/f"), cfg.always_semver_path_prefixes)
 
     def _write_poppyrc(self, repo_root, pom_template_path=None, maven_install_paths=None,
-                       pyproject_template_path=None):
+                       pyproject_template_path=None, jspackage_template_path=None,
+                       pnpm_lockfile_paths=None):
 
         content = "[general]\n"
         if pom_template_path is not None:
@@ -301,8 +368,14 @@ always_semver_path_prefixes=a/b/c,d/e/f, ,
         if pyproject_template_path is not None:
             content += "pyproject_template_path=%s\n" % pyproject_template_path
 
+        if jspackage_template_path is not None:
+            content += "jspackage_template_path=%s\n" % jspackage_template_path
+
         if maven_install_paths is not None:
             content += "maven_install_paths=%s\n" % maven_install_paths
+
+        if pnpm_lockfile_paths is not None:
+            content += "pnpm_lockfile_paths=%s\n" % pnpm_lockfile_paths
 
         self._write_file(repo_root, ".poppyrc", content)
 

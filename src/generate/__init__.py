@@ -80,6 +80,25 @@ class AbstractGenerationStrategy(ABC):
         md_dir_name = os.path.dirname(self.metadata_path)
         return os.path.join(md_dir_name, "%s.%s.released" % (self.base_manifest_filename, self.manifest_file_extension))
 
+    def is_source_ref(self, lbl):
+        """
+        Returns True if the given label instance is a source ref, this means
+        that it starts with // generally. But there are edge cases, for example
+        for JavaScript/TypeScript, this is a 3rd party dependency:
+        //examples/js:node_modules/figlet
+        """
+        if lbl.is_source_ref:
+            return self.is_source_ref__hook(lbl)
+        else:
+            return False
+
+    def is_source_ref__hook(self, lbl):
+        """
+        Hook method, only meant to be called from this class
+        and optionally implementeded in subclasses.
+        """
+        return lbl.is_source_ref
+
     @abstractmethod
     def load_dependency(self, label, artifact_def=None):
         """
@@ -95,7 +114,8 @@ class AbstractGenerationStrategy(ABC):
             artifact_def crawl.buildpom.MavenArfifactDef for source labels,
             the artifact the label points to
         Returns:
-            AbstractDependency instance
+            AbstractDependency instance or None if the given input should
+            be excluded from the final manifest.
         """
         pass
 
@@ -111,9 +131,6 @@ class AbstractGenerationStrategy(ABC):
 
         This method is only called for 3rd party dependencies (for ex jar
         dependencies).
-
-        We could use bazel query to get the same information, but it is
-        faster to parse the "pinned dependency file" once.
         """
         pass
 
@@ -150,6 +167,7 @@ class AbstractDependency(ABC):
 
     def __init__(self, label, artifact_def, artifact_id=None, version=None):
         if artifact_def is None:
+            assert label is not None, "label cannot be None"
             assert isinstance(label, labelm.Label)
             self._label = label
             self._artifact_def = None

@@ -1,4 +1,5 @@
 from common import mdfiles
+import generate.impl.js.jsgenerationstrategy as jsgenerationstrategy
 import generate.impl.pom.pomgenerationstrategy as pomgenerationstrategy
 import generate.impl.py.pygenerationstrategy as pygenerationstrategy
 import os
@@ -18,7 +19,10 @@ class GenerationStrategyFactory:
         self._strategies = (
             self._pomstrategy,
             pygenerationstrategy.PyGenerationStrategy(
-                self._repository_root, config, self._verbose))
+                self._repository_root, config, self._verbose),
+            jsgenerationstrategy.JsGenerationStrategy(
+                self._repository_root, config, self._verbose),
+        )
         self._initialize_strategies()
 
     def get_strategy_for_package(self, package):

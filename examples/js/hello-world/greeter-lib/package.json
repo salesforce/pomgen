@@ -1,0 +1,7 @@
+{
+    "name": "greeter-lib",
+    "main": "src/greeter.js",
+    "dependencies": {
+        "greeter-constants": "workspace:*"
+    }
+}

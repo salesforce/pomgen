@@ -68,8 +68,8 @@
     "released_version": null,
     "requires_release": true,
     "release_reason": "artifact has never been released",
-    "proposed_release_version": "20260316.1",
-    "proposed_next_dev_version": "20260316.1-SNAPSHOT"
+    "proposed_release_version": "20260331.1",
+    "proposed_next_dev_version": "20260331.1-SNAPSHOT"
   },
   {
     "library_path": "examples/java/java-binary",
@@ -115,6 +115,15 @@
     "release_reason": null,
     "proposed_release_version": null,
     "proposed_next_dev_version": null
+  },
+  {
+    "library_path": "examples/js/hello-world",
+    "version": "1.2.3",
+    "released_version": null,
+    "requires_release": true,
+    "release_reason": "artifact has never been released",
+    "proposed_release_version": "1.2.3",
+    "proposed_next_dev_version": "2.0.0-SNAPSHOT"
   },
   {
     "library_path": "examples/python/111/communicator",

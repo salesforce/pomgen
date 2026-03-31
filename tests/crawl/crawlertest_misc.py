@@ -11,6 +11,9 @@ import crawl.crawler as crawlerm
 import common.manifestcontent as manifestcontent
 import crawl.workspace as workspace
 import generate.generationstrategyfactory as generationstrategyfactory
+import generate.impl.pom.dependencymd as dependencymdm
+import generate.impl.pom.maveninstallinfo as maveninstallinfo
+import generate.impl.pom.pomgenerationstrategy as pomgenerationstrategy
 import os
 import tempfile
 import unittest
@@ -33,6 +36,7 @@ class CrawlerTestMisc(unittest.TestCase):
         self.repo_root_path = tempfile.mkdtemp("root")
         self.fac = generationstrategyfactory.GenerationStrategyFactory(
             self.repo_root_path, cfg, manifestcontent.NOOP, verbose=True)
+        self.strat = self._get_strategy()
         self.ws = workspace.Workspace(self.repo_root_path, cfg, self.fac)
 
     def test_default_package_ref(self):
@@ -99,11 +103,14 @@ class CrawlerTestMisc(unittest.TestCase):
         self._write_library_root(self.repo_root_path, "lib")
         self._add_artifact(self.repo_root_path, "lib/a1", "dynamic", deps=[],
                            target_name="foo")
-
+        downstream_artifact_def = buildpom.MavenArtifactDef(
+            "g", "a", "v",
+            bazel_package="lib/a1",
+            generation_strategy=self.strat)
         crawler = crawlerm.Crawler(self.ws, verbose=True)
         label = labelm.Label("//lib/a1")
 
-        filtered_label = crawler._filter_label(label, downstream_artifact_def=None)
+        filtered_label = crawler._filter_label(label, downstream_artifact_def)
 
         self.assertIs(label, filtered_label)
 
@@ -114,13 +121,17 @@ class CrawlerTestMisc(unittest.TestCase):
         """
         self.setup_collaborators(self._get_config(excluded_dependency_paths=["projects/protos/",]))
         crawler = crawlerm.Crawler(self.ws, verbose=True)
+        downstream_artifact_def = buildpom.MavenArtifactDef(
+            "g", "a", "v",
+            bazel_package="lib/a1",
+            generation_strategy=self.strat)
         label = labelm.Label("@maven//:ch_qos_logback_logback_classic")
 
-        filtered_label = crawler._filter_label(label, downstream_artifact_def=None)
+        filtered_label = crawler._filter_label(label, downstream_artifact_def)
         self.assertIs(label, filtered_label) # not filtered
 
         label = labelm.Label("//projects/protos/grail:java_protos")
-        filtered_label = crawler._filter_label(label, downstream_artifact_def=None)
+        filtered_label = crawler._filter_label(label, downstream_artifact_def)
         self.assertIsNone(filtered_label) # filtered
 
     def test_filter_label__artifact_excluded_dependency_paths(self):
@@ -133,7 +144,8 @@ class CrawlerTestMisc(unittest.TestCase):
         downstream_artifact_def = buildpom.MavenArtifactDef(
             "g", "a", "v",
             bazel_package="projects/libs/pastry",
-            excluded_dependency_paths=["src/abstractions",])
+            excluded_dependency_paths=["src/abstractions",],
+            generation_strategy=self.strat)
 
         label = labelm.Label("@maven//:ch_qos_logback_logback_classic")
         filtered_label = crawler._filter_label(label, downstream_artifact_def)
@@ -151,18 +163,21 @@ class CrawlerTestMisc(unittest.TestCase):
         self._write_library_root(self.repo_root_path, "lib")
         self._add_artifact(self.repo_root_path, "lib/a1", "dynamic", deps=[],
                            target_name="foo")
-
+        downstream_artifact_def = buildpom.MavenArtifactDef(
+            "g", "a", "v",
+            bazel_package="lib/a1",
+            generation_strategy=self.strat)
         crawler = crawlerm.Crawler(self.ws, verbose=True)
 
         label = labelm.Label("@maven//:ch_qos_logback_logback_classic")
-        filtered_label = crawler._filter_label(label, downstream_artifact_def=None)
+        filtered_label = crawler._filter_label(label, downstream_artifact_def)
         self.assertIsNone(filtered_label) # filtered
 
         label = labelm.Label("//lib/a1")
-        filtered_label = crawler._filter_label(label, downstream_artifact_def=None)
+        filtered_label = crawler._filter_label(label, downstream_artifact_def)
         self.assertIs(filtered_label, label) # not filtered
 
-        filtered_label = crawler._filter_label(label,downstream_artifact_def=None)
+        filtered_label = crawler._filter_label(label,downstream_artifact_def)
 
         self.assertIs(label, filtered_label)
 
@@ -176,15 +191,28 @@ class CrawlerTestMisc(unittest.TestCase):
         self._write_library_root(self.repo_root_path, "lib")
         # no BUILD.pom file
         self._write_build_file(self.repo_root_path, "lib/lombok", neverlink=True)
+        downstream_artifact_def = buildpom.MavenArtifactDef(
+            "g", "a", "v",
+            bazel_package="lib/a1",
+            generation_strategy=self.strat)
+
         crawler = crawlerm.Crawler(self.ws, verbose=True)
         label = labelm.Label("//lib/lombok")
 
-        filtered_label = crawler._filter_label(label, downstream_artifact_def=None)
+        filtered_label = crawler._filter_label(label, downstream_artifact_def)
 
         self.assertIsNone(filtered_label)
 
     def _get_config(self, **kwargs):
         return config.Config(**kwargs)
+
+    def _get_strategy(self):
+        strategy = pomgenerationstrategy.PomGenerationStrategy(
+            "root", config.Config(), maveninstallinfo.NOOP,
+            dependencymdm.DependencyMetadata(None),
+            manifestcontent.NOOP, label_to_overridden_fq_label={}, verbose=True)
+        strategy.initialize()
+        return strategy
 
     def _add_artifact(self, repo_root_path, package_rel_path,
                       pom_generation_mode,
