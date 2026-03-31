@@ -16,7 +16,7 @@ class PyDependency(generate.AbstractDependency):
         assert repository_name is not None
         assert extras is None or isinstance(extras, (list, tuple))
         artifact_def = None
-        label_name = name.replace("-", "_") # what else?
+        label_name = name.replace("-", "_") # todo - move into label
         label = labelm.Label("@%s//%s" % (repository_name, label_name))
         return PyDependency(label, artifact_def, name, version, extras)
     

@@ -1,0 +1,4 @@
+{
+    "name": "greeter-constants",
+    "main": "src/constants.js"
+}

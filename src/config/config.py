@@ -52,11 +52,14 @@ def load(repo_root, verbose=False):
     cfg = Config(
         pom_template_path_and_content=_read_file(repo_root, gen("pom_template_path", "")),
         pyproject_template_path_and_content=_read_file(repo_root, gen("pyproject_template_path", "")),
+        jspackage_template_path_and_content=_read_file(repo_root, gen("jspackage_template_path", "")),
         maven_install_paths=gen("maven_install_paths", ()),
         locked_requirements_paths=gen("locked_requirements_paths", ()),
+        pnpm_lockfile_paths=gen("pnpm_lockfile_paths", ()),
         override_file_paths=gen("override_file_paths", ()),
         pom_base_filename=gen("pom_base_filename", "pom"),
         pyproject_base_filename=gen("pyproject_base_filename", "pyproject"),
+        jspackage_base_filename=gen("jspackage_base_filename", "package"),
         excluded_dependency_paths=crawl("excluded_dependency_paths", ()),
         excluded_dependency_labels=crawl("excluded_dependency_labels", ()),
         excluded_src_relpaths=artifact("excluded_relative_paths", ("src/test",)),
@@ -105,11 +108,14 @@ class Config:
     def __init__(self,
         pom_template_path_and_content=("",""),
         pyproject_template_path_and_content=("",""),
+        jspackage_template_path_and_content=("",""),
         maven_install_paths=(),
         locked_requirements_paths=(),
+        pnpm_lockfile_paths=(),
         override_file_paths=(),
         pom_base_filename="pom",
         pyproject_base_filename="pyproject",
+        jspackage_base_filename="package",
         excluded_dependency_paths=(),
         excluded_dependency_labels=(),
         excluded_src_relpaths=(),
@@ -123,11 +129,14 @@ class Config:
         # general
         self.pom_template_path_and_content = pom_template_path_and_content
         self.pyproject_template_path_and_content = pyproject_template_path_and_content
+        self.jspackage_template_path_and_content = jspackage_template_path_and_content
         self.maven_install_paths = _to_tuple(maven_install_paths)
         self.locked_requirements_paths = _to_tuple(locked_requirements_paths)
+        self.pnpm_lockfile_paths = _to_tuple(pnpm_lockfile_paths)
         self.override_file_paths = _to_tuple(override_file_paths)
         self.pom_base_filename = pom_base_filename
         self.pyproject_base_filename = pyproject_base_filename
+        self.jspackage_base_filename = jspackage_base_filename
 
         # crawler
         self.excluded_dependency_paths = _add_pathsep(_to_tuple(excluded_dependency_paths))
@@ -150,6 +159,10 @@ class Config:
     @property
     def pyproject_template(self):
         return self.pyproject_template_path_and_content[1]
+
+    @property
+    def jspackage_template(self):
+        return self.jspackage_template_path_and_content[1]
 
     @property
     def jar_artifact_classifier(self):
@@ -176,9 +189,14 @@ class Config:
         return """[general]
 pom_template_path=%s
 pyproject_template_path=%s
+jspackage_template_path=%s
 maven_install_paths=%s
+locked_requirements_paths=%s
+pnpm_lockfile_paths=%s
 override_file_paths=%s
 pom_base_filename=%s
+pyproject_base_filename=%s
+jspackage_base_filename=%s
 
 [crawler]
 excluded_dependency_paths=%s
@@ -194,9 +212,14 @@ jar_artifact_classifier=%s
 change_detection_enabled=%s
 """ % (self.pom_template_path_and_content[0],
        self.pyproject_template_path_and_content[0],
+       self.jspackage_template_path_and_content[0],
        self.maven_install_paths,
+       self.locked_requirements_paths,
+       self.pnpm_lockfile_paths,
        self.override_file_paths,
        self.pom_base_filename,
+       self.pyproject_base_filename,
+       self.jspackage_base_filename,
        self.excluded_dependency_paths,
        self.excluded_dependency_labels,
        self.excluded_src_relpaths,

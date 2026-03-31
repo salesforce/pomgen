@@ -1,11 +1,9 @@
-*.pyc
-
 bazel-bin
 bazel-genfiles
 bazel-out
 bazel-pomgen
 bazel-example
 bazel-testlogs
-
 target
-
+*.pyc
+examples/js/node_modules

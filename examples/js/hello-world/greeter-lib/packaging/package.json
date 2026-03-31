@@ -1,0 +1,10 @@
+{
+    "name": "greeter-lib",
+    "version": "1.0.0",
+    "main": "src/greeter.js",
+    "types": "src/greeter.d.ts",
+    "dependencies": {
+        "greeter-constants": "^1.0.0",
+        "figlet": "^1.11.0"
+    }
+}
