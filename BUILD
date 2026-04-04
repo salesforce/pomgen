@@ -12,15 +12,14 @@ load("@rules_python//python:pip.bzl", "compile_pip_requirements")
 
 py_library(
     name = "poppy_lib",
-    srcs = glob(["src/generate_manifest.py",
-                 "src/update/*.py",
-                 "src/common/*.py",
-                 "src/config/*.py",
-                 "src/common/*.py",
-                 "src/crawl/*.py",
-                 "src/generate/**/*.py"]),
+    srcs = glob([
+        "src/*.py",
+        "src/common/*.py",
+        "src/config/*.py",
+        "src/crawl/*.py",
+        "src/generate/**/*.py",
+    ]),
     data = ["examples/java/pom_template.xml"],
-    deps = ["@pip//lxml"],
     imports = ["src"],
     visibility = ["//:__subpackages__"],
 )
@@ -51,14 +50,6 @@ py_binary(
     srcs = ["src/refactor/refactor.py"],
     deps = [":poppy_lib"],
     imports = ["src"],
-)
-
-
-# bazel run //:pip.update
-compile_pip_requirements(
-    name = "pip",
-    src = "//tools/pip:requirements.in",
-    requirements_txt = "//tools/pip:requirements_lock.txt",
 )
 
 # bazel run //:examples_pip.update
