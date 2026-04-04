@@ -2,7 +2,7 @@ load("@aspect_rules_py//py:defs.bzl", "py_library")
 
 
 py_library(
-    name = "amiga",
+    name = "amiga_lib", # diff target name than package dflt should work
     srcs = ["startup.py",],
     deps = ["//examples/python/111/computer/amiga/src/amiga/workbench"],
     visibility = [

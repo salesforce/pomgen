@@ -696,13 +696,17 @@ class Crawler:
                 # the label uses the default, so ok to overwrite
                 return label.with_target(artifact_def.bazel_target)
             else:
-                # we used to assert here but we now allow this for edge-casey
-                # build file structures, for example:
-                # java_library <- just to export some deps
-                # java_binary <- refs target above, we want self contained jar,
-                #     so build.pom file has deploy.jar as target_name
                 if label.target != artifact_def.bazel_target:
-                    logger.warning("Conflicting target information: the artifact at [%s] specifies [%s] but the current label is [%s]. We got here from [%s]" % (artifact_def, artifact_def.bazel_target, label, "none" if parent_node is None else parent_node.artifact_def))
+                    # we used to assert here but we now allow this for
+                    # edge-casey build file structures, for example:
+                    # java_library <- just to export some deps
+                    # java_binary <- refs target above, we want self contained
+                    # jar, so build.pom file has deploy.jar as target_name
+                    if artifact_def.generation_mode.produces_artifact:
+                        # only warn if this package produces an artifact, we
+                        # don't care in other situations (specially not in 1-1-1
+                        # subpackages)
+                        logger.warning("Conflicting target information: the artifact at [%s] specifies [%s] but the current label is [%s]. We got here from [%s]" % (artifact_def, artifact_def.bazel_target, label, "none" if parent_node is None else parent_node.artifact_def))
                 return label
         raise AssertionError("we should not get here " + str(label))
 
