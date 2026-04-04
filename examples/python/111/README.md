@@ -1,6 +1,6 @@
 # 1:1:1
 
-This example shows a Python project using Bazel's [1:1:1](https://bazel.build/basics/dependencies#using_fine-grained_modules_and_the_111_rule) structure of "one BUILD file per Bazel package". Why is this interesting? Because the `1:1:1` structure is a common layout when using Bazel, especially when using [Gazelle](https://github.com/bazel-contrib/bazel-gazelle) to generate BUILD files. However, when generating manifests and artifacts for a package manager, we typically do not want to generate at the granularity of the Bazel package level but instead at the "project level" - Poppy handles this translation.
+This example shows a Python project using Bazel's [1:1:1](https://bazel.build/basics/dependencies#using_fine-grained_modules_and_the_111_rule) structure of "one BUILD file per Bazel package". Why is this interesting? Because the `1:1:1` structure is a common layout when using Bazel, especially with [Gazelle](https://github.com/bazel-contrib/bazel-gazelle). However, when generating manifests and artifacts for a package manager, we typically do not want to generate at the granularity of the Bazel package level but instead at the "project level" - Poppy handles this translation.
 
 
 ## Looking around
