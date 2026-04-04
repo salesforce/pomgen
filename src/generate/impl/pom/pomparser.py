@@ -5,15 +5,16 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 
 
-This is a helper module for pom generation - it contains methods dealing with 
+This is a helper module for pom generation - it contains methods dealing with
 pom.xml parsing.
 """
 import collections
 import generate.impl.pom.dependency as dependencym
 import os
+import xml.etree.ElementTree as ET
 
 
-# https://lxml.de/tutorial.html#namespaces
+# https://docs.python.org/3/library/xml.etree.elementtree.html#parsing-xml-with-namespaces
 XML_NS = "{http://maven.apache.org/POM/4.0.0}"
 
 # this is the indentation used when writing out pom content, including content
@@ -28,26 +29,18 @@ def format_for_comparison(pom_content):
         - superfluous whitespace
         - the root <description> element
     """
-    etree = _import_lxml()
-    if etree is None:
-        # lxml import error, this isn't fatal but we can't process the pom
-        # as we'd like
-        return pom_content.strip()
+    # Register namespace to avoid ns0 prefixes
+    ET.register_namespace('', 'http://maven.apache.org/POM/4.0.0')
 
-    parser = etree.XMLParser(remove_blank_text=True)
-    tree = etree.XML(pom_content.encode().strip(), parser=parser)
+    tree = ET.fromstring(pom_content.encode().strip())
 
     # remove <description>, if it exists
     description_el = tree.find(XML_NS + "description")
     if description_el is not None:
         tree.remove(description_el)
 
-    # remove comments
-    comments = tree.xpath("//comment()")
-    for c in comments:
-        p = c.getparent()
-        if p is not None:
-            p.remove(c)
+    # remove comments recursively
+    _remove_comments(tree)
 
     return _pretty_str(tree)
 
@@ -129,19 +122,20 @@ class ParsedDependencies:
 def parse_dependencies(pom_content):
     """
     Parses the <dependencies> section in the specified pom_content.
-    
+
     Returns a ParsedDependencies instance.
     """
-    etree = _import_lxml()
-    assert etree is not None, "cannot parse dependencies without lxml"
+    # Register namespace to avoid ns0 prefixes
+    ET.register_namespace('', 'http://maven.apache.org/POM/4.0.0')
+
     if pom_content.startswith("<project xmlns"):
         # lets not deal with the xml ns complication
         i = pom_content.index(">")
         pom_content = "<project" + pom_content[i:]
 
-    parser = etree.XMLParser(remove_blank_text=True)
-    tree = etree.XML(pom_content.encode().strip(), parser=parser)
-    all_deps = tree.xpath('/project/dependencies/*')
+    tree = ET.fromstring(pom_content.encode().strip())
+    dependencies_el = tree.find('dependencies')
+    all_deps = list(dependencies_el) if dependencies_el is not None else []
 
     dependencies = set()
     dependency_to_exclusions = collections.defaultdict(list)
@@ -151,21 +145,22 @@ def parse_dependencies(pom_content):
         dep = _get_dependency_from_xml_element(el, version_must_be_set=True)
         dependency_to_str_repr[dep] = _get_unindented_xml(el)
         dependencies.add(dep)
-        exclusions = el.xpath("exclusions/*")
-        for el in exclusions:
-            excluded_dep = _get_dependency_from_xml_element(el, version_must_be_set=False)
-            dependency_to_exclusions[dep].append(excluded_dep)
+        exclusions_el = el.find("exclusions")
+        if exclusions_el is not None:
+            for excl_el in exclusions_el:
+                excluded_dep = _get_dependency_from_xml_element(excl_el, version_must_be_set=False)
+                dependency_to_exclusions[dep].append(excluded_dep)
 
     return ParsedDependencies(dependencies, dependency_to_exclusions, dependency_to_str_repr)
 
 
 def _get_dependency_from_xml_element(el, version_must_be_set):
-    group_id = _get_xpath_text_value(el, "groupId/text()", True)
-    artifact_id = _get_xpath_text_value(el, "artifactId/text()", True)
-    version = _get_xpath_text_value(el, "version/text()", version_must_be_set)
-    classifier = _get_xpath_text_value(el, "classifier/text()", False)
-    scope = _get_xpath_text_value(el, "scope/text()", False)
-    _type = _get_xpath_text_value(el, "type/text()", False)
+    group_id = _get_element_text(el, "groupId", True)
+    artifact_id = _get_element_text(el, "artifactId", True)
+    version = _get_element_text(el, "version", version_must_be_set)
+    classifier = _get_element_text(el, "classifier", False)
+    scope = _get_element_text(el, "scope", False)
+    _type = _get_element_text(el, "type", False)
     if _type is not None:
         # we currently don't support "type" (for no particular reason, we could)
         raise Exception("we are dropping type on the floor %s" % _str(el))
@@ -178,21 +173,39 @@ def _get_dependency_from_xml_element(el, version_must_be_set):
 
 
 def _pretty_str(el):
-    return _str(el, pretty=True)
+    """Format XML element with indentation."""
+    ET.indent(el, space="  ")
+    return _str(el) + "\n"
 
 
-def _str(el, pretty=False):
-    etree = _import_lxml()
-    assert etree is not None, "cannot format xml without lxml"
-    return etree.tostring(el, pretty_print=pretty).decode()
+def _str(el):
+    """Convert XML element to string."""
+    return ET.tostring(el, encoding='unicode')
 
 
-def _get_xpath_text_value(el, xpath, must_not_be_empty):
-    v = el.xpath(xpath)
-    text = v[0].strip() if len(v) == 1 else None
+def _get_element_text(el, tag_name, must_not_be_empty):
+    """Get text content of a child element."""
+    child = el.find(tag_name)
+    text = child.text.strip() if child is not None and child.text else None
     if must_not_be_empty and text is None:
-        raise Exception("value of %s cannot be empty for %s" % (xpath, _str(el)))
+        raise Exception("value of %s cannot be empty for %s" % (tag_name, _str(el)))
     return text
+
+
+def _remove_comments(element):
+    """Recursively remove all comments from an element tree."""
+    # Comments in ElementTree have a callable tag (comment function)
+    # We need to remove them from parent elements
+    for parent in element.iter():
+        # Create a list of children to keep (non-comments)
+        children_to_keep = []
+        for child in list(parent):
+            if not callable(child.tag) and child.tag != ET.Comment:
+                children_to_keep.append(child)
+                _remove_comments(child)
+
+        # Remove all children and re-add only the ones to keep
+        parent[:] = children_to_keep
 
 
 def _get_unindented_xml(element):
@@ -200,17 +213,3 @@ def _get_unindented_xml(element):
     for line in _pretty_str(element).splitlines():
         xml += line.strip() + os.linesep
     return xml
-
-
-def _import_lxml():
-    """
-    If lxml has not been installed properly, we attempt to degrade
-    gracefully.
-    """
-    try:
-        from lxml import etree
-        return etree
-    except ImportError:
-        print("Module lxml is not installed, please execute the following in your environment:")
-        print("pip3 install --user lxml")
-        return None
