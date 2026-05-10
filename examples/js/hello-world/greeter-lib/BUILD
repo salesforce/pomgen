@@ -4,8 +4,6 @@ load("@npm//:defs.bzl", "npm_link_all_packages")
 
 npm_link_all_packages(name = "node_modules")
 
-# compiles ts sources and generates .js and .d.ts files
-# this target is used directly by consumers for type-checking
 ts_project(
     name = "greeter-lib",
     srcs = [
@@ -23,11 +21,6 @@ ts_project(
     ],
 )
 
-# wraps the compiled TypeScript as an npm package for runtime linking
-# this creates the :node_modules/greeter-lib target that
-# npm_link_all_packages() can discover.
-# The package.json is included to provide metadata (name, main, types)
-# for Node.js module resolution
 npm_package(
     name = "pkg",
     srcs = [

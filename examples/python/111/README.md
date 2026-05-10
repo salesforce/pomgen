@@ -46,3 +46,4 @@ Since `communicator` depends on `computer`, and each library has 2 modules, 4 ma
 The `communicator/phone` manifest at `/tmp/py/examples/python/111/communicator/phone/pyproject.toml` lists these dependencies:
 
 - `uvicorn[standard]>=0.34.0` brought in through [communicator/phone/src/phone/ringtone/BUILD](communicator/phone/src/phone/ringtone/BUILD)
+- `amiga`, a module of the `computer` library, brought in through [communicator/phone/src/phone/emulator/BUILD](communicator/phone/src/phone/emulator/BUILD)

@@ -17,9 +17,10 @@ _TEMPLATE = """{
 class PackageJsonGeneratorTest(unittest.TestCase):
 
     def test_generate(self):
-        art_def = buildpom.MavenArtifactDef(artifact_id="my-package", version="1.2.3")
+        repository_root = ""
+        art_def = buildpom.MavenArtifactDef(artifact_id="my-package", version="1.2.3", bazel_package="p1")
         dep = jsdependency.JsDependency.init_with_name_and_version("foo-dep", "4.5.6", "npm")
-        gen = packagejsongenerator.PackageJsonGenerator(art_def, _TEMPLATE)
+        gen = packagejsongenerator.PackageJsonGenerator(repository_root, art_def, _TEMPLATE)
         gen.register_dependencies((dep,))
 
         package_json = gen.generate_release_manifest()
@@ -29,8 +30,9 @@ class PackageJsonGeneratorTest(unittest.TestCase):
         self.assertIn('"foo-dep": "^4.5.6"', package_json)
 
     def test_generate_no_dependencies(self):
-        art_def = buildpom.MavenArtifactDef(artifact_id="my-package", version="1.0.0")
-        gen = packagejsongenerator.PackageJsonGenerator(art_def, _TEMPLATE)
+        repository_root = ""
+        art_def = buildpom.MavenArtifactDef(artifact_id="my-package", version="1.0.0", bazel_package="p1")
+        gen = packagejsongenerator.PackageJsonGenerator(repository_root, art_def, _TEMPLATE)
         gen.register_dependencies(())
 
         package_json = gen.generate_release_manifest()
@@ -40,10 +42,11 @@ class PackageJsonGeneratorTest(unittest.TestCase):
         self.assertIn('"dependencies": {}', package_json)
 
     def test_generate_multiple_dependencies(self):
-        art_def = buildpom.MavenArtifactDef(artifact_id="my-package", version="2.0.0")
+        repository_root = ""
+        art_def = buildpom.MavenArtifactDef(artifact_id="my-package", version="2.0.0", bazel_package="p1")
         dep1 = jsdependency.JsDependency.init_with_name_and_version("dep-a", "1.0.0", "npm")
         dep2 = jsdependency.JsDependency.init_with_name_and_version("dep-b", "2.0.0", "npm")
-        gen = packagejsongenerator.PackageJsonGenerator(art_def, _TEMPLATE)
+        gen = packagejsongenerator.PackageJsonGenerator(repository_root, art_def, _TEMPLATE)
         gen.register_dependencies((dep1, dep2))
 
         package_json = gen.generate_release_manifest()

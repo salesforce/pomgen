@@ -72,7 +72,8 @@ class JsGenerationStrategy(generate.AbstractGenerationStrategy):
         return True
 
     def _new_generator__hook(self, artifact_def):
-        return packagejsongenerator.PackageJsonGenerator(artifact_def, self._jspackage_template)
+        return packagejsongenerator.PackageJsonGenerator(
+            self._repository_root, artifact_def, self._jspackage_template)
 
     @classmethod
     def _parse_pnpm_lockfiles(clazz, repository_root, pnpm_lockfile_paths, verbose):

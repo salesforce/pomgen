@@ -1,13 +1,13 @@
 load("@aspect_rules_js//js:defs.bzl", "js_binary")
+load("@aspect_rules_js//npm:defs.bzl", "npm_package")
 load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 
 npm_link_all_packages(name = "node_modules")
 
-# Compiles TypeScript to JavaScript.
 ts_project(
-    name = "greeter_ts",
-    srcs = ["src/main.ts"],
+    name = "greeter",
+    srcs = ["src/index.ts"],
     tsconfig = "tsconfig.json",
     transpiler = "tsc",
     deps = [
@@ -15,12 +15,21 @@ ts_project(
     ],
 )
 
-# Creates an executable Node.js binary.
+npm_package(
+    name = "pkg",
+    srcs = [
+        ":greeter",
+        "package.json",
+    ],
+    package = "greeter",
+    visibility = ["//visibility:public"],
+)
+
 js_binary(
-    name = "greeter",
-    entry_point = "src/main.js",
+    name = "greeter_bin",
+    entry_point = "src/index.js",
     data = [
-        ":greeter_ts",
+        ":greeter",
         ":node_modules/greeter-lib",
     ],
 )

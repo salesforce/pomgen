@@ -1,7 +1,7 @@
 {
     "name": "greeter-constants",
     "version": "1.2.3",
-    "main": "src/index.js",
-    "types": "src/index.d.ts",
+    "main": "src/constants.js",
+    "types": "src/constants.d.ts",
     "dependencies": {}
 }

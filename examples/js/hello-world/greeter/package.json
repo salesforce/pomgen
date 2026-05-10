@@ -1,6 +1,6 @@
 {
     "name": "greeter",
-    "main": "src/main.js",
+    "main": "src/index.js",
     "dependencies": {
         "greeter-lib": "workspace:*"
     }

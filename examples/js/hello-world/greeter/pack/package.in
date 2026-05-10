@@ -1,0 +1,4 @@
+artifact(
+    artifact_id = "greeter",
+    generation_mode = "dynamic",
+)
