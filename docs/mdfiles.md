@@ -1,9 +1,54 @@
 # Metadata Files
 
-pomgen metadata files live at `<bazel-package>/MVN-INF`.
+`poppy` metadata files live in a subdirectory next to the BUILD file that builds the binary artifact.
+
+## Definitions
+
+`poppy` docs often mention the words `Library` and `Module`. These terms align with the Maven concept of a [Single/Multi Module library/project]().
+
+### Library
+
+This is the `project` in a `Maven Multi-Module project`.
+
+A library is a grouping of artifact-producing modules. A library by itself does not have an addressable identity, only the artifacts that are part of the library have an identity.
+A library may consist of one or multiple artifacts. In Bazel concepts, this means that a library may have one or more Bazel Packages, so one or multiple BUILD files, each BUILD file producing one artifact.
+
+Example: a Java logging library that consists of 2 jar files `logging-api` and `logging-impl`.
+
+### Module
+
+This is the `module` in a `Maven Multi-Module project`.
+
+A Module exists within a Library and is responsible for building an artifact. An artifact has an identity, generally a name and a version, so that it can be uploaded to a package manager and shared with consumers (referenced by name).
+
+In Bazel concepts, a Module is a Bazel Package.
+
+Example: a Java logging library that consists of 2 jar files `logging-api` and `logging-impl`. Each jar is built by a Bazel `java_library` target that live in 2 different Bazel Packages (2 different BUILD files). Each jar has an identity (groupId and artifactId) and a version.
+
+## Directory structure
+
+### Single module
+
+Example metadata structure for a Java library that produces a single jar:
+
+TODO
+
+### Multiple modules
+
+Example metadata structure for a Java library that produces a single jar:
 
 
-### BUILD.pom (required)
+
+Regardless of language, the metadata file format is the same.
+
+
+## LIBRARY.root
+
+The LIBRARY.root file has 2 functions:
+- It defines the root directory of a library. Child directories of this root directory, also called the library module directories, produce the modules that beling to the library.
+- It contains common metadata that applies to all library modules.
+
+Example LIBRARY.root for a Java project:
 
 The BUILD.pom files defines how a pom.xml (for this bazel package) should be generated.
 
