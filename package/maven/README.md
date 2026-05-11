@@ -29,3 +29,6 @@ For details on all arguments and options that may be specified, pass in `-h` or 
 The following executables must be in $PATH:
 - `mvn`
 - `xmllint`
+
+External Central/Nexus dependencies (jars) must be managed using [rules_jvm_external's maven_install](https://github.com/bazel-contrib/rules_jvm_external) rule.
+Artifacts must be pinned, because poppy processes the pinned files.

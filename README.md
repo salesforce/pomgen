@@ -9,7 +9,7 @@
 
 `poppy` is a package manager manifest generator for Bazel-based projects.
 
-It currently supports Java (jars), Python (wheels) and JavaScript (npm packages).
+It supports Java (jars), Python (wheels), JavaScript (npm packages) and can be extended to support additional manifest formats, package managers, languages.
 
 ### Why?
 
@@ -68,28 +68,14 @@ bazel run @poppy//:info
 
 ### Usage Requirements
 
-- Bazel, through [bazelisk](https://github.com/bazelbuild/bazelisk)
-- Python 3 is required and must be configured as a toolchain or available in your $PATH
+- Your project must use Bazel
+- Python 3 is required and must be configured as a Bazel Toolchain or available in your $PATH
 
-### Java
-
-- External Maven Central/Nexus dependencies **must** be managed using [rules_jvm_external](https://github.com/bazelbuild/rules_jvm_external)'s `maven_install` rule
-- Artifacts **must** be [pinned](https://github.com/bazelbuild/rules_jvm_external#pinning-artifacts-and-integration-with-bazels-downloader), because pomgen parses the pinned artifacts' json file(s)
-  - The location of all pinned artifact json files must be declared in the pomgen [config file](#configuration) by setting `maven_install_paths`
-
-### Python
-
-TODO
-
-### JavaScript
-
-TODO
-
-## poppy development
+## Development
 
 ### Linting
 
-pomgen uses [ruff](https://github.com/astral-sh/ruff). Follow the installation instructions, then run:
+poppy uses [ruff](https://github.com/astral-sh/ruff). Follow the installation instructions, then run:
 
 ```
 ruff check src tests
