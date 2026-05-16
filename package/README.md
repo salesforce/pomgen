@@ -5,4 +5,5 @@ This location contains subdirectories for each supported language (packaging for
 See each subdirectory for usage instructions:
 
 - [Java](maven)
+- [Python](py)
 
