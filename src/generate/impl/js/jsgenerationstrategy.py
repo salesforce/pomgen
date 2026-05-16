@@ -36,6 +36,10 @@ class JsGenerationStrategy(generate.AbstractGenerationStrategy):
         return "pack/package.in"
 
     @property
+    def name(self):
+        return "package.json -> tgz"
+
+    @property
     def base_manifest_filename(self):
         return self._base_filename
 
