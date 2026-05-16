@@ -1,11 +1,31 @@
-# pomgen Wrapper Script
+# Packaging jars
 
-[This script](maven.sh) conveniently wraps `pomgen` and `mvn` invocations.
+This script augments jars with their required pom.xmls and installs them into `~/m2/repository`, the standard location where other Java build tools (like [Maven](https://maven.apache.org)) will look for them. Optionally, the jars can also be uploaded to a Nexus-based package manager.
 
-See the top of the script for usage information or run it without arguments.
+## Usage
+
+### Install
+
+`bazel run @poppy//package/maven -- -a pomgen,build,install -l path/to/library/root`
+
+The command above will generated poms and install all jars that are part of the library pointed to by `-l`, and its transitive libraries, into ~/m2/repository. 
+
+Since the `build` action (`-a` stands for action) is specified, the script will also use bazel to build all jars first.
+
+Example invocation:
+
+```
+bazel run @poppy//package/maven -- -a pomgen,build,install -l examples/java/hello-world/juicer
+```
+
+### Deploy
+
+The `deploy_all` action can be used instead of `install` above - the script will then upload the jars to a Nexus server. Set the `REPOSITORY_URL` environment variable to specify the server hostname.
+
+For details on all arguments and options that may be specified, pass in `-h` or look at the [top of the script](maven.sh).
 
 ## External Dependencies
 
-- [this](../README.md#external-dependencies)
-- The Maven executable `mvn` needs to be in your $PATH
-- The xmllint command line utility
+The following executables must be in $PATH:
+- `mvn`
+- `xmllint`

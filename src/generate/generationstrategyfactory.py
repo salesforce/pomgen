@@ -45,6 +45,9 @@ class GenerationStrategyFactory:
         # leaky - only for poms at this point, review usages
         return self._pomstrategy.load_external_dependencies()
 
+    def get_strategy_names(self):
+        return tuple([s.name for s in self._strategies])
+
     def _initialize_strategies(self):
         for strategy in self._strategies:
             strategy.initialize()

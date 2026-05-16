@@ -72,6 +72,14 @@ class AbstractGenerationStrategy(ABC):
         pass
 
     @property
+    @abstractmethod
+    def name(self):
+        """
+        The friendly name of this generation strategy.
+        """
+        pass
+
+    @property
     def released_metadata_path(self):
         return "%s.released" % self.metadata_path
 

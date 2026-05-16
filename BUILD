@@ -46,6 +46,13 @@ py_binary(
 )
 
 py_binary(
+    name = "info",
+    srcs = ["src/info.py"],
+    deps = [":poppy_lib"],
+    imports = ["src"],
+)
+
+py_binary(
     name = "refactor",
     srcs = ["src/refactor/refactor.py"],
     deps = [":poppy_lib"],

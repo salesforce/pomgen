@@ -7,41 +7,59 @@
 
 ## Overview
 
-`poppy` is an extensible package manager manifest generator for Bazel-based projects.
+`poppy` is a package manager manifest generator for Bazel-based projects.
 
 It currently supports Java (jars), Python (wheels) and JavaScript (npm packages).
 
-### What problems does poppy solve?
+### Why?
 
-TODO
+Bazel is generally used for building large repositories ("monorepo"). In such repositories, dependencies are built from source and always at the latest version. In an ideal world, all dependencies and all their consumers exist in the same repository. `poppy` is for the non-ideal world case, where some consumers exist outside of the Bazel-built repository. In this scenario, dependencies have to be shared with the outside via a package manager. `poppy` is the translation layer between Bazel and the package manager.
+
+### Features
+
+`poppy` provides the following high level features:
+
+- package manager metadata for Bazel-built artifacts
+- grouping of related artifacts into a library with a tracked version
+- generation of package manager specific manifest file (for example pom.xml)
+- convenience wrappers of package manager specific tooling to publish libraries
+- supports many libraries with dependencies on each other
+- change detection to avoid publishing when a library has not changed
+- query capabilities to understand library structure
+- extensible - can support different package managers / languages
 
 ### What's up with the name?
 
-Originally this project was called `pomgen` because it was Java and pom.xml specific. But as we added Python support, we needed a new name. We picked `poppy` because it starts with po(m.xml) and ends with py(thon). The repository is still called `pomgen`, we may rename it at some point.
+Originally this project was called `pomgen` because it was Java and pom.xml specific. As we added Python support, we needed a new name. We picked `poppy` because it starts with po(m.xml) and ends with py(thon). The repository is still called `pomgen`, we may rename it at some point. Got a better idea for a name? We thought you would - file an issue!
 
 ## Using poppy
 
-See our examples to get started.
+The best way to learn about `poppy` is to explore the [examples](examples) and the [docs](docs).
 
 ### Running poppy in your own repository
 
-Reference this repository in your `WORKSPACE` file using Bazel's `git_repository` rule:
+Use `git_repository` and specificy the latest commit of the `master` branch. The `master` branch is always releasable.
 
+In your `MODULE.bazel` file, load `git_repository` is you do not have it already:
 ```
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
-
-git_repository(
-    name = "pomgen",
-    remote = "https://github.com/salesforce/pomgen.git",
-    commit = "<current master HEAD commit-sha>"
+git_repository = use_repo_rule(
+    "@bazel_tools//tools/build_defs/repo:git.bzl",
+    "git_repository",
 )
 ```
-The `master` branch is always releasable - use the current `HEAD` commit.
 
-You can then run pomgen commands [see the example](examples/java/hello-world/README.md), for example:
-
+Then add:
 ```
-bazel run @poppy//package/maven -- -a pomgen,install
+git_repository(
+    name = "poppy",
+    commit = "<latest commit from master branch>",
+    remote = "https://github.com/salesforce/pomgen.git",
+)
+```
+
+If everything is setup correcty, this command should succeed:
+```
+bazel run @poppy//:info
 ```
 
 ### CI setup

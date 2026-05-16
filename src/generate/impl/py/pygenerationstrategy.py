@@ -26,6 +26,10 @@ class PyGenerationStrategy(generate.AbstractGenerationStrategy):
         return "md/pyproject.in"
 
     @property
+    def name(self):
+        return "pyproject.toml -> wheel"
+
+    @property
     def base_manifest_filename(self):
         return self._base_filename
 

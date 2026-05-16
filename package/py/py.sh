@@ -194,12 +194,12 @@ if [ "$debug" = true ]; then
 fi
 
 # figure out where this script is being run from, accordingly set repo_root_path
-if [ -f "WORKSPACE" ]; then
+if [ -f "WORKSPACE" ] || [ -f "MODULE.bazel" ]; then
     repo_root_path=`pwd`
 else
     # "bazel run" sets the env var BUILD_WORKING_DIRECTORY, which points
     # to the root of the repository
-    if [ -f "$BUILD_WORKING_DIRECTORY/WORKSPACE" ]; then
+    if [ -f "$BUILD_WORKING_DIRECTORY/WORKSPACE" ] || [ -f "$BUILD_WORKING_DIRECTORY/MODULE.bazel" ]; then
         # $BUILD_WORKING_DIRECTORY is set by "bazel run"
         repo_root_path=$BUILD_WORKING_DIRECTORY
         cd $repo_root_path

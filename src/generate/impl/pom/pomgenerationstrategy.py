@@ -60,6 +60,10 @@ class PomGenerationStrategy(generate.AbstractGenerationStrategy):
         return "MVN-INF/pom.xml.released"
 
     @property
+    def name(self):
+        return "pom.xml -> jar"
+
+    @property
     def base_manifest_filename(self):
         return self._base_filename
 
