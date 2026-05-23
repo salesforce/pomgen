@@ -16,7 +16,7 @@ _for_each_pom() {
     local custom_jar_classifier=$4
     local pom_root_path=$5
 
-    if ! [[ "$action" =~ ^(install_main_artifact|build_javadoc_jar|install_sources_and_javadoc_jars|upload_all_artifacts|clean_source_tree)$ ]]; then
+    if ! [[ "$action" =~ ^(install_main_artifact|build_javadoc_jar|install_sources_and_javadoc_jars|upload_all_artifacts|clean_source_tree|version_check)$ ]]; then
         echo "ERROR: Unknown action $action" && exit 1
     fi
 
@@ -160,6 +160,11 @@ _for_each_pom() {
         if [ "$is_pom_only_artifact" == 1 ]; then
             # for pom artifacts, we don't set the classifier
             jar_artifact_classifier="None"
+        fi
+
+        if [ "$action" == "version_check" ]; then
+            # testing / debugging
+            _find_available_nexus_version "$GROUP_ID" "$ARTIFACT_ID" "$VERSION" "$VERSION_INCREMENT_COMPONENT"
         fi
 
         if [ "$action" == "install_main_artifact" ]; then
@@ -432,4 +437,77 @@ EOL
     rm -rf "$root_tmpdir/META-INF"
 
     UPDATED_JAR_ARTIFACT_PATH=$new_artifact_path
+}
+
+_increment_version() {
+    local version=$1
+    local component=$2
+
+    local major=$(echo "$version" | cut -d. -f1)
+    local minor=$(echo "$version" | cut -d. -f2)
+    local patch=$(echo "$version" | cut -d. -f3 | sed 's/-.*//')
+    local suffix=$(echo "$version" | grep -o '\-.*' || true)
+
+    if [ "$component" = "major" ]; then
+        major=$((major + 1))
+        minor=0
+        patch=0
+    elif [ "$component" = "minor" ]; then
+        minor=$((minor + 1))
+        patch=0
+    elif [ "$component" = "patch" ]; then
+        patch=$((patch + 1))
+    else
+        echo "ERROR: Unknown version component: $component (must be major/minor/patch)"
+        exit 1
+    fi
+
+    echo "${major}.${minor}.${patch}${suffix}"
+}
+
+# Checks if the proposed version already exists in Nexus, incrementing the
+# specified component until a free version is found.
+# 1st arg: groupId
+# 2nd arg: artifactId
+# 3rd arg: proposed version
+# 4th arg: component to increment (major/minor/patch)
+_find_available_nexus_version() {
+    local group_id=$1
+    local artifact_id=$2
+    local version=$3
+    local component=$4
+
+    if [ -z "$REPOSITORY_URL" ]; then
+        echo "ERROR: REPOSITORY_URL must be set"
+        exit 1
+    fi
+
+    if [ -z "$REPOSITORY_ID" ]; then
+        REPOSITORY_ID="nexus"
+    fi
+
+    if [[ "$version" = *"-SNAPSHOT" ]]; then
+        repository="snapshots"
+    else
+        repository="releases"
+    fi
+
+    full_repository_url=${REPOSITORY_URL}/${repository}
+    remote_repo="${REPOSITORY_ID}::default::${full_repository_url}"
+
+    echo "INFO: Checking for available version starting at ${group_id}:${artifact_id}:${version}"
+
+    while true; do
+        echo "INFO: Checking if ${group_id}:${artifact_id}:${version} exists in Nexus..."
+        if mvn ${MVN_ARGS} dependency:get \
+            -Dartifact="${group_id}:${artifact_id}:${version}:pom" \
+            -Dtransitive=false \
+            -DremoteRepositories="${remote_repo}" > /dev/null 2>&1; then
+            echo "INFO: Version ${version} already exists, incrementing ${component}"
+            version=$(_increment_version "$version" "$component")
+        else
+            echo "INFO: Version ${version} is available"
+            return
+        fi
+    done
 }
