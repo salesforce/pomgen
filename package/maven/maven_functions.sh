@@ -16,7 +16,7 @@ _for_each_pom() {
     local custom_jar_classifier=$4
     local pom_root_path=$5
 
-    if ! [[ "$action" =~ ^(install_main_artifact|build_javadoc_jar|install_sources_and_javadoc_jars|upload_all_artifacts|clean_source_tree|version_check)$ ]]; then
+    if ! [[ "$action" =~ ^(install_main_artifact|build_javadoc_jar|install_sources_and_javadoc_jars|upload_all_artifacts|clean_source_tree|check_nexus_version)$ ]]; then
         echo "ERROR: Unknown action $action" && exit 1
     fi
 
@@ -162,9 +162,9 @@ _for_each_pom() {
             jar_artifact_classifier="None"
         fi
 
-        if [ "$action" == "version_check" ]; then
+        if [ "$action" == "check_nexus_version" ]; then
             # testing / debugging
-            _find_available_nexus_version "$GROUP_ID" "$ARTIFACT_ID" "$VERSION" "$VERSION_INCREMENT_COMPONENT"
+            _find_available_nexus_version "$GROUP_ID" "$ARTIFACT_ID" "$VERSION"
         fi
 
         if [ "$action" == "install_main_artifact" ]; then
@@ -439,75 +439,32 @@ EOL
     UPDATED_JAR_ARTIFACT_PATH=$new_artifact_path
 }
 
-_increment_version() {
-    local version=$1
-    local component=$2
-
-    local major=$(echo "$version" | cut -d. -f1)
-    local minor=$(echo "$version" | cut -d. -f2)
-    local patch=$(echo "$version" | cut -d. -f3 | sed 's/-.*//')
-    local suffix=$(echo "$version" | grep -o '\-.*' || true)
-
-    if [ "$component" = "major" ]; then
-        major=$((major + 1))
-        minor=0
-        patch=0
-    elif [ "$component" = "minor" ]; then
-        minor=$((minor + 1))
-        patch=0
-    elif [ "$component" = "patch" ]; then
-        patch=$((patch + 1))
-    else
-        echo "ERROR: Unknown version component: $component (must be major/minor/patch)"
-        exit 1
-    fi
-
-    echo "${major}.${minor}.${patch}${suffix}"
-}
-
-# Checks if the proposed version already exists in Nexus, incrementing the
-# specified component until a free version is found.
+# Checks if the given version exists in Nexus.
 # 1st arg: groupId
 # 2nd arg: artifactId
-# 3rd arg: proposed version
-# 4th arg: component to increment (major/minor/patch)
+# 3rd arg: version
 _find_available_nexus_version() {
     local group_id=$1
     local artifact_id=$2
     local version=$3
-    local component=$4
 
-    if [ -z "$REPOSITORY_URL" ]; then
-        echo "ERROR: REPOSITORY_URL must be set"
+    # eg https://nexus.repo.net/nexus/content/groups/public
+    if [ -z "$REPOSITORY_READ_URL" ]; then
+        echo "ERROR: REPOSITORY_READ_URL must be set"
         exit 1
     fi
 
-    if [ -z "$REPOSITORY_ID" ]; then
-        REPOSITORY_ID="nexus"
-    fi
-
-    if [[ "$version" = *"-SNAPSHOT" ]]; then
-        repository="snapshots"
+    local group_path="${group_id//\.//}"
+    local artifact_url="${REPOSITORY_READ_URL}/${group_path}/${artifact_id}/${version}/${artifact_id}-${version}.pom"
+    local curl_start=$(date +%s)
+    local curl_cmd="curl -s --netrc -L --head -o /dev/null -w '%{http_code}' ${artifact_url}"
+    echo "INFO: ${curl_cmd}"
+    local http_code=$(curl -s --netrc -L --head -o /dev/null -w '%{http_code}' "$artifact_url")
+    if [ "$http_code" = "200" ]; then
+        echo "INFO: Version ${version} exists on Nexus already"
     else
-        repository="releases"
+        echo "INFO: Version ${version} ok to use (http $http_code)"
     fi
-
-    full_repository_url=${REPOSITORY_URL}/${repository}
-    remote_repo="${REPOSITORY_ID}::default::${full_repository_url}"
-
-    echo "INFO: Checking for available version starting at ${group_id}:${artifact_id}:${version}"
-
-    while true; do
-        echo "INFO: Checking if ${group_id}:${artifact_id}:${version} exists in Nexus..."
-        if mvn ${MVN_ARGS} dependency:get \
-            -Dartifact="${group_id}:${artifact_id}:${version}:pom" \
-            -Dtransitive=false \
-            -DremoteRepositories="${remote_repo}" > /dev/null 2>&1; then
-            echo "INFO: Version ${version} already exists, incrementing ${component}"
-            version=$(_increment_version "$version" "$component")
-        else
-            echo "INFO: Version ${version} is available"
-            return
-        fi
-    done
+    local curl_end=$(date +%s)
+    echo "INFO: Took $((curl_end - curl_start))s"
 }
