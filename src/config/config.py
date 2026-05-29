@@ -69,6 +69,7 @@ def load(repo_root, verbose=False):
         always_semver_path_prefixes=artifact("always_semver_path_prefixes", ()),
         jar_artifact_classifier=artifact("jar_classifier", None),
         change_detection_enabled=artifact("change_detection_enabled", True),
+        nexus_artifact_url=artifact("nexus_artifact_url", None),
     )
 
     if verbose:
@@ -124,7 +125,8 @@ class Config:
         transitives_versioning_mode="semver",
         always_semver_path_prefixes=(),
         jar_artifact_classifier=None,
-        change_detection_enabled=True):
+        change_detection_enabled=True,
+        nexus_artifact_url=None):
 
         # general
         self.pom_template_path_and_content = pom_template_path_and_content
@@ -151,6 +153,7 @@ class Config:
         self.always_semver_path_prefixes = _to_tuple(always_semver_path_prefixes)
         self._jar_artifact_classifier = jar_artifact_classifier
         self._change_detection_enabled = _to_bool(change_detection_enabled)
+        self._nexus_artifact_url = nexus_artifact_url
 
     @property
     def pom_template(self):
@@ -175,6 +178,10 @@ class Config:
     @property
     def change_detection_enabled(self):
         return self._change_detection_enabled
+
+    @property
+    def nexus_artifact_url(self):
+        return self._nexus_artifact_url
 
     @property
     def all_src_exclusions(self):
@@ -210,6 +217,7 @@ transitives_versioning_mode=%s
 always_semver_path_prefixes=%s
 jar_artifact_classifier=%s
 change_detection_enabled=%s
+nexus_artifact_url=%s
 """ % (self.pom_template_path_and_content[0],
        self.pyproject_template_path_and_content[0],
        self.jspackage_template_path_and_content[0],
@@ -228,7 +236,8 @@ change_detection_enabled=%s
        self.transitives_versioning_mode,
        self.always_semver_path_prefixes,
        self.jar_artifact_classifier,
-       self.change_detection_enabled)
+       self.change_detection_enabled,
+       self.nexus_artifact_url)
 
 
 def _to_tuple(thing):

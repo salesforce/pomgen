@@ -13,14 +13,28 @@ VERSION_INCREMENT_STRATEGIES = ("major", "minor", "patch", "calver",)
 SNAPSHOT_QUAL = "-SNAPSHOT"
 
 
-def get_rel_qualifier_increment_strategy(last_released_version):
+def get_version_increment_strategy(version_increment_strategy_name, current_version, last_released_version):
+    """
+    Returns the appropriate version increment strategy. If
+    version_increment_strategy_name is None, returns the rel qualifier
+    strategy, otherwise returns the strategy identified by
+    version_increment_strategy_name.
+    """
+    assert current_version is not None
+    if version_increment_strategy_name is None:
+        return get_rel_qualifier_increment_strategy(current_version, last_released_version)
+    else:
+        return get_version_increment_strategy_by_name(version_increment_strategy_name)
+
+
+def get_rel_qualifier_increment_strategy(current_version, last_released_version):
     """
     See /docs/ci.md#using-a-different-version-increment-mode-for-transitives.
     """
-    return RelQualifierIncrementStrategy(last_released_version)
+    return RelQualifierIncrementStrategy(current_version, last_released_version)
 
 
-def get_version_increment_strategy(strategy_name):
+def get_version_increment_strategy_by_name(strategy_name):
     assert strategy_name in VERSION_INCREMENT_STRATEGIES, "Unknown version increment strategy [%s], valid strategies are %s" % (strategy_name, VERSION_INCREMENT_STRATEGIES)
 
     if strategy_name == "major":
@@ -62,15 +76,16 @@ class DefaultVersionIncrementStrategy:
 
     def get_next_release_version(self, current_version):
         """
-        This default implementation just removes the "-SNAPSHOT" qualifier, if
-        the specified current_version has that qualifier.
+        If the current_version ends with -SNAPSHOT, removes it and returns the
+        result. Otherwise, increments the version using the strategy's hook.
 
         For example: 1.0.0-SNAPSHOT -> 1.0.0
+                     1.0.0 -> 2.0.0 (major), 1.1.0 (minor), 1.0.1 (patch)
         """
         if current_version.endswith(SNAPSHOT_QUAL):
             return current_version[0:-len(SNAPSHOT_QUAL)]
         else:
-            return current_version
+            return self.get_next_version__hook(current_version)
 
     def get_next_development_version(self, current_version):
         """
@@ -200,23 +215,40 @@ class RelQualifierIncrementStrategy(VersionIncrementStrategy):
     OLD_REL_QUALIFIER_PREFIX = "-rel-"
     REL_QUALIFIER_PREFIX = "-rel"
 
-    def __init__(self, last_released_version):
+    def __init__(self, current_version, last_released_version):
+        self.current_version = current_version
         self.last_released_version = "0.0.0" if last_released_version is None else last_released_version
 
     def get_next_release_version(self, current_version):
         """
-        Takes the current "last_released_version" and increments the "-rel"
-        qualifier. If the "-rel" qualifier is not there, it is added.
+        If the current_version already has a "-rel" qualifier, increments it.
+        Otherwise, takes the "last_released_version" and increments its "-rel"
+        qualifier (adding it if not present).
         """
-        return RelQualifierIncrementStrategy._incr_rel_qualifier(self.last_released_version)
+        if current_version is not None and self._has_rel_qualifier(current_version):
+            version = current_version
+            if version.endswith(SNAPSHOT_QUAL):
+                version = version[0:-len(SNAPSHOT_QUAL)]
+            return RelQualifierIncrementStrategy._incr_rel_qualifier(version)
+        else:
+            return RelQualifierIncrementStrategy._incr_rel_qualifier(self.last_released_version)
 
     def get_next_development_version(self, current_version):
         """
         Just returns the current version.
         """
-        if not current_version.endswith(SNAPSHOT_QUAL):
-            current_version += SNAPSHOT_QUAL
-        return current_version
+        version = self.current_version
+        if not version.endswith(SNAPSHOT_QUAL):
+            version += SNAPSHOT_QUAL
+        return version
+
+    @classmethod
+    def _has_rel_qualifier(clazz, version):
+        for qual in (RelQualifierIncrementStrategy.OLD_REL_QUALIFIER_PREFIX,
+                     RelQualifierIncrementStrategy.REL_QUALIFIER_PREFIX):
+            if qual in version:
+                return True
+        return False
 
     @classmethod
     def _incr_rel_qualifier(clazz, version):

@@ -13,9 +13,9 @@ from datetime import datetime, timezone
 class VersionIncrementStrategyTest(unittest.TestCase):
 
     def test_major_version(self):
-        s = vis.get_version_increment_strategy("major")
+        s = vis.get_version_increment_strategy_by_name("major")
 
-        self.assertEqual("1.0.0", s.get_next_release_version("1.0.0"))
+        self.assertEqual("2.0.0", s.get_next_release_version("1.0.0"))
         self.assertEqual("1.0.0", s.get_next_release_version("1.0.0-SNAPSHOT"))
         self.assertEqual("1.2.0", s.get_next_release_version("1.2.0-SNAPSHOT"))
         self.assertEqual("1.0.5", s.get_next_release_version("1.0.5-SNAPSHOT"))
@@ -29,14 +29,14 @@ class VersionIncrementStrategyTest(unittest.TestCase):
 
         self.assertEqual("2.0.0-SNAPSHOT", s.get_next_development_version("1-SNAPSHOT"))
         self.assertEqual("2.0.0-SNAPSHOT", s.get_next_development_version("1"))
-        self.assertEqual("1", s.get_next_release_version("1"))
+        self.assertEqual("2.0.0", s.get_next_release_version("1"))
         self.assertEqual("2.0.0-SNAPSHOT", s.get_next_development_version("1.0-SNAPSHOT"))
-        self.assertEqual("1.0", s.get_next_release_version("1.0"))
+        self.assertEqual("2.0.0", s.get_next_release_version("1.0"))
 
     def test_minor_version(self):
-        s = vis.get_version_increment_strategy("minor")
+        s = vis.get_version_increment_strategy_by_name("minor")
 
-        self.assertEqual("1.0.0", s.get_next_release_version("1.0.0"))
+        self.assertEqual("1.1.0", s.get_next_release_version("1.0.0"))
         self.assertEqual("1.0.1", s.get_next_release_version("1.0.1-SNAPSHOT"))
         self.assertEqual("1.1.1", s.get_next_release_version("1.1.1-SNAPSHOT"))
         self.assertEqual("1.10.1", s.get_next_release_version("1.10.1-SNAPSHOT"))
@@ -50,14 +50,14 @@ class VersionIncrementStrategyTest(unittest.TestCase):
 
         self.assertEqual("1.1.0-SNAPSHOT", s.get_next_development_version("1-SNAPSHOT"))
         self.assertEqual("1.1.0-SNAPSHOT", s.get_next_development_version("1"))
-        self.assertEqual("1", s.get_next_release_version("1"))
+        self.assertEqual("1.1.0", s.get_next_release_version("1"))
         self.assertEqual("1.1.0-SNAPSHOT", s.get_next_development_version("1.0-SNAPSHOT"))
-        self.assertEqual("1.0", s.get_next_release_version("1.0"))
+        self.assertEqual("1.1.0", s.get_next_release_version("1.0"))
 
     def test_patch_version(self):
-        s = vis.get_version_increment_strategy("patch")
+        s = vis.get_version_increment_strategy_by_name("patch")
 
-        self.assertEqual("1.0.1", s.get_next_release_version("1.0.1"))
+        self.assertEqual("1.0.2", s.get_next_release_version("1.0.1"))
         self.assertEqual("1.0.1", s.get_next_release_version("1.0.1-SNAPSHOT"))
         self.assertEqual("1.1.1", s.get_next_release_version("1.1.1-SNAPSHOT"))
         self.assertEqual("1.0.9", s.get_next_release_version("1.0.9-SNAPSHOT"))
@@ -69,7 +69,7 @@ class VersionIncrementStrategyTest(unittest.TestCase):
         self.assertEqual("1.2.1-qual1-SNAPSHOT", s.get_next_development_version("1.2.0-qual1"))
 
     def test_calver_version(self):
-        s = vis.get_version_increment_strategy("calver")
+        s = vis.get_version_increment_strategy_by_name("calver")
 
         self.assertEqual("%s.1" % _today(), s.get_next_release_version("0-SNAPSHOT"))
         self.assertEqual("%s.1" % _today(), s.get_next_release_version("0"))
@@ -87,7 +87,7 @@ class VersionIncrementStrategyTest(unittest.TestCase):
 
     def test_unknown_version_increment_strategy(self):
         with self.assertRaises(Exception) as ctx:
-            vis.get_version_increment_strategy("lucy in the sky with diamonds")
+            vis.get_version_increment_strategy_by_name("lucy in the sky with diamonds")
 
         self.assertIn("Unknown version increment strategy", str(ctx.exception))
         self.assertIn("lucy in the sky with diamonds", str(ctx.exception))
@@ -95,48 +95,61 @@ class VersionIncrementStrategyTest(unittest.TestCase):
         self.assertIn("('major', 'minor', 'patch', 'calver')", str(ctx.exception))
 
     def test_rel_qualifier_increment_strategy(self):
-        s = vis.get_rel_qualifier_increment_strategy(None)
+        s = vis.get_rel_qualifier_increment_strategy("1.0.0-SNAPSHOT", None)
         self.assertEqual("0.0.0-rel1", s.get_next_release_version("1.0.0-SNAPSHOT"))
         self.assertEqual("1.0.0-SNAPSHOT", s.get_next_development_version("1.0.0-SNAPSHOT"))
 
-        s = vis.get_rel_qualifier_increment_strategy("1.2.3")
-        self.assertEqual("1.2.3-rel1", s.get_next_release_version("1.2.4-SNAPSHOT"))
-        self.assertEqual("1.2.4-SNAPSHOT", s.get_next_development_version("1.2.4"))
+        s = vis.get_rel_qualifier_increment_strategy("1.2.4", "1.2.3")
+        self.assertEqual("1.2.3-rel1", s.get_next_release_version("1.2.4"))
+        self.assertEqual("1.2.4-SNAPSHOT", s.get_next_development_version("blah"))
 
-        s = vis.get_rel_qualifier_increment_strategy("1.2.3-rel1")
+        s = vis.get_rel_qualifier_increment_strategy("1.2.4-SNAPSHOT", "1.2.3-rel1")
         self.assertEqual("1.2.3-rel2", s.get_next_release_version("1.2.4-SNAPSHOT"))
         self.assertEqual("1.2.4-SNAPSHOT", s.get_next_development_version("1.2.4-SNAPSHOT"))
 
-        s = vis.get_rel_qualifier_increment_strategy("1.2.3-rel9")
+        s = vis.get_rel_qualifier_increment_strategy("1.2.4-SNAPSHOT", "1.2.3-rel9")
         self.assertEqual("1.2.3-rel10", s.get_next_release_version("1.2.4-SNAPSHOT"))
         self.assertEqual("1.2.4-SNAPSHOT", s.get_next_development_version("1.2.4-SNAPSHOT"))
 
-        s = vis.get_rel_qualifier_increment_strategy("1.2.3-rel10")
+        s = vis.get_rel_qualifier_increment_strategy("1.2.4-SNAPSHOT", "1.2.3-rel10")
         self.assertEqual("1.2.3-rel11", s.get_next_release_version("1.2.4-SNAPSHOT"))
         self.assertEqual("1.2.4-SNAPSHOT", s.get_next_development_version("1.2.4-SNAPSHOT"))
 
-        s = vis.get_rel_qualifier_increment_strategy("1.2.3-rel99")
+        s = vis.get_rel_qualifier_increment_strategy("1.2.4-SNAPSHOT", "1.2.3-rel99")
         self.assertEqual("1.2.3-rel100", s.get_next_release_version("1.2.4-SNAPSHOT"))
         self.assertEqual("1.2.4-SNAPSHOT", s.get_next_development_version("1.2.4-SNAPSHOT"))
 
     def test_rel_qualifier_increment_strategy__multiple_qualifiers(self):
-        s = vis.get_rel_qualifier_increment_strategy("1.2.3-rel1-foo22")
+        s = vis.get_rel_qualifier_increment_strategy("foo", "1.2.3-rel1-foo22")
         self.assertEqual("1.2.3-rel2-foo22", s.get_next_release_version("foo"))
 
-        s = vis.get_rel_qualifier_increment_strategy("1.2.3-rel9-foo22")
+        s = vis.get_rel_qualifier_increment_strategy("foo", "1.2.3-rel9-foo22")
         self.assertEqual("1.2.3-rel10-foo22", s.get_next_release_version("foo"))
 
-        s = vis.get_rel_qualifier_increment_strategy("1.2.3-rel99-foo22-blah1")
+        s = vis.get_rel_qualifier_increment_strategy("foo", "1.2.3-rel99-foo22-blah1")
         self.assertEqual("1.2.3-rel100-foo22-blah1", s.get_next_release_version("foo"))
+
+    def test_get_version_increment_strategy__rel_qualifier(self):
+        s = vis.get_version_increment_strategy(None, "1.2.4-SNAPSHOT", "1.2.3")
+        self.assertEqual("1.2.3-rel1", s.get_next_release_version("ignored"))
+
+    def test_get_version_increment_strategy__named(self):
+        s = vis.get_version_increment_strategy("minor", "1.2.3", None)
+        self.assertEqual("1.1.0-SNAPSHOT", s.get_next_development_version("1.0.0"))
+
+    def test_rel_qualifier_increment_strategy__current_version_has_rel_qualifier(self):
+        s = vis.get_rel_qualifier_increment_strategy("1.2.3-rel1-SNAPSHOT", "1.2.3-rel1")
+        self.assertEqual("4.2.3-rel9", s.get_next_release_version("4.2.3-rel8"))
+
 
     def test_rel_qualifier_increment_strategy__last_rel_qualifier_uses_old_dash_number_syntax(self):
         # we used to use rel-<num>, for example rel-1, rel-2 etc
         # we switched this to rel<num> (so rel1, rel2 etc) so that '-' is only
         # used as a separator between version qualifiers: 1.0.0-rel1-SNAPSHOT
-        s = vis.get_rel_qualifier_increment_strategy("1.2.3-rel-1")
+        s = vis.get_rel_qualifier_increment_strategy("blah", "1.2.3-rel-1")
         self.assertEqual("1.2.3-rel2", s.get_next_release_version("blah"))
 
-        s = vis.get_rel_qualifier_increment_strategy("1.2.3-rel-10")
+        s = vis.get_rel_qualifier_increment_strategy("blah", "1.2.3-rel-10")
         self.assertEqual("1.2.3-rel11", s.get_next_release_version("blah"))
 
 

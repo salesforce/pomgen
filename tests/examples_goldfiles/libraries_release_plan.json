@@ -68,8 +68,8 @@
     "released_version": null,
     "requires_release": true,
     "release_reason": "artifact has never been released",
-    "proposed_release_version": "20260509.1",
-    "proposed_next_dev_version": "20260509.1-SNAPSHOT"
+    "proposed_release_version": "20260601.1",
+    "proposed_next_dev_version": "20260601.2-SNAPSHOT"
   },
   {
     "library_path": "examples/java/java-binary",
@@ -113,8 +113,8 @@
     "released_version": null,
     "requires_release": false,
     "release_reason": null,
-    "proposed_release_version": null,
-    "proposed_next_dev_version": null
+    "proposed_release_version": "1.0.0",
+    "proposed_next_dev_version": "1.1.0-SNAPSHOT"
   },
   {
     "library_path": "examples/js/hello-world",
@@ -122,8 +122,8 @@
     "released_version": null,
     "requires_release": true,
     "release_reason": "artifact has never been released",
-    "proposed_release_version": "1.2.3",
-    "proposed_next_dev_version": "2.0.0-SNAPSHOT"
+    "proposed_release_version": "2.0.0",
+    "proposed_next_dev_version": "3.0.0-SNAPSHOT"
   },
   {
     "library_path": "examples/python/111/communicator",
@@ -131,8 +131,8 @@
     "released_version": null,
     "requires_release": true,
     "release_reason": "artifact has never been released",
-    "proposed_release_version": "2.0.1",
-    "proposed_next_dev_version": "2.1.0-SNAPSHOT"
+    "proposed_release_version": "2.1.0",
+    "proposed_next_dev_version": "2.2.0-SNAPSHOT"
   },
   {
     "library_path": "examples/python/111/computer",
@@ -140,8 +140,8 @@
     "released_version": null,
     "requires_release": true,
     "release_reason": "artifact has never been released",
-    "proposed_release_version": "1.0.1",
-    "proposed_next_dev_version": "1.1.0-SNAPSHOT"
+    "proposed_release_version": "1.1.0",
+    "proposed_next_dev_version": "1.2.0-SNAPSHOT"
   },
   {
     "library_path": "examples/python/hello-world",
@@ -149,7 +149,7 @@
     "released_version": null,
     "requires_release": true,
     "release_reason": "artifact has never been released",
-    "proposed_release_version": "0.0.2",
-    "proposed_next_dev_version": "0.0.3-SNAPSHOT"
+    "proposed_release_version": "0.0.3",
+    "proposed_next_dev_version": "0.0.4-SNAPSHOT"
   }
 ]

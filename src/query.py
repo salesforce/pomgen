@@ -11,6 +11,7 @@ Command line utility that shows information about artifacts.
 
 import argparse
 import collections
+import functools
 import common.argsupport as argsupport
 import common.common as common
 import common.instancequery as instancequery
@@ -23,6 +24,7 @@ import crawl.libaggregator as libaggregator
 import common.manifestcontent as manifestcontent
 import crawl.workspace as workspace
 import generate.generationstrategyfactory as generationstrategyfactory
+import packagemanager.nexus as nexus
 import json
 import os
 import sys
@@ -62,21 +64,37 @@ def _parse_arguments(args):
     parser.add_argument("--force", required=False, action="store_true",
         help="Simulates release information when --force option is used")
 
+    parser.add_argument("--ensure_proposed_version_availability",
+                        required=False, action="store_true",
+        help="For each proposed release version, checks the package manager to ensure that artifacts with that version have not been published yet")
+
     return parser.parse_args(args)
-
-
-def _get_version_increment_strategy(node, increment_rel_qualifier):
-    if node.version is None:
-        # edge case when the generation_mode is "skip"
-        return None
-    if increment_rel_qualifier:
-        return vis.get_rel_qualifier_increment_strategy(node.released_version)
-    else:
-        return vis.get_version_increment_strategy(node.version_increment_strategy_name)
 
 
 def _to_json(thing):
     return json.dumps(thing, indent=2)
+
+
+def _compute_proposed_next_versions(lib_node, all_artifact_defs, vers_incr_strat, nexus_artifact_url, verbose=False):
+    """
+    Computes the proposed release and development versions for the given
+    library node. If nexus_artifact_url is not None, increments the release
+    version until it is available in Nexus, by checking all artifacts in the
+    library.
+    """
+    current_version = lib_node.md_version
+    rel_vers = vers_incr_strat.get_next_release_version(current_version)
+    if nexus_artifact_url is not None and lib_node.requires_release:
+        lib_artifact_defs = [art_def for art_def in all_artifact_defs if art_def.library_path == lib_node.library_path]
+        # TODO this assumes nexus - needs to instead pick the right package
+        # managers based on the artifact type being processed
+        rel_vers = nexus.get_next_available_version(
+            lib_artifact_defs,
+            rel_vers, nexus_artifact_url,
+            vers_incr_strat,
+            verbose)
+    dev_vers = vers_incr_strat.get_next_development_version(rel_vers)
+    return rel_vers, dev_vers
 
 
 if __name__ == "__main__":
@@ -150,6 +168,9 @@ if __name__ == "__main__":
     crawl_artifact_dependencies = (args.library_release_plan_tree or
                                    args.library_release_plan_json)
 
+    if args.ensure_proposed_version_availability:
+        assert cfg.nexus_artifact_url is not None, "nexus_artifact_url must be configured in .poppyrc [general] section"
+
     if crawl_artifact_dependencies:
         crawler = crawler.Crawler(ws, args.verbose)
         crawler_result = crawler.crawl(packages, force_release=args.force)
@@ -165,6 +186,7 @@ if __name__ == "__main__":
         else:
             if args.library_release_plan_json:
                 all_libs_json = []
+                all_artifact_defs = [ctx.artifact_def for ctx in crawler_result.artifact_generation_contexts]
                 incremental_rel_enabled = cfg.transitives_versioning_mode == "counter"
                 all_lib_nodes = sorted(libaggregator.LibraryNode.ALL_LIBRARY_NODES)
                 for node in all_lib_nodes:
@@ -173,8 +195,6 @@ if __name__ == "__main__":
                         incremental_rel_enabled and
                         transitive and
                         len([p for p in cfg.always_semver_path_prefixes if node.library_path.startswith(p)]) == 0)
-                    version_strat = _get_version_increment_strategy(
-                        node, increment_rel_qualifier)
                     attrs = collections.OrderedDict()
                     attrs["library_path"] = node.library_path
                     attrs["version"] = node.version
@@ -184,12 +204,26 @@ if __name__ == "__main__":
 
                     next_release_version = None
                     next_dev_version = None
-                    if version_strat is not None:
-                        next_release_version = version_strat.get_next_release_version(node.md_version)
-                        next_dev_version = version_strat.get_next_development_version(node.md_version)
-                    attrs["proposed_release_version"] = next_release_version
-                    attrs["proposed_next_dev_version"] = next_dev_version
+                    if node.version is None:
+                        # edge case when the generation_mode is "skip"
+                        version_incr_strat = None
+                    else:
+                        strat_name = None if increment_rel_qualifier else node.version_increment_strategy_name
+                        version_incr_strat = vis.get_version_increment_strategy(
+                            strat_name, node.md_version, node.released_version)
+                    if version_incr_strat is not None:
+                        nexus_url = None
+                        if args.ensure_proposed_version_availability:
+                            assert cfg.nexus_artifact_url is not None
+                            nexus_url = cfg.nexus_artifact_url
+                        next_rel_vers, next_dev_vers = \
+                        _compute_proposed_next_versions(
+                            node,
+                            all_artifact_defs,
+                            version_incr_strat,
+                            nexus_url)
+                    attrs["proposed_release_version"] = next_rel_vers
+                    attrs["proposed_next_dev_version"] = next_dev_vers
 
                     all_libs_json.append(attrs)
                 print(_to_json(all_libs_json))
-

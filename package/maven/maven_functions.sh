@@ -16,7 +16,7 @@ _for_each_pom() {
     local custom_jar_classifier=$4
     local pom_root_path=$5
 
-    if ! [[ "$action" =~ ^(install_main_artifact|build_javadoc_jar|install_sources_and_javadoc_jars|upload_all_artifacts|clean_source_tree|check_nexus_version)$ ]]; then
+    if ! [[ "$action" =~ ^(install_main_artifact|build_javadoc_jar|install_sources_and_javadoc_jars|upload_all_artifacts|clean_source_tree)$ ]]; then
         echo "ERROR: Unknown action $action" && exit 1
     fi
 
@@ -160,11 +160,6 @@ _for_each_pom() {
         if [ "$is_pom_only_artifact" == 1 ]; then
             # for pom artifacts, we don't set the classifier
             jar_artifact_classifier="None"
-        fi
-
-        if [ "$action" == "check_nexus_version" ]; then
-            # testing / debugging
-            _find_available_nexus_version "$GROUP_ID" "$ARTIFACT_ID" "$VERSION"
         fi
 
         if [ "$action" == "install_main_artifact" ]; then
@@ -439,32 +434,3 @@ EOL
     UPDATED_JAR_ARTIFACT_PATH=$new_artifact_path
 }
 
-# Checks if the given version exists in Nexus.
-# 1st arg: groupId
-# 2nd arg: artifactId
-# 3rd arg: version
-_find_available_nexus_version() {
-    local group_id=$1
-    local artifact_id=$2
-    local version=$3
-
-    # eg https://nexus.repo.net/nexus/content/groups/public
-    if [ -z "$REPOSITORY_READ_URL" ]; then
-        echo "ERROR: REPOSITORY_READ_URL must be set"
-        exit 1
-    fi
-
-    local group_path="${group_id//\.//}"
-    local artifact_url="${REPOSITORY_READ_URL}/${group_path}/${artifact_id}/${version}/${artifact_id}-${version}.pom"
-    local curl_start=$(date +%s)
-    local curl_cmd="curl -s --netrc -L --head -o /dev/null -w '%{http_code}' ${artifact_url}"
-    echo "INFO: ${curl_cmd}"
-    local http_code=$(curl -s --netrc -L --head -o /dev/null -w '%{http_code}' "$artifact_url")
-    if [ "$http_code" = "200" ]; then
-        echo "INFO: Version ${version} exists on Nexus already"
-    else
-        echo "INFO: Version ${version} ok to use (http $http_code)"
-    fi
-    local curl_end=$(date +%s)
-    echo "INFO: Took $((curl_end - curl_start))s"
-}

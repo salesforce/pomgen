@@ -78,7 +78,8 @@ def update_released_artifact(root_path, packages, generation_strategy_factory,
                              source_exclusions,
                              new_version=None,
                              new_artifact_hash=None,
-                             use_current_artifact_hash=False):
+                             use_current_artifact_hash=False,
+                             increment_rel_qualifier=False):
     """
     Updates the version and/or artifact hash attributes in the released
     metadata files (ie BUILD.pom.released) in the specified packages.
@@ -91,6 +92,17 @@ def update_released_artifact(root_path, packages, generation_strategy_factory,
 
         released_file_path = strategy.released_metadata_path
         content, _ = mdfiles.read_file(root_path, package, released_file_path)
+
+        if increment_rel_qualifier:
+            if content is None:
+                continue
+            attrs, _ = code.parse_attributes(content)
+            released_version = attrs.get("version", None)
+            if released_version is None:
+                continue
+            incr_strat = vis.get_rel_qualifier_increment_strategy("not-used", released_version)
+            new_version = incr_strat.get_next_release_version(None)
+
         if content is None and new_artifact_hash is None:
             # there is no released md file yet and a hash was not specified
             # explicitly: we have to compute the current hash so we can gen
@@ -121,9 +133,10 @@ def update_released_artifact(root_path, packages, generation_strategy_factory,
                 if artifact_hash is not None:
                     content = _update_artifact_hash_in_released_metadata(content, artifact_hash)
             mdfiles.write_file(content, root_path, package, released_file_path)
-        except:            
+        except:
             print("[ERROR] Cannot update released manifest [%s]: %s" % (released_file_path, sys.exc_info()))
             raise
+
 
 
 def _maybe_update_version(root_path, art_def,
@@ -138,7 +151,7 @@ def _maybe_update_version(root_path, art_def,
     else:
         if update_version_using_incr_strat:
             is_snapshot_version = current_version.upper().endswith(vis.SNAPSHOT_QUAL)
-            incr_strat = vis.get_version_increment_strategy(art_def.version_increment_strategy)
+            incr_strat = vis.get_version_increment_strategy_by_name(art_def.version_increment_strategy)
             updated_version = incr_strat.get_next_development_version(current_version)
             if not is_snapshot_version:
                 # get_next_development_version re-adds -SNAPSHOT, but this
