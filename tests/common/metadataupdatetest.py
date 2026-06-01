@@ -596,6 +596,36 @@ artifact_update(
             self.assertIn('version = "3.2.1-SNAPSHOT"', content)
             self.assertIn(')', content)
 
+    def test_update_BUILD_pom_released__increment_rel_qualifier(self):
+        package_rel_path = "package1/package2"
+        repo_package = os.path.join(self.repo_root, package_rel_path)
+        os.makedirs(repo_package)
+        self._write_build_pom(repo_package, "a1", "g1", "1.2.3")
+        self._write_build_pom_released(repo_package, "1.0.0", "aaa")
+
+        metadataupdate.update_released_artifact(
+            self.repo_root, [package_rel_path], self.fac,
+            exclusions.src_exclusions(), increment_rel_qualifier=True)
+
+        with open(os.path.join(repo_package, "MVN-INF", "BUILD.pom.released"), "r") as f:
+            content = f.read()
+            self.assertIn('version = "1.0.0-rel1"', content)
+
+    def test_update_BUILD_pom_released__increment_rel_qualifier__already_has_rel(self):
+        package_rel_path = "package1/package2"
+        repo_package = os.path.join(self.repo_root, package_rel_path)
+        os.makedirs(repo_package)
+        self._write_build_pom(repo_package, "a1", "g1", "1.2.3")
+        self._write_build_pom_released(repo_package, "1.0.0-rel5", "aaa")
+
+        metadataupdate.update_released_artifact(
+            self.repo_root, [package_rel_path], self.fac,
+            exclusions.src_exclusions(), increment_rel_qualifier=True)
+
+        with open(os.path.join(repo_package, "MVN-INF", "BUILD.pom.released"), "r") as f:
+            content = f.read()
+            self.assertIn('version = "1.0.0-rel6"', content)
+
     def _write_build_pom(self, package_path, artifact_id=None, group_id=None,
                          version=None,
                          version_increment_strategy="minor",

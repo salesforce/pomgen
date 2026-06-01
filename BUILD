@@ -18,6 +18,7 @@ py_library(
         "src/config/*.py",
         "src/crawl/*.py",
         "src/generate/**/*.py",
+        "src/packagemanager/*.py",
     ]),
     data = ["examples/java/pom_template.xml"],
     imports = ["src"],

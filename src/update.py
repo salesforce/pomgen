@@ -37,6 +37,9 @@ def _parse_arguments(args):
     parser.add_argument("--update_released_artifact_hash_to_current", required=False,
                         action='store_true',
         help="Computes the artifact hash based on the current state")
+    parser.add_argument("--increment_rel_qualifier", required=False,
+                        action='store_true',
+        help="Increments the special \"rel\" qualifier in the released version (used when \"transitives_versioning_mode\" is set to 'counter'")
     parser.add_argument("--update_version_using_version_increment_strategy", required=False,
                         action='store_true',
         help="Updates the version using the increment strategy set in the manifest file")
@@ -83,10 +86,13 @@ if __name__ == "__main__":
 
     if (args.new_released_version is not None or
         args.new_released_artifact_hash is not None or
-        args.update_released_artifact_hash_to_current):
+        args.update_released_artifact_hash_to_current or
+        args.increment_rel_qualifier):
         metadataupdate.update_released_artifact(
             repo_root, packages, fac,
             cfg.all_src_exclusions,
             args.new_released_version,
             args.new_released_artifact_hash,
-            args.update_released_artifact_hash_to_current)
+            args.update_released_artifact_hash_to_current,
+            args.increment_rel_qualifier)
+

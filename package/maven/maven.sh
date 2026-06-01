@@ -330,8 +330,8 @@ IFS='|' read -r jar_artifact_classifier pom_base_filename <<< "$config_output"
 
 for action in $(echo $actions | tr "," "\n")
 do
-    if ! [[ "$action" =~ ^(clean|pomgen|install|install_all|deploy_all|deploy_only|build|check_nexus_version)$ ]]; then
-        echo "[ERROR] action [$action] must be one of [clean|pomgen|install|install_all|deploy_all|deploy_only|build|check_nexus_version]" && exit 1
+    if ! [[ "$action" =~ ^(clean|pomgen|install|install_all|deploy_all|deploy_only|build)$ ]]; then
+        echo "[ERROR] action [$action] must be one of [clean|pomgen|install|install_all|deploy_all|deploy_only|build]" && exit 1
     fi
 
     echo ""
@@ -396,13 +396,6 @@ do
             exit 1
         fi
         _for_each_pom "upload_all_artifacts" $repo_root_path $pom_base_filename $jar_artifact_classifier $library_path
-
-    elif [ "$action" == "check_nexus_version" ]; then
-        if [ -z "$REPOSITORY_READ_URL" ]; then
-            echo "[ERROR] REPOSITORY_READ_URL must be set"
-            exit 1
-        fi
-        _for_each_pom "check_nexus_version" $repo_root_path $pom_base_filename $jar_artifact_classifier $library_path
 
     elif [ "$action" == "build" ]; then
         if [ "$(_use_libraries_hint_file $repo_root_path $follow_references $library_path )" == "true" ]; then
