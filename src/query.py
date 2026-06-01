@@ -169,7 +169,7 @@ if __name__ == "__main__":
                                    args.library_release_plan_json)
 
     if args.ensure_proposed_version_availability:
-        assert cfg.nexus_artifact_url is not None, "nexus_artifact_url must be configured in .poppyrc [general] section"
+        assert cfg.nexus_artifact_url is not None, "nexus_artifact_url must be configured in .poppyrc [artifact] section"
 
     if crawl_artifact_dependencies:
         crawler = crawler.Crawler(ws, args.verbose)
@@ -221,7 +221,8 @@ if __name__ == "__main__":
                             node,
                             all_artifact_defs,
                             version_incr_strat,
-                            nexus_url)
+                            nexus_url,
+                            args.verbose)
                     attrs["proposed_release_version"] = next_rel_vers
                     attrs["proposed_next_dev_version"] = next_dev_vers
 
