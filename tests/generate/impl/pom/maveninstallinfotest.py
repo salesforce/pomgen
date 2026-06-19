@@ -65,6 +65,31 @@ class MavenInstallTest(unittest.TestCase):
         self.assertEqual("my_rules", files[1][0])
         self.assertEqual(os.path.join(repo_root, "tools", "my_rules_install.json"), files[1][1])
 
+    def test_explicit_name(self):
+        repo_root = tempfile.mkdtemp("monorepo")
+        self._touch_file_at_path(repo_root, "tools/maven_install.json")
+        m = maveninstallinfo.MavenInstallInfo(("tools/maven_install.json@my_custom_name",))
+
+        files = m.get_maven_install_names_and_paths(repo_root)
+
+        self.assertEqual(1, len(files))
+        self.assertEqual("my_custom_name", files[0][0])
+        self.assertEqual(os.path.join(repo_root, "tools", "maven_install.json"), files[0][1])
+
+    def test_explicit_name_overrides_glob(self):
+        repo_root = tempfile.mkdtemp("monorepo")
+        self._touch_file_at_path(repo_root, "tools/maven_install.json")
+        self._touch_file_at_path(repo_root, "tools/my_rules_install.json")
+        m = maveninstallinfo.MavenInstallInfo(("tools/*", "tools/maven_install.json@custom",))
+
+        files = m.get_maven_install_names_and_paths(repo_root)
+
+        self.assertEqual(2, len(files))
+        self.assertEqual("my_rules", files[0][0])
+        self.assertEqual(os.path.join(repo_root, "tools", "my_rules_install.json"), files[0][1])
+        self.assertEqual("custom", files[1][0])
+        self.assertEqual(os.path.join(repo_root, "tools", "maven_install.json"), files[1][1])
+
     def _touch_file_at_path(self, repo_root_path, file_path):
         path = os.path.join(repo_root_path, file_path)
         parent_dir = os.path.dirname(path)

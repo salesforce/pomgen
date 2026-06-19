@@ -24,20 +24,37 @@ class MavenInstallInfo:
         if self.allow_excludes:
             excluded_paths = [p[1:].strip() for p in self.maven_install_paths if self._is_excluded_path(p)]
 
+        # collect paths with explicit @name overrides so globs can skip them
+        explicitly_named_paths = set()
+        for rel_path in self.maven_install_paths:
+            if self._is_excluded_path(rel_path):
+                continue
+            at_index = rel_path.find("@")
+            if at_index > 0:
+                explicitly_named_paths.add(rel_path[:at_index])
+
         names_and_paths = []
         for rel_path in self.maven_install_paths:
             if self._is_excluded_path(rel_path):
                 # excluded paths are handled below
                 continue
+            explicit_name = None
+            at_index = rel_path.find("@")
+            if at_index > 0:
+                explicit_name = rel_path[at_index+1:]
+                rel_path = rel_path[:at_index]
             path = os.path.join(repository_root, rel_path)
-            name_and_path = self._process_path(path)
+            name_and_path = self._process_path(path, explicit_name)
             if name_and_path is None:
                 globbed_names_and_paths = []
                 if "*" in path:
                     for path in glob.glob(path):
-                        if path[len(repository_root)+1:] in excluded_paths:
+                        rel = path[len(repository_root)+1:]
+                        if rel in excluded_paths:
                             continue
-                        name_and_path = self._process_path(path)
+                        if rel in explicitly_named_paths:
+                            continue
+                        name_and_path = self._process_path(path, explicit_name)
                         if name_and_path is not None:
                             globbed_names_and_paths.append(name_and_path)
                     # sort for predictable traversal order for tests
@@ -51,7 +68,7 @@ class MavenInstallInfo:
     def _is_excluded_path(self, path):
         return path.startswith("-")
 
-    def _process_path(self, path):
+    def _process_path(self, path, explicit_name=None):
         """
         Returns a tuple (mvn install name, mvn install path) or None
         if the specified path is invalid.
@@ -60,7 +77,8 @@ class MavenInstallInfo:
         if os.path.exists(path):
             fname = os.path.basename(path)
             if fname.endswith(mvn_install_suffix):
-                return (fname[:-len(mvn_install_suffix)], path)
+                name = explicit_name if explicit_name else fname[:-len(mvn_install_suffix)]
+                return (name, path)
         return None
 
 
