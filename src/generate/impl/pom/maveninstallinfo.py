@@ -29,20 +29,16 @@ class MavenInstallInfo:
         for rel_path in self.maven_install_paths:
             if self._is_excluded_path(rel_path):
                 continue
-            at_index = rel_path.find("@")
-            if at_index > 0:
-                explicitly_named_paths.add(rel_path[:at_index])
+            split_path, explicit_name = self._split_explicit_name(rel_path)
+            if explicit_name is not None:
+                explicitly_named_paths.add(split_path)
 
         names_and_paths = []
         for rel_path in self.maven_install_paths:
             if self._is_excluded_path(rel_path):
                 # excluded paths are handled below
                 continue
-            explicit_name = None
-            at_index = rel_path.find("@")
-            if at_index > 0:
-                explicit_name = rel_path[at_index+1:]
-                rel_path = rel_path[:at_index]
+            rel_path, explicit_name = self._split_explicit_name(rel_path)
             path = os.path.join(repository_root, rel_path)
             name_and_path = self._process_path(path, explicit_name)
             if name_and_path is None:
@@ -67,6 +63,16 @@ class MavenInstallInfo:
 
     def _is_excluded_path(self, path):
         return path.startswith("-")
+
+    def _split_explicit_name(self, rel_path):
+        """
+        Splits a 'path@name' string into a (path, name) tuple. If there is no
+        explicit '@name' override, name is None.
+        """
+        at_index = rel_path.find("@")
+        if at_index > 0:
+            return rel_path[:at_index], rel_path[at_index+1:]
+        return rel_path, None
 
     def _process_path(self, path, explicit_name=None):
         """
