@@ -11,7 +11,6 @@ Command line utility that shows information about artifacts.
 
 import argparse
 import collections
-import functools
 import common.argsupport as argsupport
 import common.common as common
 import common.instancequery as instancequery

@@ -5,7 +5,6 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
-import functools
 import unittest
 from unittest.mock import patch
 from common import version_increment_strategy as vis

@@ -50,8 +50,7 @@ java_library(
 Similar to above, we can build jars using Bazel, so that they can be used in Maven projects:
 
 1. Make code changes to the library which you want to release a jar for.
-1. Build the library by running `bazel build path/to/library/...`.
-1. Run `bazel run @poppy//package/maven -- -a pomgen,install -l path/to/library` to generate poms and install the jars to `~/.m2/repository`.
+1. Run `bazel run @poppy//package/maven -- -a pomgen,build,install -l path/to/library` to generate poms and install the jars to `~/.m2/repository`.
 1. Update the pom.xml in the consuming Maven project to use the right jar version
 
-See [this example](../examples/hello-world#installing-maven-artifacts-into-the-local-maven-repository) for more information.
+See [this example](../examples/java/hello-world#installing-maven-artifacts-into-the-local-maven-repository) for more information.

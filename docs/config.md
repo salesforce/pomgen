@@ -86,8 +86,13 @@ always_semver_path_prefixes=
 # value set in this cfg file
 # Default value: ""
 jar_classifier=
-```
 
+# Experimental feature - Only for Java / Jars / Nexus
+# If set, finds previously uploaded artifacts at this location and ensures
+# that the "proposed_release_version" returned by //:query is always higher than
+# what's currently in Nexus. Uses .netrc-based authentication.
+ nexus_artifact_url=
+```
 
 ### transitives_versioning_mode
 

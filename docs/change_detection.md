@@ -1,8 +1,8 @@
 # Change Detection
 
-pomgen tracks whether an artifact has changed since it was last released. It also tracks the last released version of each artifact. It uses this information to decide whether an artifact needs to be released and to determine which artifact version to use in `<dependency>` references in generated poms.
+poppy can write additional metadata at artifact release time (when an artifact is uploaded to the package manager) that contains a checksum and the released artifact version. It can then use this information to decide whether an artifact actually needs to be released and if it does not, it can used the previously released version in `<dependency>` references in generated artifact manifest files (for example in generate pom.xml files).
 
-Change detection is most useful for libraries that have a large number of transitives, because it prevents the (unchanged) transitives from being released over and over again when the main Library changes.
+Change detection is most useful for libraries that have a large number of transitives, because it prevents the (unchanged) transitives from being released over and over again when the main library changes.
 
 
 ## Example
