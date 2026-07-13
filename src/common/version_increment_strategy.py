@@ -85,7 +85,12 @@ class DefaultVersionIncrementStrategy:
         if current_version.endswith(SNAPSHOT_QUAL):
             return current_version[0:-len(SNAPSHOT_QUAL)]
         else:
-            return self.get_next_version__hook(current_version)
+            # there may be qualifiers that are part of the version
+            qualifier, version = _get_qualifier_and_version(current_version)
+            next_version = self.get_next_version__hook(version)
+            if qualifier is not None:
+                next_version += qualifier
+            return next_version
 
     def get_next_development_version(self, current_version):
         """

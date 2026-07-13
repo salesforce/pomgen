@@ -152,6 +152,15 @@ class VersionIncrementStrategyTest(unittest.TestCase):
         s = vis.get_rel_qualifier_increment_strategy("blah", "1.2.3-rel-10")
         self.assertEqual("1.2.3-rel11", s.get_next_release_version("blah"))
 
+    def test_next_rel_version_with_qualifier(self):
+        """
+        Test rel version increment  with complex qualifier.
+        """
+        s = vis.get_version_increment_strategy_by_name("patch")
+
+        self.assertEqual("0.1.7-yahoo-was_cool_1999",
+                         s.get_next_release_version("0.1.6-yahoo-was_cool_1999"))
+
 
 def _today():
     return datetime.now(timezone.utc).strftime('%Y%m%d')
