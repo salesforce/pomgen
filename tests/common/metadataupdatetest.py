@@ -12,7 +12,6 @@ import config.config as config
 import config.exclusions as exclusions
 import crawl.git as git
 import crawl.workspace as workspace
-import common.manifestcontent as manifestcontent
 import generate.generationstrategyfactory as generationstrategyfactory
 import os
 import tempfile
@@ -25,7 +24,7 @@ class MetadataUpdateTest(unittest.TestCase):
         self.repo_root = tempfile.mkdtemp("repo")
         cfg = config.Config()
         self.fac = generationstrategyfactory.GenerationStrategyFactory(
-            self.repo_root, cfg, manifestcontent.NOOP, verbose=True)
+            self.repo_root, cfg, verbose=True)
         self.workspace = workspace.Workspace(self.repo_root, cfg, self.fac, cache_artifact_defs=False)        
 
     def test_update_BUILD_pom_released__set_artifact_hash_to_current(self):

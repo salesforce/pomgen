@@ -9,7 +9,6 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 import common.genmode as genmode
 import config.config as config
 import crawl.buildpom as buildpom
-import common.manifestcontent as manifestcontent
 import generate.impl.pom.dependencymd as dependencymd
 import generate.impl.pom.maveninstallinfo as maveninstallinfo
 import generate.impl.pom.pomgenerationstrategy as pomgenerationstrategy
@@ -433,7 +432,7 @@ released_maven_artifact(
         strategy = pomgenerationstrategy.PomGenerationStrategy(
             "root", config.Config(), maveninstallinfo.NOOP,
             dependencymd.DependencyMetadata(None),
-            manifestcontent.NOOP, label_to_overridden_fq_label={}, verbose=True)
+            label_to_overridden_fq_label={}, verbose=True)
         strategy.initialize()
         return strategy
 

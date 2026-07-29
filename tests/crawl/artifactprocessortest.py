@@ -5,7 +5,6 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 import common.genmode as genmode
-import common.manifestcontent as manifestcontent
 import common.os_util as os_util
 import config.config as config
 import config.exclusions as exclusions
@@ -425,7 +424,7 @@ class ArtifactProcessorTest(unittest.TestCase):
         strategy = pomgenerationstrategy.PomGenerationStrategy(
             "root", config.Config(), maveninstallinfo.NOOP,
             dependencymd.DependencyMetadata(None),
-            manifestcontent.NOOP, label_to_overridden_fq_label={}, verbose=True)
+            label_to_overridden_fq_label={}, verbose=True)
         strategy.initialize()
         return strategy
 

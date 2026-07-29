@@ -20,7 +20,6 @@ import config.config as config
 import crawl.bazel as bazel
 import crawl.crawler as crawler
 import crawl.libaggregator as libaggregator
-import common.manifestcontent as manifestcontent
 import crawl.workspace as workspace
 import generate.generationstrategyfactory as generationstrategyfactory
 import packagemanager.nexus as nexus
@@ -101,7 +100,7 @@ if __name__ == "__main__":
     repo_root = common.get_repo_root(args.repo_root)
     cfg = config.load(repo_root, args.verbose)
     fac = generationstrategyfactory.GenerationStrategyFactory(
-        repo_root, cfg, manifestcontent.NOOP, args.verbose)
+        repo_root, cfg, args.verbose)
     ws = workspace.Workspace(repo_root, cfg, fac)
     determine_packages_to_process = (args.list_libraries or 
                                      args.list_artifacts or

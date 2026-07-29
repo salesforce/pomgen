@@ -8,7 +8,6 @@ import common.label as labelm
 import config.config as config
 import crawl.buildpom as buildpom
 import crawl.crawler as crawlerm
-import common.manifestcontent as manifestcontent
 import crawl.workspace as workspace
 import generate.generationstrategyfactory as generationstrategyfactory
 import generate.impl.pom.dependencymd as dependencymdm
@@ -35,7 +34,7 @@ class CrawlerTestMisc(unittest.TestCase):
             cfg = self._get_config()
         self.repo_root_path = tempfile.mkdtemp("root")
         self.fac = generationstrategyfactory.GenerationStrategyFactory(
-            self.repo_root_path, cfg, manifestcontent.NOOP, verbose=True)
+            self.repo_root_path, cfg, verbose=True)
         self.strat = self._get_strategy()
         self.ws = workspace.Workspace(self.repo_root_path, cfg, self.fac)
 
@@ -210,7 +209,7 @@ class CrawlerTestMisc(unittest.TestCase):
         strategy = pomgenerationstrategy.PomGenerationStrategy(
             "root", config.Config(), maveninstallinfo.NOOP,
             dependencymdm.DependencyMetadata(None),
-            manifestcontent.NOOP, label_to_overridden_fq_label={}, verbose=True)
+            label_to_overridden_fq_label={}, verbose=True)
         strategy.initialize()
         return strategy
 

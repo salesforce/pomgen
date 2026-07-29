@@ -23,7 +23,7 @@ def get_dir_hash(repo_root_path, rel_paths, source_exclusions, git_repo_must_exi
     for rel_path in rel_paths:
         dir_path = os.path.join(repo_root_path, rel_path)
         if not os.path.exists(dir_path):
-            raise Exception("Directory must exist for hash computation: [%s]" % dir_path)
+            raise FileNotFoundError("Directory must exist for hash computation: [%s]" % dir_path)
         files_output += _ls_files(repo_root_path, rel_path, source_exclusions,
                                   git_repo_must_exist)
     with tempfile.NamedTemporaryFile("w") as f:

@@ -13,7 +13,6 @@ import common.common as common
 import common.label as labelm
 import config.config as config
 import crawl.buildpom as buildpom
-import common.manifestcontent as manifestcontent
 import generate.impl.pom.dependencymd as dependencymdm
 import generate.impl.pom.maveninstallinfo as maveninstallinfo
 import generate.impl.pom.pom as pom
@@ -49,9 +48,8 @@ def _parse_arguments(args):
 class ThirdPartyDepsPomGen(pom.DynamicPomGen):
 
     def __init__(self, artifact_def, dependencies, pom_template, dependency_md):
-        super(ThirdPartyDepsPomGen, self).__init__(
-            artifact_def, pom_template, manifestcontent.NOOP, dependency_md)
-        self.dependencies = dependencies
+        super(ThirdPartyDepsPomGen, self).__init__(artifact_def, pom_template, dependency_md)
+        self.register_dependencies(dependencies)
 
 
 def _starts_with_ignored_prefix(line):
@@ -79,8 +77,7 @@ def main(args):
     dependencymd = dependencymdm.DependencyMetadata(cfg.jar_artifact_classifier)
     gen_strategy = pomgenerationstrategy.PomGenerationStrategy(
         repo_root, cfg, mvn_install_info, dependencymd,
-        manifestcontent.NOOP, label_to_overridden_fq_label={},
-        verbose=args.verbose)
+        label_to_overridden_fq_label={}, verbose=args.verbose)
     gen_strategy.initialize()
 
     group_id = "all_ext_deps_group" if args.group_id is None else args.group_id

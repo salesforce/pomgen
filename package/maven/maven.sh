@@ -358,10 +358,15 @@ do
             echo "[DEBUG] Running with extra args ${extra_args}"
             extra_args="${extra_args} --verbose"
         fi
+        if [ -z "$POM_DESCRIPTION" ]; then
+            POM_DESCRIPTION=''
+        else
+            POM_DESCRIPTION="description=$POM_DESCRIPTION"
+        fi
         bazel run @poppy//:gen -- \
                --package $library_path \
                --destdir $repo_root_path/bazel-bin \
-               --manifest_description "${POM_DESCRIPTION:-""}" $extra_args
+               --manifest_metadata "$POM_DESCRIPTION" $extra_args
 
 
     elif [ "$action" == "install" ]; then

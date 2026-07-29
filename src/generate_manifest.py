@@ -19,7 +19,6 @@ import config.config as config
 import crawl.bazel as bazel
 import crawl.crawler as crawlerm
 import crawl.libaggregator as libaggregator
-import common.manifestcontent as manifestcontentm
 import crawl.workspace as workspace
 import generate.generationstrategyfactory as generationstrategyfactory
 import os
@@ -30,14 +29,7 @@ def main(args):
     args = _parse_arguments(args)
     repo_root = common.get_repo_root(args.repo_root)
     cfg = config.load(repo_root, args.verbose)
-    manifest_content = manifestcontentm.ManifestContent()
-    if args.manifest_description is not None:
-        manifest_content.description = args.manifest_description
-    if args.verbose:
-        logger.debug("Global manifest content: %s" % manifest_content)
-
-    fac = generationstrategyfactory.GenerationStrategyFactory(
-        repo_root, cfg, manifest_content, args.verbose)
+    fac = generationstrategyfactory.GenerationStrategyFactory(repo_root, cfg, args.verbose)
     ws = workspace.Workspace(repo_root, cfg, fac)
     packages = argsupport.get_all_packages(repo_root, args.package, fac, args.verbose)
     packages = ws.filter_artifact_producing_packages(packages)
@@ -72,46 +64,50 @@ def main(args):
 
         for ctx in result.artifact_generation_contexts:
             gen_strategy = ctx.artifact_def.generation_strategy
-            pomgen = gen_strategy.new_generator(ctx)
-            pom_dest_dir = os.path.join(output_dir, ctx.artifact_def.bazel_package)
-            if not os.path.exists(pom_dest_dir):
-                os.makedirs(pom_dest_dir)
+            manifest_gen = gen_strategy.new_generator(ctx)
+            if args.manifest_metadata is not None:
+                key_value_pairs = args.manifest_metadata.split(",")
+                for pair in key_value_pairs:
+                    pair = pair.strip()
+                    if len(pair) == 0:
+                        continue
+                    key, value = pair.split("=")
+                    manifest_gen.store(key, value)
+            dest_dir = os.path.join(output_dir, ctx.artifact_def.bazel_package)
 
-            # the goldfile pom is actually a pomgen metadata file, so we 
-            # write it using the mdfiles module, which ensures it goes 
-            # into the proper location within the specified bazel package
+            if not os.path.exists(dest_dir):
+                os.makedirs(dest_dir)
+
             if args.manifest_goldfile:
-                pom_content = pomgen.generate_goldfile_manifest()
-                pom_path = os.path.join(
-                    pom_dest_dir, gen_strategy.released_manifest_path)
-                parent_dir = os.path.dirname(pom_path)
+                content = manifest_gen.generate_goldfile_manifest()
+                path = os.path.join(dest_dir, gen_strategy.released_manifest_path)
+                parent_dir = os.path.dirname(path)
                 if not os.path.exists(parent_dir):
                     os.makedirs(parent_dir)
-                common.write_file(pom_path, pom_content)
-                logger.info("Wrote goldfile manifest to [%s]" % pom_path)
+                common.write_file(path, content)
+                logger.info("Wrote goldfile manifest to [%s]" % path)
             else:
-                pom_content = pomgen.generate_release_manifest()
-                pom_path = os.path.join(
-                    pom_dest_dir, "%s.%s" % (
-                        gen_strategy.base_manifest_filename,
-                        gen_strategy.manifest_file_extension))
-                common.write_file(pom_path, pom_content)
-                logger.info("Wrote manifest file to [%s]" % pom_path)
-                for i, companion_pomgen in enumerate(pomgen.get_companion_generators()):
-                    pom_content = companion_pomgen.generate_release_manifest()
-                    pom_path = os.path.join(pom_dest_dir, 
+                content = manifest_gen.generate_release_manifest()
+                path = os.path.join(dest_dir, "%s.%s" % (
+                    gen_strategy.base_manifest_filename,
+                    gen_strategy.manifest_file_extension))
+                common.write_file(path, content)
+                logger.info("Wrote manifest file to [%s]" % path)
+                for i, companion_manifest_gen in enumerate(manifest_gen.get_companion_generators()):
+                    content = companion_manifest_gen.generate_release_manifest()
+                    path = os.path.join(dest_dir, 
                         "%s_companion%s.%s" % (
                             gen_strategy.base_manifest_filename, i,
                             gen_strategy.manifest_file_extension))
-                    common.write_file(pom_path, pom_content)
-                    logger.info("Wrote companion manifest file to [%s]" % pom_path)
+                    common.write_file(path, content)
+                    logger.info("Wrote companion manifest file to [%s]" % path)
 
                 # if jar_path has been set in the BUILD.pom file, we write a
                 # hint file with the jar path, so we can find it more easily
                 # later when jars are processed
                 jar_path = ctx.artifact_def.jar_path
                 if jar_path is not None:
-                    hint_file_path = os.path.join(pom_dest_dir, mdfiles.JAR_LOCATION_HINT_FILE)
+                    hint_file_path = os.path.join(dest_dir, mdfiles.JAR_LOCATION_HINT_FILE)
                     common.write_file(hint_file_path, jar_path)
                     logger.info("Wrote jar location hint file [%s] with content [%s]" % (hint_file_path, jar_path))
 
@@ -133,8 +129,8 @@ def _parse_arguments(args):
         help="Generates a goldfile manifest")
     parser.add_argument("--verbose", required=False, action="store_true",
         help="Verbose output")
-    parser.add_argument("--manifest_description", type=str, required=False,
-        help="Writes the specified string into the manifest as information")
+    parser.add_argument("--manifest_metadata", type=str, required=False,
+        help="Arbitrary data to write into the manifest as key/value pairs of the form key=value[,key2=value]")
     parser.add_argument("--write_libraries_hint_file", required=False, action="store_true",
         help="The libraries hint file is used by the wrapper script in //package")
 

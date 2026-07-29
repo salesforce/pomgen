@@ -10,17 +10,55 @@ class AbstractManifestGenerator(ABC):
     """
 
     @abstractmethod
+    def register_dependencies(self, dependencies):
+        """
+        Registers the dependencies the backing artifact references explicitly.
+        """
+        pass
+
+    @abstractmethod
+    def register_dependencies_transitive_closure__artifact(self, dependencies):
+        """
+        Registers the transitive closure of the dependencies the backing
+        artifact depends on.
+        """
+        pass
+
+    @abstractmethod
+    def register_dependencies_transitive_closure__library(self, dependencies):
+        """
+        Registers the transitive closure of the dependencies of all artifacts
+        that are part of the same library that the backig artifact is part of.
+        """
+        pass
+
+    @abstractmethod
     def generate_release_manifest(self):
         """
         Returns the production manifest as a string.
         """
         pass
 
+    @abstractmethod
+    def store(self, key, value):
+        """
+        Arbitrary key/value storage that is written into some area of the
+        generated manifest so it can be read back later.
+        """
+        pass
+
+    def get_companion_generators(self):
+        """
+        Optionally return more manifest generators to generate additional
+        manifests for the backing artifact.
+        """
+        return ()
+
     def generate_goldfile_manifest(self):
         """
         Returns a version of the production manifest that is "stable", ie
-        suitable for comparision against a previous version of the production
-        manifest.
+        suitable for comparision against a previous stable version of the
+        production manifest.
         """
         return self.generate_release_manifest()
 
@@ -29,8 +67,6 @@ class AbstractManifestGenerator(ABC):
         Formats the given golfile manifest for comparison.
 
         Hook to optionally modify manifest content before comaprison.
-
-        TODO use explicit __hook naming?
 
         Args:
             manifest_content: The manifest content as a string
@@ -41,7 +77,54 @@ class AbstractManifestGenerator(ABC):
         return manifest_content
 
 
+class CommonManifestGenerator(AbstractManifestGenerator):
+    """
+    Boilderplate impl.
+    """
+
+    def __init__(self):
+        self._dependencies = set()
+        self._dependencies_artifact_transitive_closure = set()
+        self._dependencies_library_transitive_closure = set()
+        self._data = {}
+
+    def register_dependencies(self, dependencies):
+        self._dependencies = dependencies
+
+    def register_dependencies_transitive_closure__artifact(self, dependencies):
+        self._dependencies_artifact_transitive_closure = dependencies
+
+    def register_dependencies_transitive_closure__library(self, dependencies):
+        self._dependencies_library_transitive_closure = dependencies
+
+    def store(self, key, value):
+        assert key not in self._data
+        self._data[key] = value
+
+    def retrieve(self, key):
+        return self._data.get(key)
+
+    @property
+    def dependencies(self):
+        return self._dependencies
+
+    @property
+    def dependencies_artifact_transitive_closure(self):
+        return self._dependencies_artifact_transitive_closure
+
+    @property
+    def dependencies_library_transitive_closure(self):
+        return self._dependencies_library_transitive_closure
+
+    @property
+    def data(self):
+        return self._data
+
+
 class AbstractGenerationStrategy(ABC):
+    """
+    The generation strategy contract.
+    """
 
     def initialize(self):
         """

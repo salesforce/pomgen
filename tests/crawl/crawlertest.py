@@ -11,7 +11,6 @@ import config.config as config
 import config.exclusions as exclusions
 import crawl.crawler as crawler
 import crawl.git as git
-import common.manifestcontent as manifestcontent
 import crawl.releasereason as rr
 import crawl.workspace as workspace
 import generate.generationstrategyfactory as generationstrategyfactory
@@ -60,7 +59,7 @@ class CrawlerTest(unittest.TestCase):
         os.chdir(self.repo_root_path)
         cfg = config.Config()
         fac = generationstrategyfactory.GenerationStrategyFactory(
-            self.repo_root_path, cfg, manifestcontent.NOOP, verbose=True)
+            self.repo_root_path, cfg, verbose=True)
         ws = workspace.Workspace(self.repo_root_path, cfg, fac)
         self.crawler = crawler.Crawler(ws, verbose=True)
 

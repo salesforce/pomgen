@@ -9,7 +9,6 @@ This module contains pom.xml generation logic.
 
 import common.genmode as genmode
 import copy
-import common.manifestcontent as manifestcontentm
 import generate
 import generate.impl.pom.pomparser as pomparser
 import os
@@ -38,7 +37,7 @@ MASKED_VERSION = "***"
 
 
 def get_pom_generator(pom_template, artifact_def, external_dependencies,
-                      pom_content_md, dependency_md):
+                      dependency_md):
     """
     Returns a pom.xml generator (AbstractPomGen implementation) for the
     specified artifact_def.
@@ -48,19 +47,17 @@ def get_pom_generator(pom_template, artifact_def, external_dependencies,
         artifact_def: the crawl.buildpom.MavenArtifactDef instance for access 
             to the parsed MVN-INF/* metadata files
         external_dependencies: all known external dependencies (jars)
-        pom_content_md: additional metadata about pom content
         dependency_md: additional metadata about dependencies (jars)
     """
     assert artifact_def is not None
-    assert isinstance(pom_content_md, manifestcontentm.ManifestContent)
     mode = artifact_def.generation_mode
     if mode is genmode.DYNAMIC:
         also_generate_dep_man_pom = artifact_def.gen_dependency_management_pom
         if also_generate_dep_man_pom:
             return PomWithCompanionDependencyManagementPomGen(
-                artifact_def, pom_template, pom_content_md, dependency_md)
+                artifact_def, pom_template, dependency_md)
         else:
-            return DynamicPomGen(artifact_def, pom_template, pom_content_md, dependency_md)
+            return DynamicPomGen(artifact_def, pom_template, dependency_md)
     elif mode is genmode.TEMPLATE:
         return TemplatePomGen(artifact_def, external_dependencies, dependency_md)
     elif mode is genmode.SKIP:
@@ -69,36 +66,12 @@ def get_pom_generator(pom_template, artifact_def, external_dependencies,
         raise Exception("Bug: unknown generation_mode [%s] for %s" % (mode, artifact_def.bazel_package))
 
 
-class AbstractPomGen(generate.AbstractManifestGenerator):
+class AbstractPomGen(generate.CommonManifestGenerator):
 
     def __init__(self, artifact_def, dependency_md):
+        super().__init__()
         self._artifact_def = artifact_def
         self._dependency_md = dependency_md
-
-        self.dependencies = set()
-        self.dependencies_artifact_transitive_closure = set()
-        self.dependencies_library_transitive_closure = set()
-
-    def register_dependencies(self, dependencies):
-        """
-        Registers the dependencies the backing artifact references explicitly.
-
-        """
-        self.dependencies = dependencies
-
-    def register_dependencies_transitive_closure__artifact(self, dependencies):
-        """
-        Registers the transitive closure of dependencies for the artifact
-        (target) backing this pom generator.
-        """
-        self.dependencies_artifact_transitive_closure = dependencies
-
-    def register_dependencies_transitive_closure__library(self, dependencies):
-        """
-        Registers the transitive closure of dependencies for the library
-        that the artifact backing this pom generator belongs to.
-        """
-        self.dependencies_library_transitive_closure = dependencies
 
     def generate_manifest(self, pomcontenttype):
         """
@@ -227,18 +200,22 @@ class AbstractPomGen(generate.AbstractManifestGenerator):
                 j = len(content) - 1
             return content[:i] + content[j+len(os.linesep):]
 
-    def _gen_description(self, description):
-        content = ""
-        content, indent = self._xml(content, "description", indent=_INDENT)
-        content = "%s%s%s%s" % (content, ' '*indent, description, os.linesep)
-        content, indent = self._xml(content, "description", indent=indent, close_element=True)
-        return content
-
-    def _handle_description(self, content, description):
-        if description is None:
+    def _handle_description(self, content):
+        if len(self.data) == 0:
             return self._remove_token(content, "#{description}")
         else:
-            return content.replace("#{description}", self._gen_description(description))
+            desc_lines = []
+            for key, value in self.data.items():
+                desc_lines.append("%s: %s" % (key, value))
+            return content.replace("#{description}", self._gen_description(desc_lines))
+
+    def _gen_description(self, desc_lines):
+        content = ""
+        content, indent = self._xml(content, "description", indent=_INDENT)
+        for line in desc_lines:
+            content = "%s%s%s%s" % (content, ' '*indent, line, os.linesep)
+        content, indent = self._xml(content, "description", indent=indent, close_element=True)
+        return content
 
 class NoopPomGen(AbstractPomGen):
     """
@@ -503,18 +480,16 @@ class DynamicPomGen(AbstractPomGen):
        #{group_id}
        #{version}
     """
-    def __init__(self, artifact_def, pom_template, pom_content_md, dependency_md):
+    def __init__(self, artifact_def, pom_template, dependency_md):
         super(DynamicPomGen, self).__init__(artifact_def, dependency_md)
-        assert isinstance(pom_content_md, manifestcontentm.ManifestContent)
         self.pom_template = pom_template
-        self.pom_content_md = pom_content_md
 
     def generate_manifest(self, pomcontenttype):
         content = self.pom_template.replace("#{group_id}", self._artifact_def.group_id)
         content = content.replace("#{artifact_id}", self._artifact_def.artifact_id)
         version = self._artifact_def_version(pomcontenttype)
         content = content.replace("#{version}", version)
-        content = self._handle_description(content, self.pom_content_md.description)
+        content = self._handle_description(content)
         if len(self.dependencies) == 0:
             content = self._remove_token(content, "#{dependencies}")
         else:
@@ -599,10 +574,9 @@ class DependencyManagementPomGen(AbstractPomGen):
        #{group_id}
        #{version}
     """
-    def __init__(self, artifact_def, pom_template, pom_content_md, dependency_md):
+    def __init__(self, artifact_def, pom_template, dependency_md):
         super(DependencyManagementPomGen, self).__init__(artifact_def, dependency_md)
         self.pom_template = pom_template
-        self.pom_content_md = pom_content_md
 
     def generate_manifest(self, pomcontenttype):
         assert pomcontenttype == PomContentType.RELEASE
@@ -613,7 +587,7 @@ class DependencyManagementPomGen(AbstractPomGen):
         content = content.replace("#{artifact_id}", "%s.depmanagement" % self._artifact_def.artifact_id)
         version = self._artifact_def_version(pomcontenttype)
         content = content.replace("#{version}", version)
-        content = self._handle_description(content, self.pom_content_md.description)
+        content = self._handle_description(content)
         if len(self.dependencies_artifact_transitive_closure) == 0:
             content = self._remove_token(content, "#{dependencies}")
         else:
@@ -645,10 +619,10 @@ class PomWithCompanionDependencyManagementPomGen(AbstractPomGen):
     Composite PomGen implementation with a companion PomGen the generates a
     DependencyManagement pom.
     """
-    def __init__(self, artifact_def, pom_template, pom_content_md, dependency_md):
+    def __init__(self, artifact_def, pom_template, dependency_md):
         super(PomWithCompanionDependencyManagementPomGen, self).__init__(artifact_def, dependency_md)
-        self.pomgen = DynamicPomGen(artifact_def, pom_template, pom_content_md, dependency_md)
-        self.depmanpomgen = DependencyManagementPomGen(artifact_def, pom_template, pom_content_md, dependency_md)
+        self.pomgen = DynamicPomGen(artifact_def, pom_template, dependency_md)
+        self.depmanpomgen = DependencyManagementPomGen(artifact_def, pom_template, dependency_md)
 
     def register_dependencies(self, dependencies):
         self.pomgen.register_dependencies(dependencies)

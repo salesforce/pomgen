@@ -10,7 +10,6 @@ Command line utility that updates attributes in metadata files.
 
 from common import argsupport
 from common import common
-from common import manifestcontent as manifestcontent
 from common import metadataupdate
 from common import version_increment_strategy as vis
 from config import config
@@ -63,7 +62,7 @@ if __name__ == "__main__":
     repo_root = common.get_repo_root(args.repo_root)
     cfg = config.load(repo_root)
     fac = generationstrategyfactory.GenerationStrategyFactory(
-        repo_root, cfg, manifestcontent.NOOP, verbose=args.verbose)
+        repo_root, cfg, verbose=args.verbose)
     ws = workspace.Workspace(repo_root, cfg, fac, cache_artifact_defs=False)
     packages = argsupport.get_all_packages(repo_root, args.package, fac, verbose=args.verbose)
     assert len(packages) > 0, "Did not find any packages at [%s]" % args.package

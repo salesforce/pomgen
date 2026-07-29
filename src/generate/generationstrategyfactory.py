@@ -7,15 +7,14 @@ import os
 
 class GenerationStrategyFactory:
     
-    def __init__(self, repository_root, config, manifest_content, verbose):
+    def __init__(self, repository_root, config, verbose):
         assert repository_root is not None
         assert config is not None
-        assert manifest_content is not None
         self._repository_root = repository_root
         self._verbose = verbose
         self._strategies = []
         self._pomstrategy = pomgenerationstrategy.PomGenerationStrategy.new(
-            repository_root, config, manifest_content, verbose)
+            repository_root, config, verbose)
         self._strategies = (
             self._pomstrategy,
             pygenerationstrategy.PyGenerationStrategy(

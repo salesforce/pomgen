@@ -10,7 +10,6 @@ import collections
 import common.argsupport as argsupport
 import common.code as code
 import common.common as common
-import common.manifestcontent as manifestcontent
 import common.mdfiles as mdfiles
 import config.config as config
 import generate.generationstrategyfactory as generationstrategyfactory
@@ -38,7 +37,7 @@ def main(args):
     repository_root = common.get_repo_root(args.repo_root)
     cfg = config.load(repository_root)
     fac = generationstrategyfactory.GenerationStrategyFactory(
-        repository_root, cfg, manifestcontent.NOOP, verbose=args.verbose)
+        repository_root, cfg, verbose=args.verbose)
     ws = workspace.Workspace(repository_root, cfg, fac, cache_artifact_defs=False)
     packages = argsupport.get_all_packages(repository_root, args.package, fac, verbose=args.verbose)
     assert len(packages) > 0, "Did not find any packages at [%s]" % args.package

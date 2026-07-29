@@ -11,7 +11,7 @@ import generate.impl.pom.pom as pom
 class PomGenerationStrategy(generate.AbstractGenerationStrategy):
 
     @classmethod
-    def new(clazz, repository_root, config, pom_content, verbose):
+    def new(clazz, repository_root, config, verbose):
         depmd = dependencymd.DependencyMetadata(
             config.jar_artifact_classifier)
         override_file_info = overridefileinfo.OverrideFileInfo(
@@ -20,7 +20,7 @@ class PomGenerationStrategy(generate.AbstractGenerationStrategy):
             config.maven_install_paths)
         return PomGenerationStrategy(
             repository_root, config, mvn_install_info, depmd,
-            pom_content, override_file_info.label_to_overridden_fq_label,
+            override_file_info.label_to_overridden_fq_label,
             verbose)
 
     def __init__(self,
@@ -28,20 +28,17 @@ class PomGenerationStrategy(generate.AbstractGenerationStrategy):
                  config,
                  maven_install_info,
                  dependency_md,
-                 pom_content_md,
                  label_to_overridden_fq_label,
                  verbose=False):
         assert repository_root is not None
         assert config is not None
         assert maven_install_info is not None
         assert dependency_md is not None
-        assert pom_content_md is not None
         assert label_to_overridden_fq_label is not None
         self._repository_root = repository_root
         self._pom_template = config.pom_template
         self._maven_install_info = maven_install_info
         self._dependency_md = dependency_md
-        self._pom_content_md = pom_content_md
         self._label_to_overridden_fq_label = label_to_overridden_fq_label
         self._verbose = verbose
         self._base_filename = config.pom_base_filename
@@ -98,7 +95,7 @@ class PomGenerationStrategy(generate.AbstractGenerationStrategy):
         return pom.get_pom_generator(self._pom_template,
                                      artifact_def,
                                      tuple(self._label_to_ext_dep.values()),
-                                     self._pom_content_md, self._dependency_md)
+                                     self._dependency_md)
 
     def _parse_maven_install(self):
         """
