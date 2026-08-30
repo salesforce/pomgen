@@ -9,6 +9,7 @@ Helper functions used for parsing metadata files.
 """
 
 import ast
+import os
 
 
 def parse_artifact_attributes(content, artifact_must_exist=True):
@@ -49,6 +50,13 @@ def parse_artifact_attributes(content, artifact_must_exist=True):
         attrs_indexes = parse_attributes(artifact_update, offset)
         attributes.update(attrs_indexes[0])
         indexes.update(attrs_indexes[1])
+
+    # we allow simple expressions in some values
+    for key in ("artifact_id", "group_id"):
+        val = attributes.get(key)
+        if val is not None and " if " in val:
+            attributes[key] = parse_as_expr(val)
+
     return attributes, indexes
 
 
@@ -212,3 +220,71 @@ def _has_space_until_open_paren(text, start_index):
             return False
         current_index += 1
     return False
+
+
+def parse_as_expr(expr):
+    """
+    Intentionally simplistic parser that supports intentionally simplistic 
+    expressions:
+        literal constants: 
+            1 -> 1
+            "foo" -> "foo"
+    python-style simple (only single if else) conditional expression:
+        "2 if 1 == 1 else 3" -> 2
+        "2 if 1 == 2 else 3" -> 3
+
+    conditional expression with single env var reference:
+        export TARGET=prod
+        "test" if '$TARGET' == "staging" else "production" -> "production"
+    """
+    node = ast.parse(expr)
+    _assert_node(node, ast.Module, expr)
+    node = node.body[0]
+    _assert_node(node, ast.Expr, expr)
+    node = node.value
+    if isinstance(node, ast.Name):
+        # "foo" usual, return as str
+        return node.id
+    elif isinstance(node, ast.Constant):
+        # '"foo"' # ok
+        return node.value
+    elif isinstance(node, ast.IfExp):
+        # "'foo if 1 == 1 else 'blah'"
+        _assert_node(node.test, ast.Compare, expr)
+        _assert_node(node.test.ops[0], ast.Eq, "Only == comparison is supported")
+        lhs = _get_value(node.test.left, expr)
+        rhs = _get_value(node.test.comparators[0], expr)
+        body = node.body
+        _assert_node(body, (ast.Constant, ast.Name), expr)
+        orelse =  node.orelse
+        _assert_node(orelse, (ast.Constant, ast.Name), expr)
+        if lhs == rhs:
+            return _get_value(body, expr)
+        else:
+            return _get_value(orelse, expr)
+    else:
+        _assert_node(node, type(None), expr)
+
+
+class BadCodeException(Exception):
+    pass
+
+
+def _assert_node(node, expected, expr, msg=None):
+    if not isinstance(node, expected):
+        if msg is None:
+            msg = "Unsupported syntax [%s]" % expr
+        raise BadCodeException(msg)
+        
+
+def _get_value(node, expr):
+    if isinstance(node, ast.Constant):
+        val = node.value
+        if isinstance(val, str) and val.startswith("$"):
+            return os.environ.get(val[1:], "")
+        else:
+            return val
+    elif isinstance(node, ast.Name):
+        return node.id
+    else:
+        _assert_node(node, type(None), expr)

@@ -5,8 +5,10 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 
-from common import code
+import common.code as code
+import os
 import unittest
+import unittest.mock as mock
 
 
 class CodeTest(unittest.TestCase):
@@ -210,6 +212,104 @@ artifact_update(
     strat = "tocaster",
 )
 """, updated_content)
+
+
+    def test_parse_artifact_attributes__expr(self):
+        content = """
+# def:
+artifact(
+    name = "LAX",
+    artifact_id = "1 if 1==2 else 2",
+)
+# update:
+artifact_update(
+    strat = "guitar",
+)
+"""
+        attrs, _ = code.parse_artifact_attributes(content)
+
+        self.assertEqual(2, attrs["artifact_id"])
+
+
+    def test_parse_artifact_attributes__artifact_update_with_expr(self):
+        content = """
+# def:
+artifact(
+    name = "LAX",
+    artifact_id = "1 if 1==2 else 2",
+)
+# update:
+artifact_update(
+    strat = "guitar",
+)
+"""
+        attrs, value_indexes = code.parse_artifact_attributes(content)
+        self.assertEqual(2, attrs["artifact_id"]) # evaluated
+
+        start, end = value_indexes["strat"]
+
+        # indexes use literal expression, not the evaluated expr
+        updated_content = content[:start] + '"tocaster"' + content[end+1:]
+
+        self.assertEqual("""
+# def:
+artifact(
+    name = "LAX",
+    artifact_id = "1 if 1==2 else 2",
+)
+# update:
+artifact_update(
+    strat = "tocaster",
+)
+""", updated_content)
+        
+
+    def test_parse_as_expr(self):
+        self.assertEqual("foo", code.parse_as_expr("foo"))
+        self.assertEqual("foo", code.parse_as_expr("'foo'"))
+        self.assertEqual(3, code.parse_as_expr("3 if 1==1 else 2"))
+        self.assertEqual(2, code.parse_as_expr("3 if 1== 2 else 2"))
+        self.assertEqual("foo", code.parse_as_expr("foo if 2 == 2 else 2"))
+        self.assertEqual("foo", code.parse_as_expr("'foo' if 2 == 2 else 2"))
+        self.assertEqual("foo", code.parse_as_expr("2 if 2 == 1 else foo"))
+        self.assertEqual("foo", code.parse_as_expr("2 if 2 == 1 else 'foo'"))
+
+    @mock.patch.dict(os.environ, {"FOO22": "some_value"})
+    def test_parse_as_expr__env_var_lhs(self):
+        self.assertEqual(3, code.parse_as_expr("3 if '$FOO22'=='some_value' else 2"))
+
+    @mock.patch.dict(os.environ, {"FOSTER": "Dublin"})
+    def test_parse_as_expr__env_var_rhs(self):
+        self.assertEqual(3, code.parse_as_expr("3 if 'Dublin' == '$FOSTER' else 2"))
+
+    def test_parse_as_expr__env_var_not_set(self):
+        # FOO22 is not set, so it evals to ''
+        self.assertEqual(3, code.parse_as_expr("3 if '$FOO22'=='' else 2"))
+
+    def test_parse_as_expr__no_func_calls_allowed(self):
+        try:
+            code.parse_as_expr("sys.exit()")
+            self.fail("Expected exception")
+        except code.BadCodeException:
+            pass
+        except Exception:
+            self.fail("Expected BadCodeException")            
+
+        try:
+            code.parse_as_expr("1 if 1==1 else sys.exit()")
+            self.fail("Expected exception")
+        except code.BadCodeException:
+            pass
+        except Exception:
+            self.fail("Expected BadCodeException")            
+
+        try:
+            code.parse_as_expr("sys.exit() if 1==1 else 2")
+            self.fail("Expected exception")
+        except code.BadCodeException:
+            pass
+        except Exception:
+            self.fail("Expected BadCodeException")            
 
 
 if __name__ == '__main__':
