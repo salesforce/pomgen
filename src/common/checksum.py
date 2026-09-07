@@ -11,8 +11,18 @@ This module has methods related to calculating and verifying checksums.
 import hashlib
 
 
-def compute_for_external_dependencies(dependencies):
+def for_dependencies(dependencies):
     assert isinstance(dependencies, (list, set, tuple))
-    deps = [dep.native_repr for dep in dependencies if not dep.label.is_source_ref]
-    deps.sort()
-    return hashlib.sha1(str(deps).encode()).hexdigest()
+    native_deps = []
+    for dep in dependencies:
+        native_repr = dep.native_repr
+        if dep.label.is_source_ref:
+            native_repr = _rm_version(native_repr, dep.version)
+        native_deps.append(native_repr)
+    native_deps.sort()
+    return hashlib.sha1(str(native_deps).encode()).hexdigest()
+
+
+def _rm_version(native_repr, version):
+    version_start_index = native_repr.index(version)
+    return native_repr[:version_start_index] + native_repr[version_start_index + len(version):]
