@@ -68,8 +68,8 @@
     "released_version": null,
     "requires_release": true,
     "release_reason": "artifact has never been released",
-    "proposed_release_version": "20260830.1",
-    "proposed_next_dev_version": "20260830.2-SNAPSHOT"
+    "proposed_release_version": "20260908.1",
+    "proposed_next_dev_version": "20260908.2-SNAPSHOT"
   },
   {
     "library_path": "examples/java/java-binary",

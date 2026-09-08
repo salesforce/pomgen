@@ -96,8 +96,16 @@ Usage: bazel run @poppy//package/maven.sh -a action(s) -l path/to/library/root/d
       authentication. Defaults to "nexus".
       See https://maven.apache.org/plugins/maven-deploy-plugin/deploy-file-mojo.html
 
-    POM_DESCRIPTION: if set, used as the value of the <description> element
-      in the generated pom(s).
+    POM_METADATA_<KEY>: any environment variable prefixed with POM_METADATA_
+      is converted into a "key=value" pair (the part of the variable name
+      after the prefix, lowercased, is used as the key) and passed to the
+      pomgen action's --manifest_metadata argument. These key/value pairs
+      are written into the generated pom's <description> element, one pair
+      per line.
+      For example:
+          export POM_METADATA_DESCRIPTION="my library"
+          export POM_METADATA_OWNER=team-foo
+      results in --manifest_metadata "description=my library,owner=team-foo"
 
     BZL_ACTION_ENV_*: any environment variable prefixed with BZL_ACTION_ENV_
       will be passed to bazel build as --action_env arguments, when the "build
@@ -178,6 +186,28 @@ _build_action_env_args() {
     done < <(env)
 
     echo "$action_env_args"
+}
+
+
+_build_manifest_metadata_arg() {
+    # Converts POM_METADATA_* environment variables into a comma-separated
+    # list of key=value pairs, suitable for --manifest_metadata
+    # Example: POM_METADATA_DESCRIPTION="my lib" -> "description=my lib"
+    local manifest_metadata=""
+    local prefix="POM_METADATA_"
+
+    while IFS='=' read -r name value; do
+        if [[ "$name" == ${prefix}* ]]; then
+            local key="${name#$prefix}"
+            key="$(echo "$key" | tr '[:upper:]' '[:lower:]')"
+            if [ -n "$manifest_metadata" ]; then
+                manifest_metadata="${manifest_metadata},"
+            fi
+            manifest_metadata="${manifest_metadata}${key}=${value}"
+        fi
+    done < <(env)
+
+    echo "$manifest_metadata"
 }
 
 
@@ -358,15 +388,11 @@ do
             echo "[DEBUG] Running with extra args ${extra_args}"
             extra_args="${extra_args} --verbose"
         fi
-        if [ -z "$POM_DESCRIPTION" ]; then
-            POM_DESCRIPTION=''
-        else
-            POM_DESCRIPTION="description=$POM_DESCRIPTION"
-        fi
+        manifest_metadata="$(_build_manifest_metadata_arg)"
         bazel run @poppy//:gen -- \
                --package $library_path \
                --destdir $repo_root_path/bazel-bin \
-               --manifest_metadata "$POM_DESCRIPTION" $extra_args
+               --manifest_metadata "$manifest_metadata" $extra_args
 
 
     elif [ "$action" == "install" ]; then

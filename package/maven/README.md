@@ -22,6 +22,25 @@ bazel run @poppy//package/maven -- -a pomgen,build,install -l examples/java/hell
 
 The `deploy_all` action can be used instead of `install` above - the script will then upload the jars to a Nexus server. Set the `REPOSITORY_URL` environment variable to specify the server hostname.
 
+### Custom pom metadata
+
+Any environment variable prefixed with `POM_METADATA_` is turned into a `key=value` pair (the part of the variable name after the prefix, lowercased, becomes the key) and written into the generated pom's `<description>` element, one pair per line. For example:
+
+```
+export POM_METADATA_DESCRIPTION="my library"
+export POM_METADATA_OWNER=team-foo
+bazel run @poppy//package/maven -- -a pomgen -l path/to/library/root
+```
+
+This results in the following `<description>` element in the generated pom:
+
+```xml
+<description>
+    description: my library
+    owner: team-foo
+</description>
+```
+
 For details on all arguments and options that may be specified, pass in `-h` or look at the [top of the script](maven.sh).
 
 ## External Dependencies
