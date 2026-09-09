@@ -205,7 +205,7 @@ class AbstractPomGen(generate.CommonManifestGenerator):
             return self._remove_token(content, "#{description}")
         else:
             desc_lines = []
-            for key, value in self.data.items():
+            for key, value in sorted(self.data.items()):
                 desc_lines.append("%s: %s" % (key, value))
             return content.replace("#{description}", self._gen_description(desc_lines))
 

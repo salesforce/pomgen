@@ -185,6 +185,35 @@ class PomTest(unittest.TestCase):
         generated_pom = pomgen.generate_release_manifest()
         self.assertEqual(exepcted_pom, generated_pom)
 
+    def test_dynamic_pom__gen_description_sorts_keys(self):
+        """
+        Tests that the <description> element's lines are sorted by key,
+        regardless of the order they were stored in.
+        """
+        exepcted_pom = """<project>
+    <description>
+        commit: abc123
+        root_library: projects/services/foo
+        root_library_version: 2.0.7
+    </description>
+
+</project>
+"""
+        pom_template = """<project>
+#{description}
+</project>
+"""
+        artifact_def = buildpom.MavenArtifactDef("g1", "a2", "1.2.3", bazel_target="t1")
+        pomgen = pom.DynamicPomGen(artifact_def, pom_template,  self.dependencymd)
+
+        # stored out of alphabetical order on purpose
+        pomgen.store("root_library_version", "2.0.7")
+        pomgen.store("commit", "abc123")
+        pomgen.store("root_library", "projects/services/foo")
+
+        generated_pom = pomgen.generate_release_manifest()
+        self.assertEqual(exepcted_pom, generated_pom)
+
     def test_dynamic_pom__remove_description_token_if_no_value(self):
         """
         Tests that the #{description} token is removed if no description value
