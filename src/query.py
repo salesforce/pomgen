@@ -12,12 +12,12 @@ Command line utility that shows information about artifacts.
 import argparse
 import collections
 import common.argsupport as argsupport
+import common.bazel as bazel
 import common.common as common
 import common.instancequery as instancequery
 import common.logger as logger
 import common.version_increment_strategy as vis
 import config.config as config
-import crawl.bazel as bazel
 import crawl.crawler as crawler
 import crawl.libaggregator as libaggregator
 import crawl.workspace as workspace

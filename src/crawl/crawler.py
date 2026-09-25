@@ -7,14 +7,12 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 
 Crawls Bazel BUILD file dependencies and builds a DAG.
 """
-
-
 import collections
+import common.buildfile as buildfile
 import common.genmode as genmode
 import common.label as labelm
 import common.logger as logger
 import crawl.artifactgenctx as artifactgenctx
-import crawl.bazel as bazel
 import crawl.buildpom as buildpom
 import crawl.releasereason as releasereason
 import difflib
@@ -605,8 +603,9 @@ class Crawler:
             _, excluded_deps = self._load_custom_output_dependencies(artifact_def)
             artifactctx = artifactgenctx.ArtifactGenerationContext(artifact_def, label)
             self.genctxs.append(artifactctx)
-            labels = self._discover_dependencies(artifact_def, label)
-            source_labels, deps = self._partition_and_filter_labels(labels, artifact_def)
+            labels = buildfile.load_dependencies(self.workspace.repo_root_path,
+                artifact_def, label, self.verbose)
+            source_labels, deps = buildfile.partition_and_filter_labels(labels, artifact_def, self.workspace)
             if self.verbose:
                 logger.debug("Determined labels for artifact: [%s] with target key [%s]" % (artifact_def, label))
                 logger.debug("Labels: %s" % "\n".join([lbl.canonical_form for lbl in labels]))
@@ -622,65 +621,6 @@ class Crawler:
             self.library_to_nodes[node.artifact_def.library_path].append(node)
             self._store_if_leafnode(node)
             return node
-
-    def _discover_dependencies(self, artifact_def, label):
-        """
-        Discovers the dependencies of the given artifact (==bazel target).
-
-        This method returns a list of common.label.Label instances.
-        """
-        assert artifact_def is not None
-        assert label is not None, "label is None for artifact %s" % artifact_def
-        labels = ()
-        if artifact_def.deps is not None:
-            labels = [labelm.Label(lbl) for lbl in artifact_def.deps]
-        if artifact_def.generation_mode.query_dependency_attributes:
-            labels += self._query_labels(artifact_def, label)
-        return labels
-
-    def _query_labels(self, artifact_def, label):
-        """
-        Delegates to bazel query to get the value of a bazel target's  "deps"
-        and "runtime_deps" attributes. Returns an iterable of common.label.Label
-        instances.
-        """
-        if not artifact_def.include_deps:
-            return ()
-        else:
-            assert artifact_def.bazel_package is not None
-            try:
-                labels = bazel.query_java_library_deps_attributes(
-                    self.workspace.repo_root_path,
-                    label.canonical_form,
-                    artifact_def.generation_mode.dependency_attributes,
-                    self.verbose)
-                labels = [labelm.Label(lbl) for lbl in labels]
-                return Crawler._remove_package_private_labels(labels, artifact_def)
-            except Exception as e:
-                raise Exception("Error while querying dependencies of %s. Maybe the label [%s] does not exist?\n%s" % (artifact_def, label.canonical_form, repr(e)))
-
-    @classmethod
-    def _remove_package_private_labels(clazz, labels, owning_artifact_def):
-        """
-        This method removes labels that point back to the bazel package
-        of the current artifact (so private targets in the same build file),
-        except when no actual artifact is produced (-> the special "skip"
-        generation mode).
-
-        Specifically, this method handles the case where, in the BUILD file, 
-        a java_library has a dependency on a (private) target defined in the 
-        same Bazel Package. This configuration is generally not supported.
-        """
-        updated_labels = []
-        for label in labels:
-            if label.package_path == owning_artifact_def.bazel_package:
-                # this label has the same package as the artifact referencing it
-                # is is therefore a private target ref - skip it unless this
-                # package does not produce any artifact
-                if owning_artifact_def.generation_mode.produces_artifact:
-                    continue
-            updated_labels.append(label)
-        return updated_labels
 
     @classmethod
     def _merge(clazz, label, artifact_def, parent_node):
@@ -709,66 +649,6 @@ class Crawler:
                         logger.warning("Conflicting target information: the artifact at [%s] specifies [%s] but the current label is [%s]. We got here from [%s]" % (artifact_def, artifact_def.bazel_target, label, "none" if parent_node is None else parent_node.artifact_def))
                 return label
         raise AssertionError("we should not get here " + str(label))
-
-    def _partition_and_filter_labels(self, labels, downstream_artifact_def):
-        """
-        For the given lables, filters and partitions by source labels.
-        Returns a tuple of source labels and dependencies.
-        """
-        assert downstream_artifact_def is not None
-        source_labels = []
-        deps = []
-        for lbl in labels:
-            lbl = self._filter_label(lbl, downstream_artifact_def)
-            if lbl is None:
-                continue
-            add_dependency = True
-            artifact_def = None
-            if downstream_artifact_def.generation_strategy.is_source_ref(lbl):
-                source_labels.append(lbl)
-                artifact_def = self.workspace.parse_maven_artifact_def(lbl.package_path, downstream_artifact_def)
-                if artifact_def.generation_mode is genmode.ONEONEONE_CHILD:
-                    if artifact_def.is_or_has_same_111_parent(downstream_artifact_def):
-                        # the referenced package (//label) belongs to the same
-                        # 111 module, so we don't add any dep
-                        add_dependency = False
-                    else:
-                        # we need to point to the main 111 parent when building
-                        # the dep, since it has the full metadata, including
-                        # the aggregation target
-                        artifact_def = artifact_def.parent_artifact_def
-                else:
-                    if not artifact_def.generation_mode.produces_artifact:
-                        add_dependency = False
-            if add_dependency:
-                dep = downstream_artifact_def.generation_strategy.load_dependency(lbl, artifact_def)
-                if dep is not None:
-                    deps.append(dep)
-        return source_labels, deps
-
-    def _filter_label(self, label, downstream_artifact_def):
-        assert label is not None
-        assert downstream_artifact_def is not None
-        if label in self.workspace.excluded_dependency_labels:
-            return None
-        elif downstream_artifact_def.generation_strategy.is_source_ref(label):
-            for excluded_path in self.workspace.excluded_dependency_paths:
-                # globally defined path exclusions are relative to the
-                # repository root
-                if label.package_path.startswith(excluded_path):
-                    return None
-            for excluded_path in downstream_artifact_def.excluded_dependency_paths:
-                # per-artifact exclusions are relative to the artifact package
-                excluded_path = os.path.join(downstream_artifact_def.bazel_package, excluded_path)
-                if label.package_path.startswith(excluded_path):
-                    return None
-            artifact_def = self.workspace.parse_maven_artifact_def(label.package_path, downstream_artifact_def)
-            if artifact_def is None:
-                if bazel.is_never_link_dep(self.workspace.repo_root_path, label.canonical_form):
-                    return None
-                else:
-                    raise Exception("cannot process this package because there is no manifest metadata at: [%s]" % label.package_path)
-        return label
 
     def _store_if_leafnode(self, node):
         if len(node.children) == 0:

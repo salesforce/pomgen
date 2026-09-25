@@ -11,12 +11,12 @@ The poppy manifest generation cmdline entry-point.
 
 import argparse
 import common.argsupport as argsupport
+import common.bazel as bazel
 import common.common as common
 import common.label as label
 import common.logger as logger
 import common.mdfiles as mdfiles
 import config.config as config
-import crawl.bazel as bazel
 import crawl.crawler as crawlerm
 import crawl.libaggregator as libaggregator
 import crawl.workspace as workspace

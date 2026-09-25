@@ -4,9 +4,7 @@ All rights reserved.
 SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
-import common.label as labelm
 import config.config as config
-import crawl.buildpom as buildpom
 import crawl.crawler as crawlerm
 import crawl.workspace as workspace
 import generate.generationstrategyfactory as generationstrategyfactory
@@ -18,7 +16,6 @@ import tempfile
 import unittest
 
 
-GROUP_ID = "group"
 POM_TEMPLATE_FILE = "foo.template"
 
 
@@ -94,114 +91,6 @@ class CrawlerTestMisc(unittest.TestCase):
         self.assertEqual("lib/a1", result.nodes[0].children[0].artifact_def.bazel_package)
         self.assertEqual("foo", result.nodes[0].children[0].artifact_def.bazel_target)
 
-    def test_filter_label(self):
-        """
-        Happy path.
-        """
-        self.setup_collaborators()
-        self._write_library_root(self.repo_root_path, "lib")
-        self._add_artifact(self.repo_root_path, "lib/a1", "dynamic", deps=[],
-                           target_name="foo")
-        downstream_artifact_def = buildpom.MavenArtifactDef(
-            "g", "a", "v",
-            bazel_package="lib/a1",
-            generation_strategy=self.strat)
-        crawler = crawlerm.Crawler(self.ws, verbose=True)
-        label = labelm.Label("//lib/a1")
-
-        filtered_label = crawler._filter_label(label, downstream_artifact_def)
-
-        self.assertIs(label, filtered_label)
-
-    def test_filter_label__excluded_dependency_paths(self):
-        """
-        Verifies that globally defined excluded dependency paths are filtered
-        out.
-        """
-        self.setup_collaborators(self._get_config(excluded_dependency_paths=["projects/protos/",]))
-        crawler = crawlerm.Crawler(self.ws, verbose=True)
-        downstream_artifact_def = buildpom.MavenArtifactDef(
-            "g", "a", "v",
-            bazel_package="lib/a1",
-            generation_strategy=self.strat)
-        label = labelm.Label("@maven//:ch_qos_logback_logback_classic")
-
-        filtered_label = crawler._filter_label(label, downstream_artifact_def)
-        self.assertIs(label, filtered_label) # not filtered
-
-        label = labelm.Label("//projects/protos/grail:java_protos")
-        filtered_label = crawler._filter_label(label, downstream_artifact_def)
-        self.assertIsNone(filtered_label) # filtered
-
-    def test_filter_label__artifact_excluded_dependency_paths(self):
-        """
-        Verifies that locally defined excluded dependency paths are filtered
-        out.
-        """
-        self.setup_collaborators(self._get_config())
-        crawler = crawlerm.Crawler(self.ws, verbose=True)
-        downstream_artifact_def = buildpom.MavenArtifactDef(
-            "g", "a", "v",
-            bazel_package="projects/libs/pastry",
-            excluded_dependency_paths=["src/abstractions",],
-            generation_strategy=self.strat)
-
-        label = labelm.Label("@maven//:ch_qos_logback_logback_classic")
-        filtered_label = crawler._filter_label(label, downstream_artifact_def)
-        self.assertIs(label, filtered_label) # not filtered
-
-        label = labelm.Label("//projects/libs/pastry/src/abstractions:foo")
-        filtered_label = crawler._filter_label(label, downstream_artifact_def)
-        self.assertIsNone(filtered_label) # filtered
-
-    def test_filter_label__excluded_dependency_labels(self):
-        """
-        Verifies that excluded dependency labels are filtered out.
-        """
-        self.setup_collaborators(self._get_config(excluded_dependency_labels=["@maven//:ch_qos_logback_logback_classic",]))
-        self._write_library_root(self.repo_root_path, "lib")
-        self._add_artifact(self.repo_root_path, "lib/a1", "dynamic", deps=[],
-                           target_name="foo")
-        downstream_artifact_def = buildpom.MavenArtifactDef(
-            "g", "a", "v",
-            bazel_package="lib/a1",
-            generation_strategy=self.strat)
-        crawler = crawlerm.Crawler(self.ws, verbose=True)
-
-        label = labelm.Label("@maven//:ch_qos_logback_logback_classic")
-        filtered_label = crawler._filter_label(label, downstream_artifact_def)
-        self.assertIsNone(filtered_label) # filtered
-
-        label = labelm.Label("//lib/a1")
-        filtered_label = crawler._filter_label(label, downstream_artifact_def)
-        self.assertIs(filtered_label, label) # not filtered
-
-        filtered_label = crawler._filter_label(label,downstream_artifact_def)
-
-        self.assertIs(label, filtered_label)
-
-    def test_src_dep_with_neverlink_enabled(self):
-        """
-        Verifies that no error is triggered when a dep has neverlink enabled
-        and it has no BUILD.pom file.
-        """
-        self.setup_collaborators()
-        self._write_basic_workspace_file(self.repo_root_path)
-        self._write_library_root(self.repo_root_path, "lib")
-        # no BUILD.pom file
-        self._write_build_file(self.repo_root_path, "lib/lombok", neverlink=True)
-        downstream_artifact_def = buildpom.MavenArtifactDef(
-            "g", "a", "v",
-            bazel_package="lib/a1",
-            generation_strategy=self.strat)
-
-        crawler = crawlerm.Crawler(self.ws, verbose=True)
-        label = labelm.Label("//lib/lombok")
-
-        filtered_label = crawler._filter_label(label, downstream_artifact_def)
-
-        self.assertIsNone(filtered_label)
-
     def _get_config(self, **kwargs):
         return config.Config(**kwargs)
 
@@ -276,64 +165,6 @@ maven_artifact_update(
             os.makedirs(path)
         with open(os.path.join(path, "LIBRARY.root"), "w") as f:
            f.write("foo")
-
-    def _write_build_file(self, repo_root_path, package_rel_path, neverlink=False):
-        build_file = """
-java_plugin(
-    name = "lombok-plugin",
-    generates_api = True,
-    processor_class = "lombok.launch.AnnotationProcessorHider$AnnotationProcessor",
-    visibility = ["//visibility:private"],
-    deps = ["@nexus//:org_projectlombok_lombok"],
-)
-
-java_library(
-    name = "lombok",
-    neverlink = %s,
-    exports = ["@nexus//:org_projectlombok_lombok"],
-    exported_plugins = [":lombok-plugin"],
-    visibility = ["//visibility:public"],
-)
-""" % (1 if neverlink else 0)
-
-        path = os.path.join(repo_root_path, package_rel_path)
-        if not os.path.exists(path):
-            os.makedirs(path)
-        build_file_path = os.path.join(path, "BUILD")
-        with open(build_file_path, "w") as f:
-           f.write(build_file)
-
-    def _write_basic_workspace_file(self, repo_root_path):
-        workspace_file = """
-workspace(name = "pomgen")
-
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
-RULES_JVM_EXTERNAL_TAG = "4.1"
-RULES_JVM_EXTERNAL_SHA = "f36441aa876c4f6427bfb2d1f2d723b48e9d930b62662bf723ddfb8fc80f0140"
-
-http_archive(
-    name = "rules_jvm_external",
-    strip_prefix = "rules_jvm_external-%s" % RULES_JVM_EXTERNAL_TAG,
-    sha256 = RULES_JVM_EXTERNAL_SHA,
-    url = "https://github.com/bazelbuild/rules_jvm_external/archive/%s.zip" % RULES_JVM_EXTERNAL_TAG,
-)
-
-load("@rules_jvm_external//:defs.bzl", "maven_install")
-load("@rules_jvm_external//:specs.bzl", "maven")
-
-
-load("@rules_jvm_external//:repositories.bzl", "rules_jvm_external_deps")
-rules_jvm_external_deps()
-load("@rules_jvm_external//:setup.bzl", "rules_jvm_external_setup")
-rules_jvm_external_setup()
-"""
-        path = os.path.join(repo_root_path)
-        if not os.path.exists(path):
-            os.makedirs(path)
-        workspace_file_path = os.path.join(path, "WORKSPACE")
-        with open(workspace_file_path, "w") as f:
-           f.write(workspace_file)
 
 
 if __name__ == '__main__':

@@ -5,18 +5,40 @@ SPDX-License-Identifier: BSD-3-Clause
 For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 
 
-This module has methods that return information about the monorepo structure.
-
-Whenever possible, the code here uses bazel query.
+This module has functions that return information about the bazel build graph
+structure.  Whenever possible, the code here uses bazel query.
 """
-
+import common.label as labelm
 import common.logger as logger
 import common.os_util as os_util
 import os
 
 
-def query_java_library_deps_attributes(repository_root_path, target_pattern,
-                                       dep_attributes, verbose=False):
+def query_dependencies(repository_root_path, artifact_def, label, verbose=False):
+    """
+    Delegates to bazel query to get the value of the specified bazel target's
+    "deps" and "runtime_deps" attributes. The bazel target is provided by the
+    given artifact_def instance.
+    Returns an iterable of common.label.Label instances.
+    """
+    if not artifact_def.include_deps:
+        return ()
+    else:
+        assert artifact_def.bazel_package is not None
+        try:
+            labels = _query_java_library_deps_attributes(
+                repository_root_path,
+                label.canonical_form,
+                artifact_def.generation_mode.dependency_attributes,
+                verbose)
+            labels = [labelm.Label(lbl) for lbl in labels]
+            return _remove_package_private_labels(labels, artifact_def)
+        except Exception as e:
+            raise Exception("Error while querying dependencies of %s. Maybe the label [%s] does not exist?\n%s" % (artifact_def, label.canonical_form, repr(e)))
+
+
+def _query_java_library_deps_attributes(repository_root_path, target_pattern,
+                                        dep_attributes, verbose=False):
     """
     Returns, as a list of strings, the combined values of the dep_attributes
     given, typically 'deps' and 'runtime_deps', of the (java_library) rule
@@ -49,6 +71,28 @@ def query_java_library_deps_attributes(repository_root_path, target_pattern,
     deps = _sanitize_deps(output)
     deps = _ensure_unique_deps(deps)
     return reversed(deps)
+
+
+def _remove_package_private_labels(labels, owning_artifact_def):
+    """
+    This method removes labels that point back to the bazel package
+    of the current artifact (so private targets in the same build file),
+    except when no actual artifact is produced (-> the special "skip"
+    generation mode).
+     Specifically, this method handles the case where, in the BUILD file,
+    a java_library has a dependency on a (private) target defined in the
+    same Bazel Package. This configuration is generally not supported.
+    """
+    updated_labels = []
+    for label in labels:
+        if label.package_path == owning_artifact_def.bazel_package:
+            # this label has the same package as the artifact referencing it
+            # is is therefore a private target ref - skip it unless this
+            # package does not produce any artifact
+            if owning_artifact_def.generation_mode.produces_artifact:
+                continue
+        updated_labels.append(label)
+    return updated_labels
 
 
 def query_all_libraries(repository_root_path, packages, generation_strategy_factory, verbose=False):
