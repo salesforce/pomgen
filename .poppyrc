@@ -7,3 +7,7 @@ locked_requirements_paths=examples/python/pip/requirements_lock.txt@examples_pip
 
 jspackage_template_path=examples/js/package_template.json
 pnpm_lockfile_paths=examples/js/pnpm-lock.yaml
+
+
+[artifact]
+nexus_artifact_url=file://~/.m2/repository

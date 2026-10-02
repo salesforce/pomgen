@@ -6,6 +6,7 @@ For full license text, see the LICENSE file in the repo root or https://opensour
 """
 
 import common.logger as logger
+import os
 import subprocess
 
 
@@ -35,35 +36,41 @@ def _is_version_available(artifacts, version, nexus_artifact_url, verbose):
     urls = []
     for art_def in artifacts:
         group_path = art_def.group_id.replace(".", "/")
-        url = "%s/%s/%s/%s/%s-%s.pom" % (
+        path = "%s/%s/%s/%s/%s-%s.pom" % (
             nexus_artifact_url, group_path, art_def.artifact_id,
             version, art_def.artifact_id, version)
-        urls.append(url)
+        urls.append(path)
+    if nexus_artifact_url.startswith("file://"):
+        found = _check_paths_exist(urls, verbose)
+    elif nexus_artifact_url.startswith("http"):
+        found = _head_requests(urls, verbose)
+    else:
+        raise AssertionError("Unknown scheme for nexus url [%s]" % nexus_artifact_url)
+    if found:
+        # at least one of the artifacts exists, so this version is not available
+        return False
+    else:
+        return True
 
-    results = _head_requests(urls, verbose)
 
-    for http_code in results:
-        if http_code == "200":
-            return False
-    return True
-
-
-def _check_artifacts_sanity(artifacts):
+def _check_paths_exist(urls, verbose):
     """
-    # just a sanity check - all artifact defs must be for the same lib,
-    at the same version!
+    Returns True if at least one of the urls, treated as local paths,
+    exist.
     """
-    version = artifacts[0].version
-    library_path = artifacts[0].library_path
-    for art_def in artifacts:
-        assert art_def.version == version, "All artifacts must have the same version, got %s and %s" % (version, art_def.version)
-        assert art_def.library_path == library_path, "All artifacts must belong to the same library, got %s and %s" % (library_path, art_def.library_path)
+    paths = [os.path.expanduser(p[len("file://"):]) for p in urls]
+    for path in paths:
+        if verbose:
+            logger.debug("Checking path: %s" % path)
+        if os.path.exists(path):
+            return True
+    return False
 
 
 def _head_requests(urls, verbose):
     """
     Issues HEAD requests for the given urls in parallel.
-    Returns a list of HTTP status codes (as strings), one per url.
+    Returns True if at least one request was successful (http code 200).
     """
     procs = []
     for url in urls:
@@ -75,8 +82,20 @@ def _head_requests(urls, verbose):
             cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         procs.append(proc)
 
-    results = []
+    found = False
     for proc in procs:
         stdout, _ = proc.communicate()
-        results.append(stdout.decode().strip())
-    return results
+        if stdout.decode().strip() == "200":
+            found = True
+    return found
+
+
+def _check_artifacts_sanity(artifacts):
+    """
+    All artifact defs must be for the same lib, at the same version.
+    """
+    version = artifacts[0].version
+    library_path = artifacts[0].library_path
+    for art_def in artifacts:
+        assert art_def.version == version, "All artifacts must have the same version, got %s and %s" % (version, art_def.version)
+        assert art_def.library_path == library_path, "All artifacts must belong to the same library, got %s and %s" % (library_path, art_def.library_path)

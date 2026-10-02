@@ -200,20 +200,32 @@ class AbstractPomGen(generate.CommonManifestGenerator):
                 j = len(content) - 1
             return content[:i] + content[j+len(os.linesep):]
 
+    def read_metadata(self, manifest_path):
+        """
+        Reads the metadata from the given pom.xml manifest file, returns it
+        as a dict.
+        """
+        with open(manifest_path, "r") as f:
+            pom_content = f.read()
+        return pomparser.parse_description_metadata(pom_content)
+
     def _handle_description(self, content):
-        if len(self.data) == 0:
+        metadata = self.get_metadata()
+        if len(metadata) == 0:
             return self._remove_token(content, "#{description}")
         else:
             desc_lines = []
-            for key, value in sorted(self.data.items()):
+            for key, value in metadata.items():
                 desc_lines.append("%s: %s" % (key, value))
             return content.replace("#{description}", self._gen_description(desc_lines))
 
     def _gen_description(self, desc_lines):
         content = ""
         content, indent = self._xml(content, "description", indent=_INDENT)
+        content = "%s%s<![CDATA[%s" % (content, ' '*indent, os.linesep)
         for line in desc_lines:
-            content = "%s%s%s%s" % (content, ' '*indent, line, os.linesep)
+            content = "%s%s%s%s" % (content, ' '*(indent + _INDENT), line, os.linesep)
+        content = "%s%s]]>%s" % (content, ' '*indent, os.linesep)
         content, indent = self._xml(content, "description", indent=indent, close_element=True)
         return content
 

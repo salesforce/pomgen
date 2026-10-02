@@ -12,7 +12,11 @@
     <packaging>jar</packaging>
 
     <description>
-        description: this is a call!
+        <![CDATA[
+            description: this is a call!
+            poppy.artifact-checksum: eeeae08ddd1de60a5cd3073c8180fcaf2c57ba27
+            poppy.manifest-checksum: ab4a99e2e9204260d7cc881c26b914adc4dca4da
+        ]]>
     </description>
 
     <properties>

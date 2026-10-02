@@ -27,7 +27,7 @@ class ComputeProposedNextVersionsTest(unittest.TestCase):
             version_increment_strategy_name="minor")
         strat = vis.get_version_increment_strategy_by_name("minor")
 
-        with patch.object(nexus, '_head_requests', return_value=["404"]):
+        with patch.object(nexus, '_head_requests', return_value=False):
             rel_vers, dev_vers = query._compute_proposed_next_versions(
                 node, [], strat, None)
 
@@ -50,7 +50,7 @@ class ComputeProposedNextVersionsTest(unittest.TestCase):
         ]
         strat = vis.get_version_increment_strategy_by_name("minor")
 
-        with patch.object(nexus, '_head_requests', return_value=["404"]):
+        with patch.object(nexus, '_head_requests', return_value=False):
             rel_vers, dev_vers = query._compute_proposed_next_versions(
                 node, artifacts, strat, "http://nexus")
 
@@ -72,7 +72,7 @@ class ComputeProposedNextVersionsTest(unittest.TestCase):
         ]
         strat = vis.get_version_increment_strategy_by_name("minor")
 
-        with patch.object(nexus, '_head_requests', side_effect=[["200"], ["200"], ["404"]]):
+        with patch.object(nexus, '_head_requests', side_effect=[True, True, False]):
             rel_vers, dev_vers = query._compute_proposed_next_versions(
                 node, artifacts, strat, "http://nexus")
 
@@ -94,7 +94,7 @@ class ComputeProposedNextVersionsTest(unittest.TestCase):
         ]
         strat = vis.get_rel_qualifier_increment_strategy("1.0.0-SNAPSHOT", "1.0.0-rel1")
 
-        with patch.object(nexus, '_head_requests', side_effect=[["200"], ["404"]]):
+        with patch.object(nexus, '_head_requests', side_effect=[True, False]):
             rel_vers, dev_vers = query._compute_proposed_next_versions(
                 node, artifacts, strat, "http://nexus")
 

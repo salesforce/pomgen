@@ -148,6 +148,75 @@ class PomParserTest(unittest.TestCase):
 
         self.assertNotEqual(pomparser.format_for_comparison(pom1), pomparser.format_for_comparison(pom2))
 
+    def test_parse_description_metadata__basic(self):
+        pom = """<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <description>
+        <![CDATA[
+            commit: abc123
+            poppy.manifest-checksum: f3c44d17deddac4f8e55a34a2ad3ca18c75121cb
+        ]]>
+    </description>
+</project>"""
+
+        expected_metadata = {
+            "commit": "abc123",
+            "poppy.manifest-checksum": "f3c44d17deddac4f8e55a34a2ad3ca18c75121cb",
+        }
+        self.assertEqual(expected_metadata, pomparser.parse_description_metadata(pom))
+
+    def test_parse_description_metadata__no_namespace(self):
+        pom = """<project>
+    <description>
+        info: this is a cool description
+    </description>
+</project>"""
+
+        expected_metadata = {"info": "this is a cool description"}
+        self.assertEqual(expected_metadata, pomparser.parse_description_metadata(pom))
+
+    def test_parse_description_metadata__value_contains_colon(self):
+        pom = """<project>
+    <description>
+        <![CDATA[
+            url: http://example.com?a=1&b=2
+        ]]>
+    </description>
+</project>"""
+
+        expected_metadata = {"url": "http://example.com?a=1&b=2"}
+        self.assertEqual(expected_metadata, pomparser.parse_description_metadata(pom))
+
+    def test_parse_description_metadata__no_description_element(self):
+        pom = """<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <dependencies>
+        <dependency>
+            <artifactId>a1</artifactId>
+        </dependency>
+    </dependencies>
+</project>"""
+
+        self.assertEqual({}, pomparser.parse_description_metadata(pom))
+
+    def test_parse_description_metadata__empty_description_element(self):
+        pom = """<project>
+    <description></description>
+</project>"""
+
+        self.assertEqual({}, pomparser.parse_description_metadata(pom))
+
+    def test_parse_description_metadata__content_not_key_value_lines(self):
+        pom = """<project>
+    <description>
+        <![CDATA[
+            this is just a plain description without colons
+        ]]>
+    </description>
+</project>"""
+
+        self.assertEqual({}, pomparser.parse_description_metadata(pom))
+
 
 if __name__ == '__main__':
     unittest.main()

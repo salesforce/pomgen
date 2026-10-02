@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from functools import total_ordering
+from types import MappingProxyType
 import common.label as labelm
 import os
 
@@ -40,10 +41,31 @@ class AbstractManifestGenerator(ABC):
         pass
 
     @abstractmethod
-    def store(self, key, value):
+    def set_metadata(self, metadata):
         """
-        Arbitrary key/value storage that is written into some area of the
-        generated manifest so it can be read back later.
+        Arbitrary key/value metadata, specified as a dict instance, that is
+        written into the generated manifest.
+
+        May be called multiple times as long as the keys in the given dict
+        are different.
+
+        Args:
+            metadata: a dict of key/value pairs
+        """
+        pass
+
+    @abstractmethod
+    def get_metadata(self):
+        """
+        Returns the metadata that has been set on this instance using the
+        set_metadata method.
+        """
+        pass
+
+    @abstractmethod
+    def read_metadata(self, manifest_path):
+        """
+        Reads the metadata from the given manifest file, returns it as a dict.
         """
         pass
 
@@ -97,12 +119,13 @@ class CommonManifestGenerator(AbstractManifestGenerator):
     def register_dependencies_transitive_closure__library(self, dependencies):
         self._dependencies_library_transitive_closure = dependencies
 
-    def store(self, key, value):
-        assert key not in self._data
-        self._data[key] = value
+    def set_metadata(self, metadata):
+        for key, value in metadata.items():
+            assert key not in self._data
+            self._data[key] = value
 
-    def retrieve(self, key):
-        return self._data.get(key)
+    def get_metadata(self):
+        return MappingProxyType(dict(sorted(self._data.items())))
 
     @property
     def dependencies(self):
@@ -115,10 +138,6 @@ class CommonManifestGenerator(AbstractManifestGenerator):
     @property
     def dependencies_library_transitive_closure(self):
         return self._dependencies_library_transitive_closure
-
-    @property
-    def data(self):
-        return self._data
 
 
 class AbstractGenerationStrategy(ABC):

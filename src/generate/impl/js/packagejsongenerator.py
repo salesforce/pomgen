@@ -30,6 +30,9 @@ class PackageJsonGenerator(generate.CommonManifestGenerator):
             package_dict["dependencies"] = deps_dict
         return json.dumps(package_dict, indent=4)
 
+    def read_metadata(self, manifest_path):
+        raise NotImplementedError("read_metadata is not supported for package.json manifests")
+
     def _get_main_and_types(self):
         main  = self._dev_package_json.get("main", "src/index.js")
         types = main[0:-2] + "d.ts"
