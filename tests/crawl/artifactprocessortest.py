@@ -46,8 +46,10 @@ class ArtifactProcessorTest(unittest.TestCase):
         repo_root = tempfile.mkdtemp("repo")
         art_def_1 = buildpom.MavenArtifactDef("g1", "a1", "1.0.0", bazel_package="lib1/pack1", generation_strategy=self._get_strategy())
         self._touch_file_at_path(repo_root, "lib1", "MVN-INF", "LIBRARY.root")
+        self._touch_file_at_path(repo_root, "lib1/pack1", "", "Foo.java")
         art_def_2 = buildpom.MavenArtifactDef("g1", "a2", "1.0.0", bazel_package="foo/lib2/pack1", generation_strategy=self._get_strategy())
         self._touch_file_at_path(repo_root, "foo/lib2", "MVN-INF", "LIBRARY.root")
+        self._touch_file_at_path(repo_root, "foo/lib2/pack1", "", "Foo.java")
 
         art_def_1 = artifactprocessor.augment_artifact_def(repo_root, art_def_1, exclusions.src_exclusions(), change_detection_enabled=True)
         art_def_2 = artifactprocessor.augment_artifact_def(repo_root, art_def_2, exclusions.src_exclusions(), change_detection_enabled=True)

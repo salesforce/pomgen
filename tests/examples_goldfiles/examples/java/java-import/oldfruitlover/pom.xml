@@ -11,6 +11,13 @@
     <version>1.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
+    <description>
+        <![CDATA[
+            poppy.artifact-checksum: a4c3491a820121f527b5edd4bb5f47eb354b05ad
+            poppy.manifest-checksum: cb802f960e25f55a9e9bc42b4a851f93aaa9a74d
+        ]]>
+    </description>
+
     <properties>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

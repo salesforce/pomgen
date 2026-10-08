@@ -12,6 +12,7 @@ The poppy manifest generation cmdline entry-point.
 import argparse
 import common.argsupport as argsupport
 import common.bazel as bazel
+import common.checksum as checksum
 import common.common as common
 import common.label as label
 import common.logger as logger
@@ -65,14 +66,7 @@ def main(args):
         for ctx in result.artifact_generation_contexts:
             gen_strategy = ctx.artifact_def.generation_strategy
             manifest_gen = gen_strategy.new_generator(ctx)
-            if args.manifest_metadata is not None:
-                key_value_pairs = args.manifest_metadata.split(",")
-                for pair in key_value_pairs:
-                    pair = pair.strip()
-                    if len(pair) == 0:
-                        continue
-                    key, value = pair.split("=")
-                    manifest_gen.store(key, value)
+            _register_metadata(args, manifest_gen, ctx)
             dest_dir = os.path.join(output_dir, ctx.artifact_def.bazel_package)
 
             if not os.path.exists(dest_dir):
@@ -111,6 +105,25 @@ def main(args):
                     common.write_file(hint_file_path, jar_path)
                     logger.info("Wrote jar location hint file [%s] with content [%s]" % (hint_file_path, jar_path))
 
+
+
+def _register_metadata(args, manifest_gen, ctx):
+        # internal metadata
+        manifest_gen.set_metadata({
+            "poppy.manifest-checksum": checksum.for_dependencies(ctx.direct_dependencies),
+            "poppy.artifact-checksum": ctx.artifact_def.artifact_hash,
+        })
+        # user metadata
+        if args.manifest_metadata is not None:
+            user_metadata = {}
+            key_value_pairs = args.manifest_metadata.split(",")
+            for pair in key_value_pairs:
+                pair = pair.strip()
+                if len(pair) == 0:
+                    continue
+                key, value = pair.split("=")
+                user_metadata[key] = value
+            manifest_gen.set_metadata(user_metadata)
 
 
 def _parse_arguments(args):

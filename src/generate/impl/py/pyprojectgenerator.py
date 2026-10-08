@@ -31,6 +31,9 @@ class PyProjectGenerator(generate.CommonManifestGenerator):
 ]""" % "\n".join(['%s"%s",' % (" "*4, dep.native_repr) for dep in deps]))
         return content
 
+    def read_metadata(self, manifest_path):
+        raise NotImplementedError("read_metadata is not supported for pyproject.toml manifests")
+
 
 
 

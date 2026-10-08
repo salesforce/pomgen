@@ -5,7 +5,7 @@ rules-jvm-external provides an [override mechanism](https://github.com/bazelbuil
 
 ## Example
 
-The [library in this example](BUILD) depends on `org.antlr:ST4` (`@antlr//:org_antlr_ST4`). This jar in turn drags in 3 transitives (the transitive closure is):
+The [library in this example](BUILD) depends on `org.antlr:ST4` (`@poppy_antlr//:org_antlr_ST4`). This jar in turn drags in 3 transitives (the transitive closure is):
 - `org.antlr:antlr-runtime` references
 - `org.antlr:stringtemplate` references
 - `antlr:antlr`
@@ -32,11 +32,11 @@ override_file_paths=examples/java/dep-overrides/overrides.bzl
 
 The content of the [overrides file](overrides.bzl) is:
 ```
-"org.antlr:stringtemplate": "@maven//:com_google_guava_guava"
+"org.antlr:stringtemplate": "@poppy_mvn//:com_google_guava_guava"
 ```
 (although this example only has a single override, many override rules are allowed)
 
-This means that the `stringtemplate` dependency will be overridden with `guava`.  Note that Guave happens to be defined in a different maven install rule (`@maven` instead of `@antlr`): overrides may cross maven install boundaries.
+This means that the `stringtemplate` dependency will be overridden with `guava`.  Note that Guave happens to be defined in a different maven install rule (`@poppy_mvn` instead of `@poppy_antlr`): overrides may cross maven install boundaries.
 
 Regenerate the pom:
 

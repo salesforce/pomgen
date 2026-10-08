@@ -45,6 +45,34 @@ def format_for_comparison(pom_content):
     return _pretty_str(tree)
 
 
+def parse_description_metadata(pom_content):
+    """
+    Parses the <description> element in the specified pom_content, which is
+    expected to contain "key: value" metadata lines, one per line (as written
+    by pom.AbstractPomGen._gen_description).
+
+    Returns the parsed metadata as a dict. Returns an empty dict if there is
+    no root <description> element, or if it has no content.
+    """
+    tree = ET.fromstring(pom_content.encode().strip())
+    description_el = tree.find(XML_NS + "description")
+    if description_el is None:
+        description_el = tree.find("description")
+    if description_el is None or description_el.text is None:
+        return {}
+
+    metadata = {}
+    for line in description_el.text.splitlines():
+        line = line.strip()
+        if len(line) == 0:
+            continue
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        metadata[key.strip()] = value.strip()
+    return metadata
+
+
 def indent_xml(xml_content, indent):
     indented_xml = ""
     current_indent = indent

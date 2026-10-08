@@ -24,8 +24,12 @@ def augment_artifact_def(repo_root_path,
                          source_exclusions,
                          change_detection_enabled):
 
+
     # library path
     art_def.library_path = _get_library_path(repo_root_path, art_def)
+
+    # compute the current artifact hash
+    art_def.artifact_hash = _get_artifact_hash(repo_root_path, art_def, source_exclusions)
 
     # attributes that are set at the library level
     _set_library_level_attribute_values(repo_root_path, art_def)
@@ -42,7 +46,7 @@ def augment_artifact_def(repo_root_path,
             art_def.release_reason = None
     else:
         if change_detection_enabled and art_def.change_detection:
-            has_changed = _has_changed_since_last_release(repo_root_path, art_def, source_exclusions)
+            has_changed = art_def.artifact_hash != art_def.released_artifact_hash
             if has_changed:
                 art_def.requires_release = True
                 art_def.release_reason = releasereason.ARTIFACT
@@ -89,11 +93,10 @@ def _set_library_level_attribute_values(repo_root_path, art_def):
                 art_def.register_md_file_path_for_attr(attr_name, lib_md_file_rel_path)
 
 
-def _has_changed_since_last_release(repo_root_path, art_def, source_exclusions):
+def _get_artifact_hash(repo_root_path, art_def, source_exclusions):
     all_packages = [art_def.bazel_package] + art_def.additional_change_detected_packages
-    current_artifact_hash = git.get_dir_hash(repo_root_path, all_packages,
-                                             source_exclusions)
+    current_artifact_hash = git.get_dir_hash(repo_root_path, all_packages, source_exclusions)
 
     assert current_artifact_hash is not None
 
-    return current_artifact_hash != art_def.released_artifact_hash
+    return current_artifact_hash

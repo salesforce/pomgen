@@ -110,7 +110,9 @@ class MavenArtifactDef:
 
     release_reason: the reason for releasing this artifact.
 
-    released_pom_content: if the file pom.xml.released exists next to the 
+    artifact_hash: the hash of the artifact's current (source) content.
+
+    released_pom_content: if the file pom.xml.released exists next to the
         BUILD.pom file, the content of the pom.xml.released file.
 
     generation_strategy: the generation strategy for this artfifact.
@@ -145,6 +147,7 @@ class MavenArtifactDef:
                  bazel_target=None,
                  library_path=None,
                  requires_release=None,
+                 artifact_hash=None,
                  released_pom_content=None,
                  generation_strategy=None,
                  parent_artifact_def=None,
@@ -170,6 +173,7 @@ class MavenArtifactDef:
         self._library_path = library_path
         self._requires_release = requires_release
         self._release_reason = None
+        self._artifact_hash = artifact_hash
         self._released_pom_content = released_pom_content
         self._generation_strategy = generation_strategy
         self._parent_artifact_def = parent_artifact_def
@@ -280,6 +284,14 @@ class MavenArtifactDef:
     @release_reason.setter
     def release_reason(self, value):
         self._release_reason = value
+
+    @property
+    def artifact_hash(self):
+        return self._artifact_hash
+
+    @artifact_hash.setter
+    def artifact_hash(self, value):
+        self._artifact_hash = value
 
     @property
     def released_pom_content(self):
