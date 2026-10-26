@@ -27,3 +27,20 @@ The generated `package.json` contains information from 3 places:
 - The poppy module manifest files [ref](greeter-lib/pack/package.in)
 - The static package.json that lives at the project root [ref](greeter-lib/package.json)
 - The dependencies in the BUILD file (for ex figlet) [ref](greeter-lib/BUILD)
+
+
+## Building installable packages
+
+Set the destination directory:
+
+```
+GLOBAL_DIST_DIR=/tmp/npm-packages bazel run @poppy//package/npm -- -l examples/js/hello-world -a gen,build,install
+```
+
+`poppy` doesn't currenly run `npm pack` for you, but you can:
+
+```
+npm pack /tmp/npm-packages/greeter-constants --pack-destination /tmp/npm-packages
+npm pack /tmp/npm-packages/greeter-lib --pack-destination /tmp/npm-packages
+npm pack /tmp/npm-packages/greeter --pack-destination /tmp/npm-packages
+```

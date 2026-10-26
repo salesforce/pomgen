@@ -47,11 +47,8 @@ class JsGenerationStrategy(generate.AbstractGenerationStrategy):
     def manifest_file_extension(self):
         return "json"
 
-    def _is_source_ref(self, lbl):
-        return lbl.is_source_ref and not lbl.canonical_form.startswith("//examples/js:node_modules")
-
     def load_dependency(self, lbl, artifact_def):
-        if self._is_source_ref(lbl):
+        if self.is_source_ref(lbl):
             return jsdependency.JsDependency.init_with_artifact_def(artifact_def)
         else:
             if lbl in self._label_to_ext_dep:
@@ -73,6 +70,14 @@ class JsGenerationStrategy(generate.AbstractGenerationStrategy):
         for prefix in self._node_modules_label_prefixes:
             if lbl.canonical_form.startswith(prefix):
                 return False
+        if "node_modules/" in lbl.target:
+            raise Exception(
+                "Label [%s] looks like a 3rd party node_modules reference "
+                "(its target contains \"node_modules/\"), but it does not "
+                "match any of the configured node_modules label prefixes "
+                "%s. This usually means pnpm_lockfile_paths is missing or "
+                "incomplete in .poppyrc - add an entry for the pnpm-lock.yaml "
+                "that covers this package." % (lbl, self._node_modules_label_prefixes))
         return True
 
     def _new_generator__hook(self, artifact_def):

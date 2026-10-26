@@ -8,34 +8,18 @@ To build and create a local installable npm package for testing:
 bazel build examples/js/hello-world/...
 ```
 
-## Generate the package.json files
+## Generate the package.json files and project directories
 
 ```
-bazel run //:gen -- --package examples/js/hello-world --destdir bazel-bin
-```
-
-## Copy the generated package.json files into the package structure
-
-```
-chmod u+w bazel-bin/examples/js/hello-world/greeter-constants/pkg/package.json
-cp bazel-bin/examples/js/hello-world/greeter-constants/package.json bazel-bin/examples/js/hello-world/greeter-constants/pkg/package.json
-
-chmod u+w bazel-bin/examples/js/hello-world/greeter-lib/pkg/package.json
-cp bazel-bin/examples/js/hello-world/greeter-lib/package.json bazel-bin/examples/js/hello-world/greeter-lib/pkg/package.json
-
-chmod u+w bazel-bin/examples/js/hello-world/greeter/pkg/package.json
-cp bazel-bin/examples/js/hello-world/greeter/package.json bazel-bin/examples/js/hello-world/greeter/pkg/package.json
+bazel run @poppy//package/npm -- -l examples/js/hello-world -a gen,install
 ```
 
 ## Create the tarball
 
 ```bash
-mkdir -p /tmp/npm-packages
-npm pack bazel-bin/examples/js/hello-world/greeter-constants/pkg --pack-destination /tmp/npm-packages
-
-npm pack bazel-bin/examples/js/hello-world/greeter-lib/pkg --pack-destination /tmp/npm-packages
-
-npm pack bazel-bin/examples/js/hello-world/greeter/pkg --pack-destination /tmp/npm-packages
+npm pack /tmp/npm-packages/greeter-constants --pack-destination /tmp/npm-packages
+npm pack /tmp/npm-packages/greeter-lib --pack-destination /tmp/npm-packages
+npm pack /tmp/npm-packages/greeter --pack-destination /tmp/npm-packages
 ```
 
 ## Testing the Package from Scratch

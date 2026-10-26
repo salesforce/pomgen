@@ -11,7 +11,7 @@ ts_project(
     tsconfig = "tsconfig.json",
     transpiler = "tsc",
     deps = [
-        "//examples/js/hello-world/greeter-lib",
+        "//examples/js/hello-world/greeter-lib:greeter-lib_project",
     ],
 )
 

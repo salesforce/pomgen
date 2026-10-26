@@ -18,7 +18,7 @@ class PackageJsonGenerator(generate.CommonManifestGenerator):
         """
         pack_json = self._package_json_template.replace("$dependencies$", '"dependencies": {}')
         pack_json = pack_json.replace("$name$", self._artifact_def.artifact_id)
-        pack_json = pack_json.replace("$version$", self._artifact_def.version)
+        pack_json = pack_json.replace("$version$", self.resolve_version(self._artifact_def.version))
         main, types = self._get_main_and_types()
         pack_json = pack_json.replace("$main$", main)
         pack_json = pack_json.replace("$types$", types)

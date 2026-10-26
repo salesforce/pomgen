@@ -1,4 +1,5 @@
 artifact(
     artifact_id = "greeter-lib",
     generation_mode = "dynamic",
+    target_name = "greeter-lib_project",
 )

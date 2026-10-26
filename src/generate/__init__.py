@@ -2,7 +2,12 @@ from abc import ABC, abstractmethod
 from functools import total_ordering
 from types import MappingProxyType
 import common.label as labelm
+import datetime
 import os
+
+
+_VERSION_TS_TOKEN_START = "${timestamp:"
+_VERSION_TS_TOKEN_END = "}"
 
 
 class AbstractManifestGenerator(ABC):
@@ -138,6 +143,21 @@ class CommonManifestGenerator(AbstractManifestGenerator):
     @property
     def dependencies_library_transitive_closure(self):
         return self._dependencies_library_transitive_closure
+
+    def resolve_version(self, version):
+        """
+        Resolves the ${timestamp:<strftime-format>} placeholder, if present
+        in the given version string, to the current time, formatted
+        according to the given strftime format string. Returns the version
+        unchanged if the placeholder isn't present.
+        """
+        start_i = version.find(_VERSION_TS_TOKEN_START)
+        if start_i == -1:
+            return version
+        end_i = version.index(_VERSION_TS_TOKEN_END, start_i)
+        format_str = version[start_i + len(_VERSION_TS_TOKEN_START):end_i]
+        timestamp = datetime.datetime.now().strftime(format_str)
+        return version[0:start_i] + timestamp + version[end_i+1:]
 
 
 class AbstractGenerationStrategy(ABC):
