@@ -120,7 +120,7 @@ class AbstractPomGen(generate.CommonManifestGenerator):
 
         This method is only intended to be called by subclasses.
         """
-        return MASKED_VERSION if pomcontenttype is PomContentType.GOLDFILE else self._artifact_def.version
+        return MASKED_VERSION if pomcontenttype is PomContentType.GOLDFILE else self.resolve_version(self._artifact_def.version)
 
     def _dep_version(self, pomcontenttype, dep):
         """

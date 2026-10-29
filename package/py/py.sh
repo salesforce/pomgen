@@ -18,7 +18,7 @@ Usage: bazel run @poppy//package/py -a action(s) -l path/to/library/root/dir
     Specifies which action(s) to run, see below for detaols on the actions.
     Make sure you run 'gen' before trying other actions.
     The actions to run may be comma-separated if there is more than one,
-    for example: -a gen,build
+    for example: -a gen,install
 
   -l (library path)
     Specify the path to a library.
@@ -45,11 +45,11 @@ Usage: bazel run @poppy//package/py -a action(s) -l path/to/library/root/dir
 
     
   Other actions:
-    build: runs "python3 -m build" on the given library and its upstreams.
-           If the environment variable GLOBAL_DIST_DIR is set, also copies
-           the content of the local dist directory, created by python3 -m
-           build, to the directory $GLOBAL_DIST_DIR points to.
-           
+    install: runs "python3 -m build" on the given library and its upstreams.
+             If the environment variable GLOBAL_DIST_DIR is set, also copies
+             the content of the local dist directory, created by python3 -m
+             build, to the directory $GLOBAL_DIST_DIR points to.
+
 EOF
 }
 
@@ -60,7 +60,7 @@ _for_each_pyproject() {
     local pyproject_root_dir=$3
     local pyproject_filter_path=$4
 
-    if ! [[ "$action" =~ ^(clean|build)$ ]]; then
+    if ! [[ "$action" =~ ^(clean|install)$ ]]; then
         echo "ERROR: Unknown action $action" && exit 1
     fi
 
@@ -69,17 +69,27 @@ _for_each_pyproject() {
         exit 1
     fi
 
+    local pyproject_file_name="pyproject.toml"
+
     # look for pyproject files
-    find -L $pyproject_root_dir$pyproject_filter_path -name "pyproject.toml"|while read pyproject_path; do
+    find -L $pyproject_root_dir$pyproject_filter_path -name "${pyproject_file_name}"|while read pyproject_path; do
+        # pyproject_path is the location of the generated manifest in bazel-bin
         echo "INFO: Processing: $pyproject_path"
+        local pyproject_rel_path="${pyproject_path#$pyproject_root_dir/}"
+        # the location of the manifest file in the source tree
+        local pyproject_srcdir_file=${repo_root}/${pyproject_rel_path}
+        # the path to the project root dir (in the source tree)
+        local project_root_dir=$(dirname $pyproject_srcdir_file)
+        # the dist directory that the wheel is built into
+        local project_dist_dir=$project_root_dir/dist
 
         if [ "$action" == "clean" ]; then
+            rm -f $pyproject_srcdir_file
+            rm -rf $project_dist_dir
+            rm -rf $project_root_dir/src/*.egg-info
             rm $pyproject_path
-        elif [ "$action" == "build" ]; then
-            pyproject_rel_path="${pyproject_path#$pyproject_root_dir/}"
-            pyproject_dest_dir=${repo_root}/${pyproject_rel_path}
-            cp $pyproject_path $pyproject_dest_dir # cp into ws/source dir
-            project_root_dir=$(dirname $pyproject_dest_dir)
+        elif [ "$action" == "install" ]; then
+            cp $pyproject_path $pyproject_srcdir_file # cp into source dir
             echo "INFO Running python3 -m build $project_root_dir"
             python3 -m build $project_root_dir
             if [ -z "$GLOBAL_DIST_DIR" ]; then
@@ -87,7 +97,7 @@ _for_each_pyproject() {
             else
                 echo "INFO Copying dist/* to GLOBAL_DIST_DIR $GLOBAL_DIST_DIR"
                 mkdir -p $GLOBAL_DIST_DIR
-                cp -r $project_root_dir/dist/* $GLOBAL_DIST_DIR
+                cp -r ${project_dist_dir}/* $GLOBAL_DIST_DIR
             fi
         fi
     done
@@ -97,8 +107,12 @@ _run_actions() {
     local actions=$1
     for action in $(echo $actions | tr "," "\n")
     do
-        if ! [[ "$action" =~ ^(clean|gen|build)$ ]]; then
-            echo "[ERROR] action [$action] must be one of [clean|gen|build]" && exit 1
+        if [ "$action" == "build" ]; then
+            echo "[ERROR] build has been removed, use install instead" && exit 1
+        fi
+
+        if ! [[ "$action" =~ ^(clean|gen|install)$ ]]; then
+            echo "[ERROR] action [$action] must be one of [clean|gen|install]" && exit 1
         fi
 
         repo_root=$PWD
@@ -123,10 +137,7 @@ _run_actions() {
             if [ "$follow_references" = false ]; then
                 extra_args="${extra_args} --ignore_references"
             fi
-            if [ "$debug" = true ]; then
-                echo "[DEBUG] Running poppy with extra args ${extra_args}"
-                extra_args="${extra_args} --verbose"
-            fi
+            echo "[DEBUG] Running poppy with extra args ${extra_args}"
             bazel run @poppy//:gen -- --package $library_path --destdir $pyproject_root_dir $extra_args
         else
             # for now we constrain the path where we look for generated toml 
@@ -170,7 +181,7 @@ fi
 
 if [ -z "$actions" ] ; then
     echo "[ERROR] The action(s) to run must be specified using -a, for example:"
-    echo "        $ bazel run @poppy//package/py -- -a gen,build"
+    echo "        $ bazel run @poppy//package/py -- -a gen,install"
     echo "        bazel run @poppy//package/py for usage information."
     exit 1
 fi

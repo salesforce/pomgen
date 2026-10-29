@@ -257,7 +257,7 @@ excluded_dependency_labels=  //a/b/c    ,   //a/b/c:foo
         self.assertIn("pnpm_lockfile_paths=('path/pnpm-lock.yaml',)", str(cfg))
         self.assertIn("pom_base_filename=pom", str(cfg))
         self.assertIn("pyproject_base_filename=pyproject", str(cfg))
-        self.assertIn("jspackage_base_filename=package", str(cfg))
+        self.assertIn("jspackage_base_filename=poppy_package", str(cfg))
 
     def test_pathsep__excluded_dependency_paths(self):
         cfg = config.Config(excluded_dependency_paths="abc")
@@ -329,7 +329,7 @@ pom_base_filename=glue-test
 
         cfg = config.load(repo_root)
 
-        self.assertEqual("package", cfg.jspackage_base_filename)
+        self.assertEqual("poppy_package", cfg.jspackage_base_filename)
 
     def test_jspackage_base_filename__custom(self):
         repo_root = tempfile.mkdtemp("root")

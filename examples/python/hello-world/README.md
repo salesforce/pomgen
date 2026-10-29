@@ -52,10 +52,10 @@ You need the `build` module; if you don't have it yet install it with:
 pip3 install build
 ```
 
-Run the following Poppy command to generate the manifests (the `gen` action) and generate the wheels for the `hello-world` library.
+Run the following command to generate the manifests (the `gen` action) and generate the wheels for the `hello-world` library.
 
 ```
-bazel run @poppy//package/py -- -l examples/python/hello-world -a gen,build
+bazel run @poppy//package/py -- -l examples/python/hello-world -a gen,install
 ```
 The above command will generate 2 pyproject.toml files:
 

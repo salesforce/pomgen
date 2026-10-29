@@ -46,6 +46,8 @@ def _get_value_from_config(cfg, key):
         return cfg.jar_artifact_classifier
     elif key == "general.pom_base_filename":
         return cfg.pom_base_filename
+    elif key == "general.jspackage_base_filename":
+        return cfg.jspackage_base_filename
     else:
         raise ValueError("Unknown config key [%s], fix me if needed!" % key)
 

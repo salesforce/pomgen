@@ -142,53 +142,6 @@ EOF
 }
 
 
-_build_libraries_file_path() {
-    local repo_root_path=$1
-    local library=$2
-    local libraries_file_path="$repo_root_path/bazel-bin$library/libraries.txt"
-    echo "$libraries_file_path"
-}
-
-
-_use_libraries_hint_file() {
-    local repo_root_path=$1
-    local follow_libraries=$2
-    local library_path=$3
-
-    if [ "$follow_libraries" = false ]; then
-        echo "false"
-    else
-        if [ -z "$library_path" ]; then
-            echo "false"
-        else
-            local path="$(_build_libraries_file_path $repo_root_path $library_path)"
-            if [ -f "$path" ]; then
-                echo "true"
-            else
-                echo "false"
-            fi
-        fi
-    fi
-}
-
-
-_build_action_env_args() {
-    # Converts BZL_ACTION_ENV_* environment variables to --action_env arguments
-    # Example: BZL_ACTION_ENV_JAVA_HOME=/usr/lib -> --action_env JAVA_HOME=/usr/lib
-    local action_env_args=""
-    local prefix="BZL_ACTION_ENV_"
-
-    while IFS='=' read -r name value; do
-        if [[ "$name" == ${prefix}* ]]; then
-            local key="${name#$prefix}"
-            action_env_args="${action_env_args} --action_env ${key}=${value}"
-        fi
-    done < <(env)
-
-    echo "$action_env_args"
-}
-
-
 _build_manifest_metadata_arg() {
     # Converts POM_METADATA_* environment variables into a comma-separated
     # list of key=value pairs, suitable for --manifest_metadata
@@ -222,7 +175,7 @@ _for_each_library() {
         echo "ERROR: Unknown action $action" && exit 1
     fi
 
-    libraries_file_path="$(_build_libraries_file_path $repo_root_path $root_library_path)"
+    libraries_file_path="$(_libraries_hint_file_path $repo_root_path $root_library_path)"
 
     # Handle install action by iterating over libraries
     if [ "$action" == "install" ]; then
@@ -240,19 +193,9 @@ _for_each_library() {
         done <<< "$(cat $libraries_file_path)"
     fi
 
-    # Handle build action using bazel labels file
+    # Handle build action using the bazel labels file
     if [ "$action" == "build" ]; then
-        local bazel_labels_file_path="$repo_root_path/bazel-bin$root_library_path/bazel_labels.txt"
-        if [ -f "$bazel_labels_file_path" ]; then
-            echo ""
-            echo "[INFO] Building bazel labels from: $bazel_labels_file_path"
-            cat "$bazel_labels_file_path"
-            echo ""
-            local action_env_args="$(_build_action_env_args)"
-            local cmd="bazel build${action_env_args} --target_pattern_file=\"${bazel_labels_file_path}\""
-            echo "[INFO] Running $cmd"
-            eval $cmd
-        fi
+        _run_bazel_build_action $repo_root_path $root_library_path
     fi
 }
 
@@ -314,26 +257,33 @@ if [ "$debug" = true ]; then
 fi
 
 # load helper functions
-loaded=false
-helper_functions_file="maven_functions.sh"
-p="external/_main~_repo_rules~poppy/package/maven/${helper_functions_file}"
-if [ -f "${p}" ]; then
-    # MODULE.bazel external repository path
-    source "${p}"
-    loaded=true
-fi
-if [ "$loaded" = false ]; then
-    p="package/maven/${helper_functions_file}"
+_source_helper_file() {
+    local package_dir=$1
+    local helper_functions_file=$2
+
+    local loaded=false
+    local p="external/_main~_repo_rules~poppy/${package_dir}/${helper_functions_file}"
     if [ -f "${p}" ]; then
-        # when running locally in this repository
+        # MODULE.bazel external repository path
         source "${p}"
         loaded=true
     fi
-fi
-if [ "$loaded" = false ]; then
-    echo "[ERROR] Unable to locate ${helper_functions_file}"
-    exit 1
-fi
+    if [ "$loaded" = false ]; then
+        p="${package_dir}/${helper_functions_file}"
+        if [ -f "${p}" ]; then
+            # when running locally in this repository
+            source "${p}"
+            loaded=true
+        fi
+    fi
+    if [ "$loaded" = false ]; then
+        echo "[ERROR] Unable to locate ${helper_functions_file}"
+        exit 1
+    fi
+}
+
+_source_helper_file "package/maven" "maven_functions.sh"
+_source_helper_file "package/common" "common_functions.sh"
 
 # figure out where this script is being run from, accordingly set repo_root_path
 if [ -f "WORKSPACE" ]; then

@@ -7,12 +7,12 @@ This script builds Python wheels with code and generated `pyproject.toml` manife
 Run the following command to generated installable wheels for all modules that are part of the given library, including all transitive libraries:
 
 ```
-bazel run @poppy//package/py -- -l path/to/library/root -a gen,build
+bazel run @poppy//package/py -- -l path/to/library/root -a gen,install
 ```
 
 For example, to generate wheels for the `hello-word` library:
 ```
-bazel run @poppy//package/py -- -l examples/python/hello-world -a gen,build
+bazel run @poppy//package/py -- -l examples/python/hello-world -a gen,install
 ```
 
 If you are using an internal PyPI registry, you may have to set `REQUESTS_CA_BUNDLE` to point to the right cert to use.
