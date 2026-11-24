@@ -15,5 +15,5 @@ jobs:
       - run: bazel build //...
       - run: bazel test //...
 
-      - run: pip install ruff --user lxml
+      - run: pip install --user ruff==0.15.15
       - run: python -m ruff check src tests
